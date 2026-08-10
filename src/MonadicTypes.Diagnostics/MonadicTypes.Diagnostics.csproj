@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\MonadicTypes.Errors\MonadicTypes.Errors.csproj" />
+  </ItemGroup>
+</Project>
