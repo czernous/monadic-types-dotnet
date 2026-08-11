@@ -588,6 +588,31 @@ result.Switch(RenderValue, RenderError);
 Customer customer = cached.ValueOrElse(static _ => Customer.Anonymous);
 ```
 
+#### Switch
+
+`Switch(Action<T>, Action<E>)` returns `void` and invokes exactly one action. It
+is a terminal consumer, not a railway operator: it cannot transform the value,
+return the original Result, or be followed by another stage.
+
+```csharp
+checkout.Switch(
+    static receipt => Console.WriteLine($"Receipt {receipt.Id}"),
+    static error => Console.Error.WriteLine($"Checkout failed: {error.Code}"));
+```
+
+Use `Match` when both branches produce a value:
+
+```csharp
+IResult response = checkout.Match<IResult>(
+    static receipt => TypedResults.Ok(receipt),
+    static error => TypedResults.BadRequest(error.Code));
+```
+
+Use `Tap` or `TapError` instead when observation belongs inside a continuing
+pipeline. `Switch` accepts delegates; static lambdas and static method groups
+avoid captures and per-call closure allocation. An uninitialized Result throws
+before either action runs.
+
 ### Combining Independent Results
 
 ```csharp
@@ -634,6 +659,19 @@ string city = address.Match(
     static value => value.City,
     static () => "No address");
 ```
+
+Option's `Switch(Action<T>, Action)` is likewise terminal and invokes exactly
+one branch. `None` is a valid state, so unlike an uninitialized Result it runs
+the `none` action rather than throwing:
+
+```csharp
+address.Switch(
+    static value => RenderAddress(value),
+    static () => RenderMissingAddress());
+```
+
+Use `Match` instead when both cases must produce a value that subsequent code
+will consume.
 
 ### Option And Result
 

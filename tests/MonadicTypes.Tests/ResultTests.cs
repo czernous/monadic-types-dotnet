@@ -121,6 +121,32 @@ public class ResultTests
     }
 
     [Fact]
+    public void Switch_InvokesExactlyOneActiveBranch()
+    {
+        int successes = 0;
+        int failures = 0;
+
+        Result<int, string>.Ok(5).Switch(
+            _ => successes++,
+            _ => failures++);
+        Result<int, string>.Fail("invalid").Switch(
+            _ => successes++,
+            _ => failures++);
+
+        Assert.Equal(1, successes);
+        Assert.Equal(1, failures);
+    }
+
+    [Fact]
+    public void Switch_ThrowsForUninitializedResult()
+    {
+        Result<int, string> result = default;
+
+        Assert.Throws<InvalidOperationException>(() =>
+            result.Switch(static _ => { }, static _ => { }));
+    }
+
+    [Fact]
     public void StateOverloads_PassStateWithoutCapturedClosures()
     {
         Result<int, string> source = Result<int, string>.Ok(5);

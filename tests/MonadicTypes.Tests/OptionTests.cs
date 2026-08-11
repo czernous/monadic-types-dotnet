@@ -53,6 +53,23 @@ public class OptionTests
     }
 
     [Fact]
+    public void Switch_InvokesExactlyOneActiveBranch()
+    {
+        int someCalls = 0;
+        int noneCalls = 0;
+
+        Option<int>.Some(5).Switch(
+            _ => someCalls++,
+            () => noneCalls++);
+        Option<int>.None.Switch(
+            _ => someCalls++,
+            () => noneCalls++);
+
+        Assert.Equal(1, someCalls);
+        Assert.Equal(1, noneCalls);
+    }
+
+    [Fact]
     public void StructCallables_MapAndBindWithoutDelegates()
     {
         Option<int> source = Option<int>.Some(5);
