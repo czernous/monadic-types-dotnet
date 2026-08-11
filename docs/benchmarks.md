@@ -17,6 +17,12 @@
   when its confidence interval no longer overlaps the target or unchanged control;
   rerunning solely to obtain a favorable mean is not an acceptance strategy.
 - NativeAOT size is verified separately by the smoke executable.
+- Benchmark runners return a nonzero process exit code for critical validation,
+  failed reports, or an empty report set; a generated restore/build failure must
+  not be interpreted as a passing run.
+- NativeAOT benchmarks are local or manually dispatched by default. Hosted CI
+  should require tests and AOT smoke publication, and only gate timings on
+  stable self-hosted hardware or a deliberately budgeted scheduled job.
 
 Run the complete suite with:
 

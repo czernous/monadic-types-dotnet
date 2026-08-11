@@ -22,7 +22,7 @@ activity.Start();
 ErrorTelemetry.Record(activity, result.Error);
 
 Result<long, Error> composed = await Result<int, Error>.Ok(41)
-    .MapAsync(static value => ValueTask.FromResult(value + 1L))
+    .MapAsync(AotOperations.Functions.IncrementAsync)
     .Map(static value => value * 2);
 Result<int, Error> captured = Effect.Try<int, Error>(
     static () => 42,
@@ -42,3 +42,9 @@ return response.Result is ProblemHttpResult { StatusCode: StatusCodes.Status404N
     && capturedTask is { IsSuccess: true, Value: 43 }
     ? 0
     : 1;
+
+public static partial class AotOperations
+{
+    [GenerateValueFunction]
+    public static ValueTask<long> IncrementAsync(int value) => ValueTask.FromResult(value + 1L);
+}

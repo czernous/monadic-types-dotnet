@@ -114,4 +114,62 @@ public class AsyncResultTests
         Assert.Equal(3, valueTask.Value);
         Assert.Equal(3, task.Value);
     }
+
+    [Fact]
+    public async Task GeneratedCallables_SupportEveryAsyncOperationKind()
+    {
+        Result<int, string> success = Result<int, string>.Ok(4);
+        Result<int, string> failure = Result<int, string>.Fail("bad");
+
+        Result<long, string> mapped = await success
+            .MapAsync(GeneratedAsyncOperations.Functions.MapValueTask)
+            .MapTaskAsync(GeneratedAsyncOperations.Functions.MapTask);
+        Result<long, string> bound = await success
+            .BindAsync(GeneratedAsyncOperations.Functions.BindValueTask)
+            .BindTaskAsync(GeneratedAsyncOperations.Functions.BindTask);
+        Result<int, int> recovered = await ValueTask.FromResult(failure)
+            .BindErrorAsync(GeneratedAsyncOperations.Functions.BindErrorValueTask)
+            .BindErrorTaskAsync(GeneratedAsyncOperations.Functions.BindErrorTask);
+
+        Assert.Equal(6L, mapped.Value);
+        Assert.Equal(6L, bound.Value);
+        Assert.Equal(3, recovered.Value);
+    }
+
+    [Fact]
+    public async Task GeneratedCallable_ComposesFromTaskReceiver()
+    {
+        Task<Result<int, string>> source = Task.FromResult(Result<int, string>.Ok(4));
+
+        Result<long, string> result = await source
+            .MapAsync(GeneratedAsyncOperations.Functions.MapValueTask)
+            .MapTaskAsync(GeneratedAsyncOperations.Functions.MapTask);
+
+        Assert.Equal(6L, result.Value);
+    }
+}
+
+public static partial class GeneratedAsyncOperations
+{
+    [GenerateValueFunction]
+    public static ValueTask<long> MapValueTask(int value) => ValueTask.FromResult(value + 1L);
+
+    [GenerateValueFunction]
+    public static Task<long> MapTask(long value) => Task.FromResult(value + 1L);
+
+    [GenerateValueFunction]
+    public static ValueTask<Result<long, string>> BindValueTask(int value) =>
+        ValueTask.FromResult(Result<long, string>.Ok(value + 1L));
+
+    [GenerateValueFunction]
+    public static Task<Result<long, string>> BindTask(long value) =>
+        Task.FromResult(Result<long, string>.Ok(value + 1L));
+
+    [GenerateValueFunction]
+    public static ValueTask<Result<int, int>> BindErrorValueTask(string error) =>
+        ValueTask.FromResult(Result<int, int>.Fail(error.Length));
+
+    [GenerateValueFunction]
+    public static Task<Result<int, int>> BindErrorTask(int error) =>
+        Task.FromResult(Result<int, int>.Ok(error));
 }

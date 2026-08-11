@@ -152,6 +152,7 @@ measurement establishes.
 | TransposePresent | <= 2.9734 ns | accepted `MapOption` plus 10% shape allowance |
 | CompletedValueTaskMap | <= 13.5175 ns | at most 5x accepted type-changing `Map` |
 | CompletedAsyncMap | <= 13.7935 ns | at most 5x accepted `MapResult` |
+| GeneratedCompletedAsyncMap | < same-run `CompletedAsyncMap` | generated dispatch must beat the delegate path it replaces |
 | MixedCompletedPipeline | <= 20.6903 ns | at most 7.5x accepted `MapResult` |
 | CompletedTaskReceiverMap | <= 13.7935 ns | at most 5x accepted `MapResult` |
 | EffectSuccess | <= 2.7587 ns | no slower than accepted `MapResult` |
@@ -177,6 +178,7 @@ are diagnostic only because NativeAOT code layout differs.
 | TransposePresent | 2.7478 ns | 0 B |
 | CompletedValueTaskMap | 12.1341 ns | 0 B |
 | CompletedAsyncMap | 13.1221 ns | 0 B |
+| GeneratedCompletedAsyncMap | 6.3249 ns | 0 B |
 | MixedCompletedPipeline | 18.0510 ns | 0 B |
 | CompletedTaskReceiverMap | 13.1966 ns | 0 B |
 | EffectSuccess | 2.4475 ns | 0 B |
@@ -217,6 +219,18 @@ ns and 0 B, 19.6% faster than the same-run non-state typed Task path at 16.3664
 ns. Passing a cached Task as explicit state with a static callback therefore
 removes capture requirements and improves this measured NativeAOT path without
 changing exception semantics.
+
+The 2026-08-11 16-method full run added generated async callable dispatch. It
+measured `GeneratedCompletedAsyncMap` at 6.3249 ns and 0 B against a same-run
+`CompletedAsyncMap` control at 11.7515 ns and 0 B, a 46.2% reduction in wrapper
+time. Every existing row remained at 0 B and within its architectural target.
+The generated row becomes its first accepted baseline; the same run does not
+replace better historical baselines for existing methods.
+
+The generated async overload was also instantiated in the NativeAOT smoke
+application. Publication and execution succeeded at 8,116,736 bytes on .NET
+10.0.11. The prior 8,128,512-byte observation used .NET 10.0.10, so the smaller
+number is a size-safety check rather than an attributable binary-size improvement.
 
 The 14-method full run measured the readonly-ValueTask mixed pipeline at 19.9354
 ns, down from 23.8402 ns before completed-path inlining and copy removal. Adding

@@ -96,6 +96,11 @@ public class CompositionBenchmarks
     [Benchmark]
     public Result<long, BenchmarkError> CompletedAsyncMap() => _success.MapAsync(_mapAsync).Result;
 
+    /// <summary>Measures the generated callable equivalent of the completed asynchronous map.</summary>
+    [Benchmark]
+    public Result<long, BenchmarkError> GeneratedCompletedAsyncMap() =>
+        _success.MapAsync(GeneratedBenchmarkOperations.Functions.MapAsync).Result;
+
     /// <summary>Measures a mixed asynchronous then synchronous fluent pipeline.</summary>
     [Benchmark]
     public Result<long, BenchmarkError> MixedCompletedPipeline() =>
@@ -130,4 +135,12 @@ public class CompositionBenchmarks
     /// <summary>Compact benchmark error carried entirely by value.</summary>
     /// <param name="Code">Stable error code.</param>
     public readonly record struct BenchmarkError(int Code);
+}
+
+/// <summary>Hosts generated callables used by the composition benchmarks.</summary>
+public static partial class GeneratedBenchmarkOperations
+{
+    /// <summary>Returns a synchronously completed asynchronous transform.</summary>
+    [GenerateValueFunction]
+    public static ValueTask<long> MapAsync(int value) => ValueTask.FromResult(value + 1L);
 }

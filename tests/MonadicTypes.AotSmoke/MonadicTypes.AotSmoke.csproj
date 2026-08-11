@@ -11,5 +11,6 @@
     <ProjectReference Include="..\..\src\MonadicTypes.AspNetCore\MonadicTypes.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\MonadicTypes.Diagnostics\MonadicTypes.Diagnostics.csproj" />
     <ProjectReference Include="..\..\src\MonadicTypes.Effects\MonadicTypes.Effects.csproj" />
+    <ProjectReference Include="..\..\src\MonadicTypes.Generators\MonadicTypes.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

@@ -22,7 +22,7 @@ allocation-free alternatives for measured hot paths.
 | `MonadicTypes.Effects` | Explicit exception-to-error boundaries | [Exception boundaries](#exception-boundaries) | Core only |
 | `MonadicTypes.Diagnostics` | Optional `Activity` and `Meter` projection | [Diagnostics](#diagnostics) | Errors and BCL diagnostics |
 | `MonadicTypes.AspNetCore` | Typed HTTP results, RFC problem responses, endpoint metadata | [ASP.NET Core](#aspnet-core) | ASP.NET Core shared framework |
-| `MonadicTypes.Generators` | Compile-time callable wrappers for annotated methods | [Hot paths](#hot-paths) | Analyzer only |
+| `MonadicTypes.Generators` | Compile-time callable wrappers for annotated methods | [Generated callables](#generated-callables) | Analyzer only |
 
 FluentValidation, OpenAPI test packages, and telemetry exporters are not runtime
 dependencies. Compatibility is pinned and tested separately.
@@ -44,41 +44,174 @@ invalid, uninitialized state and throws when observed; always construct it with
 
 ## API Guide
 
-The core operators follow conventional functional-programming names:
+Every authored public member is indexed below. Each member links to the section
+that explains its branch behavior, appropriate use, performance implications,
+and examples. An overload family is one conceptual member; its row enumerates
+the available callback or receiver shapes.
 
-| Result API | Purpose | Details |
-| --- | --- | --- |
-| `Ok`, `Fail`, `Result.Ok`, `Result.Fail` | Construct valued or `Unit` success/failure | [Construction](#result) |
-| `IsInitialized`, `IsSuccess`, `IsFailure`, `Value`, `Error` | Query or read state | [Construction](#result) |
-| `TryGetValue`, `TryGetError` | Inspect a branch at an imperative boundary | [Construction](#result) |
-| `Map`, `Bind`, `Flatten` | Transform or continue the success railway | [Railway composition](#railway-composition) |
-| `MapError`, `BindError`, `BindWidened`, `BiMap` | Transform, continue, or widen the failure railway | [Error composition](#error-composition) |
-| `Ensure`, `Recover` | Introduce a guard or recover from failure | [Railway composition](#railway-composition) |
-| `Tap`, `TapError`, `Finally` | Run explicit side effects without changing the value | [Side effects](#side-effects) |
-| `Match`, `Switch` | Exhaustively terminate both branches | [Consuming a result](#consuming-a-result) |
-| `ValueOr`, `ValueOrElse` | Deliberately reduce failure to a fallback value | [Consuming a result](#consuming-a-result) |
-| `Transpose`, `RequireSome` | Convert between Result and Option shapes | [Option and Result](#option-and-result) |
-| `Combine`, `Zip`, `ResultCombination.Map` | Compose independent Results, fail-fast | [Combination](#combining-independent-results) |
-| implicit value/error conversion | Enter a typed Result when context is unambiguous | [Construction](#result) |
+### Core Result API
 
-| Option API | Purpose | Details |
+| Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| `Some`, `None`, implicit nullable conversion | Construct presence or absence | [Option](#option) |
-| `HasValue`, `IsSome`, `IsNone`, `Value`, `TryGetValue` | Query or read presence | [Option](#option) |
-| `Map`, `Bind`, `Filter` | Transform, continue, or filter presence | [Option](#option) |
-| `Match`, `Switch`, `ValueOr`, `ValueOrElse` | Consume the two cases | [Option](#option) |
-| `ToResult`, `Transpose`, `RequireSome` | Move between Option and Result | [Option and Result](#option-and-result) |
+| [`Result<T,E>.Ok`](#result) | `Ok(T)` | Construct success explicitly. |
+| [`Result<T,E>.Fail`](#result) | `Fail(E)` | Construct failure explicitly. |
+| [`Result.Ok`](#result) | `Ok<E>()` | Construct `Result<Unit,E>` success. |
+| [`Result.Fail`](#result) | `Fail<E>(E)` | Construct `Result<Unit,E>` failure. |
+| [`Result<T,E>.IsInitialized`](#result) | `bool` | Distinguish a constructed Result from `default`. |
+| [`Result<T,E>.IsSuccess`](#result) | `bool` | Test for the success branch without reading it. |
+| [`Result<T,E>.IsFailure`](#result) | `bool` | Test for the failure branch without reading it. |
+| [`Result<T,E>.Value`](#result) | `T` | Read success or throw for failure/uninitialized state. |
+| [`Result<T,E>.Error`](#result) | `E` | Read failure or throw for success/uninitialized state. |
+| [`Result<T,E>.TryGetValue`](#result) | `out T` | Read success at an imperative boundary. |
+| [`Result<T,E>.TryGetError`](#result) | `out E` | Read failure at an imperative boundary. |
+| [`Result<T,E>.Map`](#railway-composition) | same-type delegate; type-changing delegate; caller-state; struct callable; generated token | Transform success without changing failure. |
+| [`Result<T,E>.Bind`](#railway-composition) | same/type-changing delegate; caller-state; struct callable; generated token; convertible error | Continue success with another Result. |
+| [`Result<T,E>.MapError`](#error-composition) | delegate; caller-state | Transform failure without changing success. |
+| [`Result<T,E>.BindError`](#error-composition) | delegate; caller-state; struct callable | Continue failure and optionally change its type. |
+| [`Result<T,E>.BiMap`](#error-composition) | success and failure delegates | Transform both branch types in one operation. |
+| [`Result<T,E>.Recover`](#railway-composition) | Result-returning failure delegate | Recover while retaining the same error type. |
+| [`Result<T,E>.Ensure`](#railway-composition) | predicate/error factory; caller-state | Turn success into failure when a guard is false. |
+| [`Result<T,E>.Tap`](#side-effects) | action; caller-state; struct action; generated token | Observe success and return the original Result. |
+| [`Result<T,E>.TapAsync`](#side-effects) | `Func<T,ValueTask>` | Await a success observation and return the original Result. |
+| [`Result<T,E>.TapError`](#side-effects) | action; caller-state; struct action; generated token | Observe failure and return the original Result. |
+| [`Result<T,E>.Finally`](#side-effects) | caller-state action | Run one action for either initialized branch. |
+| [`Result<T,E>.FinallyAsync`](#side-effects) | caller-state `ValueTask` callback | Await one action for either initialized branch. |
+| [`Result<T,E>.Match`](#consuming-a-result) | delegates; caller-state; two struct callables | Exhaustively reduce both branches to one type. |
+| [`Result<T,E>.Switch`](#consuming-a-result) | two actions | Execute exactly one terminal branch action. |
+| [`Result<T,E>.ValueOr`](#consuming-a-result) | eager fallback | Discard failure and return a fallback value. |
+| [`Result<T,E>.ValueOrElse`](#consuming-a-result) | lazy failure callback | Lazily derive a fallback from the error. |
+| [`Result<T,E>.ToString`](#result) | diagnostic representation | Format `Ok(...)`, `Fail(...)`, or `Uninitialized`. |
+| [`Result<T,E>` implicit conversions](#result) | from `T`; from `E` | Construct a typed Result where target context is unambiguous. |
+| [`Result<T,E>.Flatten`](#railway-composition) | nested Result | Remove one same-error Result layer. |
+| [`Result<Option<T>,E>.Transpose`](#option-and-result) | Result to Option | Convert to `Option<Result<T,E>>`. |
+| [`Result<Option<T>,E>.RequireSome`](#option-and-result) | lazy error factory | Require a present success value. |
+| [`Option<Result<T,E>>.Transpose`](#option-and-result) | Option to Result | Convert to `Result<Option<T>,E>`. |
+| [`ResultCombination.Combine`](#combining-independent-results) | two Results; `ReadOnlySpan<Result<Unit,E>>` | Fail-fast combination with `Unit` success. |
+| [`ResultCombination.Zip`](#combining-independent-results) | two heterogeneous Results | Combine successes into a named tuple. |
+| [`ResultCombination.Map`](#combining-independent-results) | two Results plus projection | Combine and project without an intermediate tuple API. |
+| [`Unit.Value`](#result) | singleton value | Represent a successful operation with no payload. |
+| [`Unit.ToString`](#result) | `()` | Produce the conventional unit representation. |
 
-| Additional API family | Purpose | Details |
+### Core Option And Callable API
+
+| Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| `AsyncResultExtensions` | Compose Result, Task, and ValueTask callbacks | [Async pipelines](#async-pipelines) |
-| `Effect`, `ResultEffectExtensions` | Convert selected thrown exceptions to typed failures | [Exception boundaries](#exception-boundaries) |
-| `Error`, `ErrorType`, `IErrorConvertible` | Structured and domain-specific failure representation | [Structured errors](#structured-errors) |
-| `ValidationIssue`, `ValidationErrors` | Accumulated validation failures and third-party mapping | [Validation compatibility](#validation-compatibility) |
-| `ErrorTelemetry`, `ErrorMetrics` | Optional vendor-neutral tracing and metrics | [Diagnostics](#diagnostics) |
-| `ResultHttpExtensions`, problem helpers, metadata | Typed HTTP and OpenAPI boundaries | [ASP.NET Core](#aspnet-core) |
-| callable interfaces, wrappers, generator | Generic dispatch for measured hot paths | [Hot paths](#hot-paths) |
-| complete layered usage | Domain, dependency, telemetry, and endpoint composition | [Complete application flow](#complete-application-flow) |
+| [`Option<T>.Some`](#option) | `Some(T)` | Construct guaranteed non-null presence. |
+| [`Option<T>.None`](#option) | static value | Construct absence; equivalent to `default`. |
+| [`Option<T>.HasValue`](#option) | `bool` | Test presence. |
+| [`Option<T>.IsSome`](#option) | `bool` | Functional alias for presence. |
+| [`Option<T>.IsNone`](#option) | `bool` | Test absence. |
+| [`Option<T>.Value`](#option) | `T` | Read presence or throw for `None`. |
+| [`Option<T>.TryGetValue`](#option) | `out T` | Read presence at an imperative boundary. |
+| [`Option<T>.Map`](#option) | delegate; caller-state; struct callable; generated token | Transform a present value. |
+| [`Option<T>.Bind`](#option) | delegate; caller-state; struct callable; generated token | Continue presence without nesting Options. |
+| [`Option<T>.Filter`](#option) | predicate; caller-state | Retain presence only when a predicate is true. |
+| [`Option<T>.Match`](#option) | some/none delegates | Exhaustively reduce presence and absence. |
+| [`Option<T>.Switch`](#option) | some/none actions | Execute exactly one terminal action. |
+| [`Option<T>.ValueOr`](#option) | eager fallback | Reduce absence to a fallback. |
+| [`Option<T>.ValueOrElse`](#option) | lazy fallback; caller-state | Lazily create a fallback without a closure. |
+| [`Option<T>` implicit conversion](#option) | nullable `T` | Convert null to `None` and non-null to `Some`. |
+| [`Option<T>.ToResult`](#option-and-result) | eager error; lazy error | Require presence and attach a typed failure. |
+| [`IValueFunction<TIn,TOut>.Invoke`](#hot-paths) | value-returning callable | Define generic, devirtualizable callback dispatch. |
+| [`IValueAction<T>.Invoke`](#hot-paths) | side-effect callable | Define generic, devirtualizable action dispatch. |
+| [`ValueFunction<TIn,TOut,TFunction>.ValueFunction`](#hot-paths) | callable constructor | Wrap a stateful or default struct callable. |
+| [`ValueFunction<TIn,TOut,TFunction>.Invoke`](#hot-paths) | forwarding call | Invoke the wrapped callable. |
+| [`ValueAction<T,TAction>.Invoke`](#hot-paths) | forwarding call | Invoke the wrapped action. |
+
+### Async And Effect API
+
+| Member | Overloads or value | Purpose |
+| --- | --- | --- |
+| [`MapAsync`](#async-pipelines) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Map success with a `ValueTask<T>` callback. |
+| [`MapTaskAsync`](#async-pipelines) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Map success with a `Task<T>` callback. |
+| [`BindAsync`](#async-pipelines) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind success with a `ValueTask<Result<T,E>>` callback. |
+| [`BindTaskAsync`](#async-pipelines) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind success with a `Task<Result<T,E>>` callback. |
+| [`BindErrorAsync`](#async-pipelines) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind failure with a `ValueTask<Result<T,E>>` callback. |
+| [`BindErrorTaskAsync`](#async-pipelines) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind failure with a `Task<Result<T,E>>` callback. |
+| [`Map` on awaitable Result](#async-pipelines) | ValueTask/Task receiver | Continue an async pipeline with synchronous success mapping. |
+| [`Bind` on awaitable Result](#async-pipelines) | ValueTask/Task receiver | Continue an async pipeline with synchronous success binding. |
+| [`BindError` on awaitable Result](#async-pipelines) | ValueTask/Task receiver | Continue an async pipeline with synchronous failure binding. |
+| [`Effect.Try`](#exception-boundaries) | broad exception; selected `TException` | Convert a synchronous thrown exception to failure. |
+| [`Effect.TryAsync`](#exception-boundaries) | broad exception; selected `TException` | Convert a ValueTask operation's exception to failure. |
+| [`Effect.TryTaskAsync`](#exception-boundaries) | broad/typed exception; with/without caller state | Convert a Task operation's exception to failure. |
+| [`ExceptionFilter.IsRecoverable`](#selected-exceptions) | `Exception` | Apply the library's broad exception-capture policy. |
+| [`Result<T,E>.TryMap`](#exception-boundaries) | broad exception; selected `TException` | Map success through throwing synchronous code. |
+| [`Result<T,E>.TryBind`](#exception-boundaries) | broad exception; selected `TException` | Bind success through throwing synchronous code. |
+| [`Result<T,E>.TryTap`](#exception-boundaries) | broad exception; selected `TException` | Observe success and convert a thrown exception. |
+| [`Result<T,E>.TryMapAsync`](#exception-boundaries) | broad exception; selected `TException` | Map success through throwing ValueTask code. |
+| [`Result<T,E>.TryTapAsync`](#exception-boundaries) | broad exception; selected `TException` | Observe success asynchronously and convert a thrown exception. |
+
+### Error And Validation API
+
+| Member | Overloads or value | Purpose |
+| --- | --- | --- |
+| [`Error.Error`](#structured-errors) | category constructor; code/message constructor | Construct a structured built-in error. |
+| [`Error.Type`](#structured-errors) | `ErrorType` | Read the bounded built-in category. |
+| [`Error.NumericType`](#structured-errors) | `int` | Read built-in or custom numeric category. |
+| [`Error.Code`](#structured-errors) | `string` | Read stable machine identity. |
+| [`Error.Message`](#structured-errors) | `string` | Read diagnostic/display text. |
+| [`Error.IsMessagePublic`](#structured-errors) | `bool` | Control default transport disclosure. |
+| [`Error.Cause`](#structured-errors) | `Exception?` | Read a retained exception with its original stack. |
+| [`Error.ThrowCause`](#structured-errors) | method | Rethrow the retained exception without resetting its stack. |
+| [`Error.Failure`](#structured-errors) | message; code/message/cause/visibility | Construct a general expected failure. |
+| [`Error.Unexpected`](#structured-errors) | message; exception/code | Construct a private unexpected failure. |
+| [`Error.Validation`](#structured-errors) | message; code/message/cause | Construct invalid-input failure. |
+| [`Error.Conflict`](#structured-errors) | code/message/cause/visibility | Construct state-conflict failure. |
+| [`Error.NotFound`](#structured-errors) | code/message/cause/visibility | Construct missing-resource failure. |
+| [`Error.Unauthorized`](#structured-errors) | code/message/cause/visibility | Construct authentication failure. |
+| [`Error.Forbidden`](#structured-errors) | code/message/cause/visibility | Construct authorization failure. |
+| [`Error.Unavailable`](#structured-errors) | code/message/cause/visibility | Construct temporary-service failure. |
+| [`Error.Timeout`](#structured-errors) | code/message/cause/visibility | Construct timeout failure. |
+| [`Error.RateLimited`](#structured-errors) | code/message/cause/visibility | Construct quota/rate failure. |
+| [`Error.Cancelled`](#structured-errors) | code/message/cause | Construct cancellation failure. |
+| [`Error.Custom`](#structured-errors) | numeric type/code/message/cause/visibility | Construct an application-defined category. |
+| [`Error.IO`](#structured-errors) | message | Construct the general I/O convenience error. |
+| [`Error.System`](#structured-errors) | message | Construct the general system convenience error. |
+| [`Error.ToString`](#structured-errors) | default; format/provider | Allocate `[CODE] message` text. |
+| [`Error.TryFormat`](#structured-errors) | destination span | Format without allocating a string. |
+| [`IErrorConvertible<TError>.ToError`](#error-composition) | conversion method | Convert compact domain error only at a boundary/failure. |
+| [`Result<T,E>.BindWidened`](#error-composition) | convertible continuation error | Keep compact inner errors until the failing branch is used. |
+| [`ErrorType`](#structured-errors) | all 13 enum values | Categorize transport and observability policy. |
+| [`ValidationIssue.ValidationIssue`](#validation-compatibility) | path/code/message/severity | Construct one immutable validation issue. |
+| [`ValidationIssue.Path`](#validation-compatibility) | `string` | Read the affected member path. |
+| [`ValidationIssue.Code`](#validation-compatibility) | `string` | Read stable issue identity. |
+| [`ValidationIssue.Message`](#validation-compatibility) | `string` | Read display text. |
+| [`ValidationIssue.Severity`](#validation-compatibility) | enum | Read error, warning, or information severity. |
+| [`ValidationErrors.ValidationErrors`](#validation-compatibility) | sequence; params array | Copy issues into immutable storage. |
+| [`ValidationErrors.Create`](#validation-compatibility) | delegate; caller-state; struct mapper | Map third-party failures without a runtime adapter dependency. |
+| [`ValidationErrors.Count`](#validation-compatibility) | `int` | Read issue count. |
+| [`ValidationErrors.this[int]`](#validation-compatibility) | indexer | Read one issue. |
+| [`ValidationErrors.AsSpan`](#validation-compatibility) | `ReadOnlySpan<ValidationIssue>` | Iterate without interface/enumerator allocation. |
+| [`ValidationErrors.GetEnumerator`](#validation-compatibility) | generic enumerator | Support standard collection iteration. |
+| [`ValidationSeverity`](#validation-compatibility) | `Error`, `Warning`, `Information` | Classify issue severity. |
+
+### Diagnostics, HTTP, And Generation API
+
+| Member | Overloads or value | Purpose |
+| --- | --- | --- |
+| [`ErrorTelemetry.Record`](#diagnostics) | activity/error/policy | Project an error into an existing BCL Activity. |
+| [`ErrorActivityStatusPolicy`](#diagnostics) | `Automatic`, `Preserve`, `MarkError` | Select Activity status mutation policy. |
+| [`ErrorMetrics.ErrorMetrics`](#diagnostics) | meter/code-dimension/counter-name | Create an optional caller-owned counter. |
+| [`ErrorMetrics.Disabled`](#diagnostics) | static value | Select the cheapest disabled metrics path. |
+| [`ErrorMetrics.IsEnabled`](#diagnostics) | `bool` | Check for a listener before expensive caller work. |
+| [`ErrorMetrics.Record`](#diagnostics) | `Error?` | Increment the error counter with bounded tags. |
+| [`Result<T,E>.ToHttpResult`](#aspnet-core) | Error; ValidationErrors; convertible error; custom delegates; struct mappers | Convert to strongly typed Minimal API results. |
+| [`IHttpResultMapper<TError,TResult>.Map`](#aspnet-core) | error/context | Define an allocation-free caller-owned HTTP failure mapper. |
+| [`DefaultErrorHttpResultMapper.Map`](#aspnet-core) | error/context | Apply the default Error problem policy. |
+| [`ErrorProblemDetails.Create`](#aspnet-core) | error/context | Create RFC ProblemDetails without executing it. |
+| [`ErrorProblemDetails.ToHttpResult`](#aspnet-core) | error/context | Create an executable ProblemHttpResult. |
+| [`ErrorProblemDetails.GetStatusCode`](#aspnet-core) | `ErrorType` | Read default category-to-status mapping. |
+| [`ValidationErrorProblemDetails.ToHttpResult`](#aspnet-core) | errors/context | Create typed validation problem output. |
+| [`ProducesErrors`](#aspnet-core) | `ReadOnlySpan<ErrorType>` | Add Minimal API response metadata without reflection. |
+| [`ProducesErrorAttribute.ProducesErrorAttribute`](#aspnet-core) | `ErrorType` | Add one controller response category. |
+| [`ProducesErrorAttribute.ErrorType`](#aspnet-core) | enum | Read configured category. |
+| [`ProducesErrorAttribute.Type`](#aspnet-core) | ProblemDetails type | Expose OpenAPI response body metadata. |
+| [`ProducesErrorAttribute.StatusCode`](#aspnet-core) | `int` | Expose mapped status metadata. |
+| [`ProducesErrorAttribute.Description`](#aspnet-core) | `null` | Leave description to the OpenAPI pipeline. |
+| [`ProducesErrorAttribute.ContentTypes`](#aspnet-core) | problem media types | Expose supported response content types. |
+| [`GenerateValueFunctionAttribute.GenerateValueFunctionAttribute`](#generated-callables) | default; generated-name constructor | Request a wrapper while retaining the original method. |
+| [`GenerateValueFunctionAttribute.Name`](#generated-callables) | optional name | Read the requested generated property name. |
+| [`Functions.<Method>` generated property](#generated-callables) | `ValueFunction` or `ValueAction` | Pass an inferred zero-state token to sync or async operators. |
 
 Prefer pipelines for ordinary flow. Reserve `TryGetValue`, `TryGetError`, and
 `Switch` for framework adapters, loops, or other explicit terminal boundaries.
@@ -341,6 +474,53 @@ Result<Receipt, CheckoutError> result = await ParseOrder(input)
     .Map(CreateReceipt);
 ```
 
+All six async operator families also accept generated `ValueFunction` tokens.
+There is no separate async-generation attribute: `[GenerateValueFunction]`
+adapts the method's actual return type. A method returning `ValueTask<T>` feeds
+`MapAsync`; `Task<T>` feeds `MapTaskAsync`; `ValueTask<Result<T,E>>` feeds
+`BindAsync` or `BindErrorAsync`; and the corresponding Task type feeds the
+Task-named operator.
+
+```csharp
+using MonadicTypes;
+using MonadicTypes.Async;
+
+public static partial class InventoryOperations
+{
+    [GenerateValueFunction]
+    public static ValueTask<Result<Reservation, CheckoutError>> ReserveAsync(
+        Order order) => inventory.ReserveAsync(order);
+
+    [GenerateValueFunction]
+    public static Task<Receipt> CreateReceiptAsync(
+        Reservation reservation) => receipts.CreateAsync(reservation);
+}
+
+Result<Receipt, CheckoutError> receipt = await parsedOrder
+    .BindAsync(InventoryOperations.Functions.ReserveAsync)
+    .MapTaskAsync(InventoryOperations.Functions.CreateReceiptAsync);
+
+// Annotation does not replace or hide the original method.
+ValueTask<Result<Reservation, CheckoutError>> pending =
+    InventoryOperations.ReserveAsync(order);
+```
+
+Generated wrappers are supported on `Result<T,E>`,
+`ValueTask<Result<T,E>>`, and `Task<Result<T,E>>`, so a token can be used before
+or after another asynchronous stage. Failure operators use the same rule:
+
+```csharp
+public static partial class RecoveryOperations
+{
+    [GenerateValueFunction]
+    public static ValueTask<Result<Order, FinalError>> RecoverAsync(
+        CheckoutError error) => retry.RecoverAsync(error);
+}
+
+Result<Order, FinalError> recovered = await failedOrder
+    .BindErrorAsync(RecoveryOperations.Functions.RecoverAsync);
+```
+
 Task-returning callback methods are named `MapTaskAsync`, `BindTaskAsync`, and
 `BindErrorTaskAsync`. ValueTask callbacks use `MapAsync`, `BindAsync`, and
 `BindErrorAsync`. Separate names are intentional: overloads differing only by
@@ -356,7 +536,7 @@ asynchronous operation.
 | --- | --- | --- |
 | `Map(value => ...)` | Default application code | Simplest call site; static delegates allocate nothing per invocation |
 | `Map(state, static (value, state) => ...)` | A lambda would capture caller state | Avoids closure allocation while retaining normal functions |
-| `Map(default(MyFunction))` | A benchmark proves delegate dispatch matters | Generic callable can inline and is materially faster in current primitive benchmarks |
+| `Map(Operations.Functions.Method)` | A benchmark proves delegate dispatch matters | Generated generic callable can inline without handwritten wrapper code |
 | `MapAsync(ValueTaskCallback)` | The operation naturally returns ValueTask | Completed paths avoid Task and async-state-machine allocation |
 | `MapTaskAsync(TaskCallback)` | Existing APIs naturally return Task | No adapter lambda or ambiguous Task/ValueTask overload resolution |
 
@@ -837,8 +1017,15 @@ public interface IInventoryClient
 
 public interface IPaymentClient
 {
-    // A null response means the payment was declined, not that the call failed.
-    Task<Payment?> ChargeAsync(Reservation reservation);
+    // None means the call succeeded but the payment was declined.
+    Task<Option<Payment>> ChargeAsync(Reservation reservation);
+}
+
+// Keep null at a third-party boundary instead of leaking it into application code.
+public sealed class LegacyPaymentClient(ILegacyPaymentSdk sdk) : IPaymentClient
+{
+    public async Task<Option<Payment>> ChargeAsync(Reservation reservation) =>
+        (Option<Payment>)await sdk.ChargeAsync(reservation);
 }
 
 public sealed class InventoryUnavailableException(string message)
@@ -900,17 +1087,15 @@ public sealed class CheckoutService(
     public async ValueTask<Result<Payment, CheckoutError>> ChargeAsync(
         Reservation reservation)
     {
-        Result<Payment?, CheckoutError> charged = await Effect.TryTaskAsync(
+        Result<Option<Payment>, CheckoutError> charged = await Effect.TryTaskAsync(
             (Client: payment, Reservation: reservation),
             static state => state.Client.ChargeAsync(state.Reservation),
             static (PaymentUnavailableException exception) => new CheckoutError(
                 CheckoutErrorCode.PaymentUnavailable,
                 exception));
 
-        return charged
-            .Map(static value => (Option<Payment>)value)
-            .RequireSome(static () => new CheckoutError(
-                CheckoutErrorCode.PaymentDeclined));
+        return charged.RequireSome(static () => new CheckoutError(
+            CheckoutErrorCode.PaymentDeclined));
     }
 }
 
@@ -922,14 +1107,41 @@ static ValueTask<Result<Receipt, CheckoutError>> CheckoutAsync(
         .Map(static payment => Receipt.From(payment));
 ```
 
-Only the two known dependency exceptions are converted. A null payment response
-becomes `Option.None`, then `RequireSome` gives that expected absence the
-`PaymentDeclined` domain meaning. A different thrown exception propagates to the
-global handler shown above, where it is logged and returned as a private 500
-problem. Retained causes on expected dependency errors remain available to
-tracing without changing their HTTP classification. The dependency calls pass
-client and request data as explicit tuple state; their static callbacks do not
-allocate closures.
+Only the two known dependency exceptions are converted. The payment contract
+uses `Option<Payment>` rather than `Payment?`: `Result` says whether the remote
+operation completed as expected, while `Option` says whether that successful
+operation produced a payment. `RequireSome` gives expected absence the
+`PaymentDeclined` domain meaning. A legacy nullable SDK is normalized once in
+its adapter, so null checks cannot spread through the application pipeline. A
+different thrown exception propagates to the global handler shown above, where
+it is logged and returned as a private 500 problem. Retained causes on expected
+dependency errors remain available to tracing without changing their HTTP
+classification. The dependency calls pass client and request data as explicit
+tuple state; their static callbacks do not allocate closures.
+
+Absence does not always become an error. An optional loyalty lookup can remain
+`Option` inside the dependency `Result`; only dependency failure stops the
+railway, while no account simply means no discount:
+
+```csharp
+Result<Option<LoyaltyAccount>, CheckoutError> loyalty =
+    await loyaltyClient.FindAsync(customerId);
+
+Result<Option<decimal>, CheckoutError> discountRate = loyalty.Map(
+    static account => account
+        .Filter(static value => value.IsActive)
+        .Map(static value => value.DiscountRate));
+
+Result<decimal, CheckoutError> total = discountRate.Map(
+    subtotal,
+    static (rate, amount) => amount * (1m - rate.ValueOr(0m)));
+```
+
+This distinguishes three states without nullable branching: dependency failure,
+successful lookup with no account, and successful lookup with an account. The
+caller-state `Result.Map` overload passes `subtotal` without a closure, and
+`Option.ValueOr` deliberately reduces absence only at the calculation that owns
+the fallback policy.
 
 At a Minimal API boundary, logging remains application-owned while tracing,
 metrics, HTTP conversion, and OpenAPI metadata use optional packages:
@@ -1033,6 +1245,8 @@ public readonly struct Increment : IValueFunction<int, int>
 Result<int, ParseError> incremented = result.Map(default(Increment));
 ```
 
+### Generated Callables
+
 The source generator can create public callable wrappers for public static
 methods while leaving the original method callable normally:
 
@@ -1077,6 +1291,29 @@ can create another generic instantiation in consumer code, increasing native
 binary size. Generate wrappers for measured hot operations, not every callback.
 Callers that do not need generic dispatch continue calling `Operations.Widen`
 normally and do not depend on the generated token.
+
+Do not annotate every method that happens to consume or return a Result. Use
+ordinary static method groups and delegates first: they are easier to debug,
+avoid extra generic NativeAOT instantiations, and already allocate 0 B per call
+when cached by the runtime. Add `[GenerateValueFunction]` when a representative
+benchmark shows callback dispatch is material, or when a library intentionally
+offers a pre-measured hot-path token. The generated member is additive: callers
+that do not use `Functions.<Method>` keep calling the original method and do not
+instantiate the wrapper path.
+
+The same recommendation applies to async methods. Generation can remove
+delegate dispatch around a completed ValueTask or Task, but it cannot remove an
+allocation made by the underlying operation or the state machine required by a
+genuinely pending operation. Compare the generated token with the static
+delegate under the application's actual completion pattern before accepting
+the additional native code size.
+
+The current full NativeAOT composition run measured a generated completed
+`MapAsync` at 6.3249 ns versus 11.7515 ns for the same-run static delegate, both
+at 0 B. That result supports generated wrappers for repeatedly executed,
+completed-async hot paths. It does not justify annotating unmeasured I/O-bound
+methods, where dependency latency dominates and every distinct wrapper can add
+a generic instantiation to the native binary.
 
 ## Performance Contract
 
