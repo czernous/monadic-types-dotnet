@@ -6,6 +6,25 @@ effect, diagnostic, and application-boundary workflows. Any addition must close
 a demonstrated gap, have explicit semantics, and include pure benchmarks and
 NativeAOT size evidence.
 
+## Completion Threshold
+
+The initial library is complete when:
+
+- Every retained public API supports a demonstrated application workflow and has
+  exhaustive behavioral documentation.
+- Unit, compatibility, generator, ASP.NET Core, and NativeAOT smoke tests pass.
+- Accepted hot paths preserve their allocation requirements and benchmark
+  baselines; new hot-path APIs have isolated measurements before acceptance.
+- Shipping projects remain reflection-free, trim-safe, and NativeAOT-compatible.
+- Package boundaries and optional integrations remain independently consumable.
+- The library has been exercised in maintained applications and material API
+  problems discovered there have been resolved.
+
+After that threshold, maintenance is limited primarily to correctness, security,
+runtime compatibility, and measured performance work. A new feature requires a
+recurring concrete use case that cannot be handled clearly at the application
+boundary; theoretical completeness alone is insufficient.
+
 ## Near Term
 
 - Complete the remaining intentional `Option`/nullable conversions without

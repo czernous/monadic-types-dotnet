@@ -12,6 +12,15 @@ allocation-free alternatives for measured hot paths.
 > This repository is experimental and unpublished. APIs can change without
 > compatibility shims until the first versioned release.
 
+## Project Intent
+
+This library is built primarily for the maintainer's applications and projects.
+Broader adoption is welcome but is not an objective, and the API will not expand
+to maximize popularity or cover every functional-programming abstraction. The
+intended endpoint is a small, dependable set of documented workflows that has
+been exercised in real applications and meets the repository's correctness,
+NativeAOT, allocation, performance, and compatibility gates.
+
 ## Packages
 
 | Project | Purpose | Guide | Runtime dependencies |
@@ -1670,8 +1679,9 @@ See [benchmark policy](docs/benchmarks.md), [accepted baselines](benchmarks/base
 
 ## Status And Licensing
 
-This repository is maintained primarily for personal experimentation and reuse;
-it currently carries no support or stability commitment.
+This repository is maintained primarily for use in the maintainer's applications
+and projects. Before its first versioned release, it carries no support or
+stability commitment.
 
 The library has a deliberately bounded scope. External pull requests and feature
 requests are not currently accepted; see the [contribution policy](CONTRIBUTING.md).
