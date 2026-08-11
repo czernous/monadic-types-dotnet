@@ -1683,12 +1683,6 @@ This repository is maintained primarily for use in the maintainer's applications
 and projects. Before its first versioned release, it carries no support or
 stability commitment.
 
-The library has a deliberately bounded scope. External pull requests and feature
-requests are not currently accepted; see the [contribution policy](CONTRIBUTING.md).
-Correctness, security, compatibility, and documentation defects may still be
-reported for maintainer review. After the first stable release, additions are
-expected to be exceptional rather than continuous API expansion.
-
 Licensed under the [Apache License 2.0](LICENSE). Commercial and workplace use,
 modification, and redistribution are permitted subject to the license terms,
 including preservation of the license, modification notices, and NOTICE
