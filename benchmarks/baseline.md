@@ -157,6 +157,7 @@ measurement establishes.
 | EffectSuccess | <= 2.7587 ns | no slower than accepted `MapResult` |
 | TypedCompletedValueTaskEffectSuccess | <= 20.6903 ns | no slower than the mixed completed async boundary target |
 | TypedCompletedTaskEffectSuccess | <= 20.6903 ns | no slower than the mixed completed async boundary target |
+| TypedCallerStateCompletedTaskEffectSuccess | <= 20.6903 ns | caller-state form must meet the same completed async boundary target |
 
 These are host-specific absolute gates, not universal API promises. Future CI
 should additionally compare ratios against an unchanged same-run control to
@@ -181,6 +182,7 @@ are diagnostic only because NativeAOT code layout differs.
 | EffectSuccess | 2.4475 ns | 0 B |
 | TypedCompletedValueTaskEffectSuccess | 17.3944 ns | 0 B |
 | TypedCompletedTaskEffectSuccess | 15.9606 ns | 0 B |
+| TypedCallerStateCompletedTaskEffectSuccess | 13.1561 ns | 0 B |
 
 The additive suite is isolated in its own executable. Re-isolating the
 primitive harness measured `Option.Map` at 2.6744 ns versus 2.7031 ns,
@@ -208,12 +210,20 @@ rejected because they omitted the explicit exception boundary. The corrected
 targets compare against the existing mixed completed async boundary, which also
 combines an awaitable callback with Result composition. The 14-method full run
 passed both corrected targets and retained 0 B for every row. A focused check of
-the caller-state typed Task overload measured 16.139 ns and 0 B; it remains an
-additive diagnostic until captured in a future full-suite layout.
+the caller-state typed Task overload measured 16.139 ns and 0 B.
 
-The same full run measured the readonly-ValueTask mixed pipeline at 19.9354 ns,
-down from 23.8402 ns before completed-path inlining and copy removal. It passes
-the 20.6903 ns architectural target but does not replace the 18.0510 ns
-historical regression baseline. The older absolute result remains the gate
-until a same-run unchanged control or repeat full run separates native layout
-variance from an implementation regression.
+The subsequent 15-method full run established the caller-state path at 13.1561
+ns and 0 B, 19.6% faster than the same-run non-state typed Task path at 16.3664
+ns. Passing a cached Task as explicit state with a static callback therefore
+removes capture requirements and improves this measured NativeAOT path without
+changing exception semantics.
+
+The 14-method full run measured the readonly-ValueTask mixed pipeline at 19.9354
+ns, down from 23.8402 ns before completed-path inlining and copy removal. Adding
+the caller-state benchmark changed native layout and measured it at 20.7550 ns
+with a 0.8034 ns 99.9% error interval. The target lies inside that interval, so
+this is not a statistically established target regression and rerunning for a
+favorable mean would be p-hacking. Neither run replaces the 18.0510 ns
+historical regression baseline. That older absolute result remains the gate
+until a same-run unchanged control separates native layout variance from an
+implementation regression.

@@ -160,7 +160,9 @@ if (saved.TryGetError(out SaveError error))
 
 Implicit conversion from `T` or `E` is available when the target Result type is
 already explicit. Prefer `Ok` and `Fail` when both types could be confused at a
-call site.
+call site. Value equality is structural because Result is a record struct.
+`ToString` returns `Ok(value)`, `Fail(error)`, or `Uninitialized`; use `Match`
+for user-facing formatting rather than depending on that diagnostic form.
 
 ### Railway Composition
 
@@ -363,7 +365,9 @@ benefit, not an intrinsic speed claim. Do not wrap a naturally returned Task in
 ValueTask merely to call `MapAsync`; use `MapTaskAsync`. Conversely, do not
 convert a naturally synchronous operation to an awaitable. Callable structs and
 caller-state overloads are performance tools and should be selected from
-benchmark evidence, not used mechanically throughout application code.
+benchmark evidence, not used mechanically throughout application code. In the
+current NativeAOT Effects benchmark, the typed caller-state completed Task path
+is 13.156 ns and 0 B versus 16.366 ns and 0 B for the non-state path.
 
 ## Exception Boundaries
 
@@ -376,6 +380,7 @@ domain error.
 | `Effect.Try` | Run a synchronous operation and map recoverable or one selected exception type |
 | `Effect.TryAsync` | Run a ValueTask operation; typed and broad exception overloads are available |
 | `Effect.TryTaskAsync` | Run a Task operation directly; typed, broad, and caller-state overloads are available |
+| `ExceptionFilter.IsRecoverable` | Apply the same broad-capture policy in a custom boundary |
 | `TryMap`, `TryMapAsync` | Map an existing success through code that can throw |
 | `TryBind` | Bind an existing success through Result-returning code that can throw |
 | `TryTap`, `TryTapAsync` | Run a throwing success side effect and turn its exception into failure |
@@ -384,6 +389,12 @@ Use the broad overload when every recoverable exception has the same domain
 meaning. Use a typed overload when only one exception is expected; all other
 types propagate. Use a caller-state overload when the operation needs local
 data and a capturing lambda would allocate.
+
+`ExceptionFilter.IsRecoverable` returns false for cancellation, stack overflow,
+out-of-memory, access violation, bad image, and similar runtime failures. It is
+public so a custom adapter can use exactly the same broad-capture policy. Typed
+Effect overloads intentionally do not apply this filter: selecting an exception
+type is an explicit decision to convert that type.
 
 ```csharp
 using MonadicTypes.Effects;
@@ -775,6 +786,7 @@ logs, traces, or records metrics automatically.
 | `ErrorActivityStatusPolicy.MarkError` | Always marks the Activity as error |
 | `new ErrorMetrics(meter, includeErrorCode, name)` | Creates a caller-owned error counter |
 | `ErrorMetrics.Record(error)` | Increments the enabled counter with bounded category tags |
+| `ErrorMetrics.IsEnabled` | Reports whether the underlying counter currently has a listener |
 | `ErrorMetrics.Disabled` | Zero-configuration disabled value |
 
 ```csharp

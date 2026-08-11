@@ -13,6 +13,9 @@
   primitive before their first result can become a regression baseline.
 - Architectural targets and stable regression baselines are recorded separately;
   passing a regression baseline alone does not prove that an implementation is fast.
+- Allocation gates are absolute. A timing regression is statistically actionable
+  when its confidence interval no longer overlaps the target or unchanged control;
+  rerunning solely to obtain a favorable mean is not an acceptance strategy.
 - NativeAOT size is verified separately by the smoke executable.
 
 Run the complete suite with:

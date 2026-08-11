@@ -27,6 +27,7 @@ public class CompositionBenchmarks
     private Func<int> _effect = null!;
     private Func<ValueTask<int>> _valueTaskEffect = null!;
     private Func<Task<int>> _taskEffect = null!;
+    private Task<int> _completedEffect = null!;
     private Func<Exception, BenchmarkError> _mapException = null!;
     private Func<TimeoutException, BenchmarkError> _mapTimeout = null!;
 
@@ -51,6 +52,7 @@ public class CompositionBenchmarks
         _effect = static () => 42;
         _valueTaskEffect = static () => ValueTask.FromResult(42);
         Task<int> completedEffect = Task.FromResult(42);
+        _completedEffect = completedEffect;
         _taskEffect = () => completedEffect;
         _mapException = static exception => new BenchmarkError(exception.HResult);
         _mapTimeout = static exception => new BenchmarkError(exception.HResult);
@@ -116,6 +118,14 @@ public class CompositionBenchmarks
     [Benchmark]
     public Result<int, BenchmarkError> TypedCompletedTaskEffectSuccess() =>
         Effect.TryTaskAsync<int, BenchmarkError, TimeoutException>(_taskEffect, _mapTimeout).Result;
+
+    /// <summary>Measures the typed caller-state Task effect without a capturing operation delegate.</summary>
+    [Benchmark]
+    public Result<int, BenchmarkError> TypedCallerStateCompletedTaskEffectSuccess() =>
+        Effect.TryTaskAsync(
+            _completedEffect,
+            static task => task,
+            _mapTimeout).Result;
 
     /// <summary>Compact benchmark error carried entirely by value.</summary>
     /// <param name="Code">Stable error code.</param>
