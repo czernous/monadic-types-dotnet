@@ -1,10 +1,10 @@
 # Release Closure Plan
 
 This is a finite pre-release closure list, not a commitment to continuous API
-growth. The library intentionally covers a focused Result, Option, error, effect,
-diagnostic, and application-boundary workflow rather than becoming a general
-C# functional-extensions collection. Any addition must close a demonstrated gap,
-have explicit semantics, and include pure benchmarks and NativeAOT size evidence.
+growth. The library intentionally covers its documented Result, Option, error,
+effect, diagnostic, and application-boundary workflows. Any addition must close
+a demonstrated gap, have explicit semantics, and include pure benchmarks and
+NativeAOT size evidence.
 
 ## Near Term
 
