@@ -3,11 +3,10 @@
 ## Run Metadata
 
 - Recorded: 2026-08-09
-- OS: Windows 11 25H2, build `10.0.26200.8973`
-- CPU: AMD Ryzen 7 4800H, 8 physical cores, 16 logical cores
+- OS: Windows 11 x64
 - Runtime: .NET 10.0.10, NativeAOT x86-64-v3
 - BenchmarkDotNet: `0.15.8`
-- Command: `dotnet run -c Release --project Benchmarks\\Benchmarks.csproj -- Primitives`
+- Command: `dotnet run -c Release --project benchmarks\MonadicTypes.Benchmarks -- --filter "*PrimitiveBenchmarks*"`
 - Job: 1 launch, 3 warmups, 10 measured iterations, 100,000,000 invocations
 
 | Method | Mean | Allocated |
@@ -89,7 +88,7 @@ They measured 2.721 ns and 2.703 ns respectively, both at 0 B. The latter beats
 its 2.7047 ns historical baseline and the same-run control, so the unified
 implementation is retained without changing the accepted threshold.
 
-After moving `Switch` to its isolated executable, the restored 28-method
+After isolating `Switch` in its own executable, the restored 28-method
 primitive run retained 0 B for every accepted path. Seventeen of nineteen timed
 historical controls improved. `MapResult` measured 2.7791 ns with a 0.1802 ns
 99.9% error interval overlapping its 2.7587 ns accepted value. The unchanged
@@ -128,7 +127,7 @@ managed allocation regression in these paths.
 
 ## Rich Error Representation Check
 
-The extraction audit compared the reference-backed `Error` with an equivalent
+The representation audit compared the reference-backed `Error` with an equivalent
 32-byte `readonly record struct` carrying category, numeric category, code,
 message/cause payload, and visibility. Both result shapes allocated 0 B during
 mapping, but the larger struct materially increased success-path copy cost.
@@ -146,24 +145,6 @@ The struct removes failure allocation but made the dominant success mapping
 reference. Allocation-sensitive domains should carry a compact domain-specific
 struct error through their hot path and convert to rich `Error` only at an
 observability or transport boundary.
-
-## Extraction Host-State Control
-
-Repeated NativeAOT compilation and benchmarking degraded this laptop below the
-historical accepted run. A final exact-job control therefore ran untouched CSFM
-immediately beside the extracted candidate rather than accepting absolute means
-from different host states.
-
-| Method | Extracted candidate | Same-session CSFM control | Historical accepted |
-|---|---:|---:|---:|
-| MapResult | 3.323 ns | 3.654 ns | 2.7587 ns |
-| MatchResult | 2.656 ns | 3.118 ns | 2.5200 ns |
-
-Both candidates remained at 0 B. The extracted build beat the same-session
-control by 9.1% and 14.8%, respectively, but neither degraded host result
-replaces the historical baseline. `Match`'s explicit success-first branch and
-cold uninitialized helper is retained. A cooled-host full rerun is required
-before claiming a new absolute best.
 
 ## Async, Composition, And Effects
 

@@ -192,8 +192,7 @@ public class PrimitiveBenchmarks
         public int Invoke(BenchmarkError error) => error.Code;
     }
 
-    // Mirrors the plain unmanaged ValueResult shape from the old monadic_types
-    // experiment so both implementations run in the same benchmark job.
+    // Compact unmanaged comparison shape used as a same-job control.
     public readonly record struct LegacyValueResult<T, TError>
         where T : unmanaged
         where TError : unmanaged

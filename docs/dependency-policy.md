@@ -14,6 +14,6 @@ Current development dependencies use licenses permitting commercial use:
 - BenchmarkDotNet: MIT, benchmarks only.
 - xUnit: Apache-2.0, tests only.
 
-Every dependency update requires license and vulnerability review. This file
-does not select the license for MonadicTypes itself; repository licensing will
-be handled separately before distribution.
+Every dependency update requires license and vulnerability review. MonadicTypes
+itself is distributed under the repository's Apache License 2.0; dependency
+licenses remain independent and must continue to be preserved.

@@ -1673,9 +1673,17 @@ See [benchmark policy](docs/benchmarks.md), [accepted baselines](benchmarks/base
 This repository is maintained primarily for personal experimentation and reuse;
 it currently carries no support or stability commitment.
 
-No license has been selected. Until a license is added explicitly, publication
-does not grant permission to copy, modify, redistribute, or use the code
-commercially.
+The library has a deliberately bounded scope. External pull requests and feature
+requests are not currently accepted; see the [contribution policy](CONTRIBUTING.md).
+Correctness, security, compatibility, and documentation defects may still be
+reported for maintainer review. After the first stable release, additions are
+expected to be exceptional rather than continuous API expansion.
+
+Licensed under the [Apache License 2.0](LICENSE). Commercial and workplace use,
+modification, and redistribution are permitted subject to the license terms,
+including preservation of the license, modification notices, and NOTICE
+attributions. The license includes an explicit contributor patent grant and
+does not grant rights to project names or trademarks.
 
 ## AI-Assisted Development
 

@@ -1,7 +1,10 @@
-# Extension Roadmap
+# Release Closure Plan
 
-The current CSFM API is the compatibility floor. Extensions are accepted only
-with explicit semantics, pure benchmarks, and NativeAOT size measurements.
+This is a finite pre-release closure list, not a commitment to continuous API
+growth. The library intentionally covers a focused Result, Option, error, effect,
+diagnostic, and application-boundary workflow rather than becoming a general
+C# functional-extensions collection. Any addition must close a demonstrated gap,
+have explicit semantics, and include pure benchmarks and NativeAOT size evidence.
 
 ## Near Term
 
@@ -15,7 +18,7 @@ with explicit semantics, pure benchmarks, and NativeAOT size measurements.
 - Define intentional equality, hashing, and formatting instead of inheriting
   record-generated behavior accidentally.
 
-## Optional Layers
+## Deferred Candidates
 
 - Expand Task and ValueTask side-effect composition after its API and allocation
   behavior have dedicated tests and benchmarks.
@@ -26,9 +29,15 @@ with explicit semantics, pure benchmarks, and NativeAOT size measurements.
   core error values remain independently projectable into any telemetry stack.
 - Applicative validation only after an accumulating production use case exists.
 
+Deferred candidates are not part of the release commitment. They should remain
+outside the core package and may be rejected when application-local composition
+is smaller or clearer.
+
 ## Non-Goals
 
 - Reflection, runtime code generation, mandatory DI, or service location.
 - Mutable pointer-backed Result state.
 - Pulling third-party validation, telemetry, or documentation stacks into core.
 - API parity for its own sake when an operation has no clear semantics or use case.
+- General-purpose collection, LINQ, or functional helpers unrelated to the
+  documented Result and Option workflows.
