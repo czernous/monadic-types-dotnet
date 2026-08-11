@@ -42,6 +42,10 @@ The types are deeply immutable value types. `default(Result<T,E>)` is an
 invalid, uninitialized state and throws when observed; always construct it with
 `Ok` or `Fail`. `default(Option<T>)` is `None`, and `Some(null)` is rejected.
 
+If the individual operators are familiar but structuring an application around
+them is not, start with [Designing Pipelines](#designing-pipelines) before using
+the member-by-member reference.
+
 ## API Guide
 
 Every authored public member is indexed below. Each member links to the section
@@ -256,6 +260,202 @@ row adds work without improving the inner loop.
 The library cannot change the cost of a database query, blocking callback, or
 allocating async dependency. Its benchmarks cover the wrapper and composition
 overhead, not the work performed inside callbacks.
+
+## Designing Pipelines
+
+A fluent pipeline starts with function signatures, not with a long expression.
+Write each operation to accept the previous stage's success value and return the
+smallest type that describes its own outcome. The pipeline operator then follows
+from that return type:
+
+| Stage signature | Operator | Meaning |
+| --- | --- | --- |
+| `T -> U` | `Map` | Infallible transformation of success. |
+| `T -> Result<U,E>` | `Bind` | A dependent operation that can fail. |
+| `T -> bool` plus `T -> E` | `Ensure` | A success value must satisfy a guard. |
+| `E -> F` | `MapError` | Translate failure without retrying work. |
+| `E -> Result<T,F>` | `BindError` | Recover, retry, or replace a failure. |
+| `T -> Option<U>` | `Map` or `Bind` on Option | Preserve expected absence explicitly. |
+| `T -> ValueTask<U>` | `MapAsync` | Asynchronous, infallible transformation. |
+| `T -> ValueTask<Result<U,E>>` | `BindAsync` | Asynchronous operation that can fail. |
+| `T -> Task<U>` | `MapTaskAsync` | Existing Task-returning transformation. |
+| `T -> Task<Result<U,E>>` | `BindTaskAsync` | Existing Task-returning fallible operation. |
+| `T -> void` or `T -> ValueTask` | `Tap` or `TapAsync` | Observe success without changing it. |
+
+The important distinction is `Map` versus `Bind`. If a function already returns
+`Result`, `Map` would produce `Result<Result<U,E>,E>`; `Bind` keeps one railway.
+The same rule applies to Option: use `Bind` when the callback already returns an
+Option instead of creating `Option<Option<T>>`.
+
+### Shape Leaf Operations First
+
+Keep parsing, validation, dependency access, and projection as independently
+testable functions. Their input and output types should line up:
+
+```csharp
+static Result<ParsedOrder, CheckoutError> ParseOrder(ReadOnlySpan<char> input);
+
+static Result<ValidatedOrder, CheckoutError> ValidateOrder(ParsedOrder order);
+
+static Order CreateOrder(ValidatedOrder order);
+
+static ValueTask<Result<Reservation, CheckoutError>> ReserveInventoryAsync(
+    Order order);
+
+static ValueTask<Result<Payment, CheckoutError>> ChargeAsync(
+    Reservation reservation);
+
+static Receipt CreateReceipt(Payment payment);
+```
+
+Once the signatures align, the orchestration method contains no branch plumbing
+and does not need a temporary Result for every operation:
+
+```csharp
+static ValueTask<Result<Receipt, CheckoutError>> CheckoutAsync(
+    ReadOnlySpan<char> input) => ParseOrder(input)
+        .Bind(ValidateOrder)
+        .Map(CreateOrder)
+        .BindAsync(ReserveInventoryAsync)
+        .BindAsync(ChargeAsync)
+        .Map(CreateReceipt);
+```
+
+Each callback runs only when the preceding stage succeeded. The first failure
+passes through unchanged, including across completed or pending asynchronous
+stages. Returning the pipeline directly also avoids an unnecessary orchestration
+`async` state machine when no local work is required after awaiting it.
+
+Contrast that with manually advancing a Result:
+
+```csharp
+static async ValueTask<Result<Receipt, CheckoutError>> CheckoutFragmentedAsync(
+    ReadOnlyMemory<char> input)
+{
+    Result<ParsedOrder, CheckoutError> parsed = ParseOrder(input.Span);
+    if (parsed.IsFailure)
+    {
+        return Result<Receipt, CheckoutError>.Fail(parsed.Error);
+    }
+
+    Result<ValidatedOrder, CheckoutError> validated = ValidateOrder(parsed.Value);
+    if (validated.IsFailure)
+    {
+        return Result<Receipt, CheckoutError>.Fail(validated.Error);
+    }
+
+    Result<Reservation, CheckoutError> reserved =
+        await ReserveInventoryAsync(CreateOrder(validated.Value));
+    if (reserved.IsFailure)
+    {
+        return Result<Receipt, CheckoutError>.Fail(reserved.Error);
+    }
+
+    Result<Payment, CheckoutError> paid = await ChargeAsync(reserved.Value);
+    return paid.Map(CreateReceipt);
+}
+```
+
+This version is not more explicit about business behavior; it repeats the same
+failure propagation four times and makes accidental error conversion or missed
+branches easier. Imperative inspection is still appropriate at loops and
+framework boundaries, but it should not be the default orchestration style.
+
+### Keep Decisions Inside Stages
+
+Pipelines do not eliminate branching. They move each decision into the function
+that owns it, where every branch returns the same typed shape:
+
+```csharp
+static Result<Payment, CheckoutError> SelectPayment(
+    PaymentAttempt attempt) => attempt.Status switch
+    {
+        PaymentStatus.Accepted => Result<Payment, CheckoutError>.Ok(attempt.Payment),
+        PaymentStatus.Declined => Result<Payment, CheckoutError>.Fail(
+            CheckoutError.PaymentDeclined),
+        PaymentStatus.RequiresAction => RequestAdditionalAction(attempt),
+        _ => Result<Payment, CheckoutError>.Fail(CheckoutError.InvalidPaymentState)
+    };
+
+Result<Receipt, CheckoutError> receipt = attemptResult
+    .Bind(SelectPayment)
+    .Map(CreateReceipt);
+```
+
+The orchestrator remains linear even though `SelectPayment` has several domain
+branches. Do not force complex branch logic into an inline lambda merely to keep
+everything on one line; a named function improves testing and lets the runtime
+cache a static method-group delegate.
+
+### Align Error Types
+
+Stages compose directly when they share one domain error type. Prefer a compact
+error union or enum-backed record for one use case instead of returning unrelated
+framework errors from every leaf:
+
+```csharp
+static Result<Order, CheckoutError> LoadOrder(OrderId id) =>
+    repository.Find(id).MapError(static error => error.Code switch
+    {
+        RepositoryErrorCode.Missing => CheckoutError.OrderNotFound,
+        _ => CheckoutError.StorageUnavailable
+    });
+```
+
+Translate a narrow dependency error once with `MapError`, or use `BindWidened`
+when conversion should happen only if an inner operation actually fails. Avoid
+repeatedly widening successful Results to rich `Error`; keep the compact domain
+error through the application pipeline and convert at HTTP, telemetry, or other
+integration boundaries.
+
+### Preserve Optional Success
+
+Use `Result<Option<T>,E>` when an operation can fail but successful execution may
+legitimately find nothing. Keep the Option in the pipeline until a stage owns the
+absence policy:
+
+```csharp
+Result<Option<Customer>, LookupError> lookup = FindCustomer(customerId);
+
+Result<Option<string>, LookupError> email = lookup.Map(
+    static customer => customer
+        .Filter(static value => value.AcceptsEmail)
+        .Map(static value => value.Email));
+
+Result<Customer, LookupError> requiredCustomer = lookup.RequireSome(
+    static () => LookupError.CustomerRequired);
+```
+
+The first branch preserves absence because sending email is optional. The second
+turns the same absence into failure because that operation requires a customer.
+Neither path uses null as an undocumented third state.
+
+### Introduce Side Effects Deliberately
+
+Keep value-producing stages pure where practical. Add logging, tracing, metrics,
+or auditing with `Tap` and `TapError`, then consume the Result once at the outer
+boundary:
+
+```csharp
+Results<Ok<Receipt>, ProblemHttpResult> response = checkout
+    .Tap(audit, static (receipt, sink) => sink.Record(receipt))
+    .TapError(observer, static (error, sink) => sink.Record(error))
+    .ToHttpResult(static receipt => TypedResults.Ok(receipt), httpContext);
+```
+
+If a side effect can fail as part of business behavior, it is not merely an
+observation and should return Result for use with `Bind`. If uncontrolled code
+can throw, put one `Effect.Try`, `TryMap`, or `TryBind` boundary around that call
+instead of catching exceptions throughout the pipeline.
+
+### Know Where To Stop
+
+A pipeline should describe one use case from input to boundary. End it with
+`Match`, `Switch`, `ToHttpResult`, or another explicit adapter. Do not unwrap a
+Result only to construct the same Result again, and do not turn every local
+calculation into a pipeline stage. Tight parsers, SIMD loops, and simple local
+branches remain ordinary C#; return one Result when that lower-level operation
+crosses back into fallible application flow.
 
 ## Result
 
