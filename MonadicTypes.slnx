@@ -2,6 +2,7 @@
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/MonadicTypes.Composition.Benchmarks/MonadicTypes.Composition.Benchmarks.csproj" />
     <Project Path="benchmarks/MonadicTypes.Benchmarks/MonadicTypes.Benchmarks.csproj" />
+    <Project Path="benchmarks/MonadicTypes.Switch.Benchmarks/MonadicTypes.Switch.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/MonadicTypes.Async/MonadicTypes.Async.csproj" />

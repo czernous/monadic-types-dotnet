@@ -5,10 +5,12 @@ using MonadicTypes;
 
 namespace MonadicTypes.AspNetCore;
 
+/// <summary>Maps result branches to strongly typed ASP.NET Core HTTP results.</summary>
 public static class ResultHttpExtensions
 {
     extension<T>(in Result<T, Error> result)
     {
+        /// <summary>Maps success with a delegate and structured failure with the default problem policy.</summary>
         public Results<TSuccess, ProblemHttpResult> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess>(
@@ -18,6 +20,7 @@ public static class ResultHttpExtensions
                 ? success(result.Value)
                 : ErrorProblemDetails.ToHttpResult(result.Error, httpContext);
 
+        /// <summary>Maps success with a value-function struct and structured failure with the default problem policy.</summary>
         public Results<TSuccess, ProblemHttpResult> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess,
@@ -33,6 +36,7 @@ public static class ResultHttpExtensions
 
     extension<T>(in Result<T, ValidationErrors> result)
     {
+        /// <summary>Maps success with a delegate and failures to a validation problem result.</summary>
         public Results<TSuccess, ValidationProblem> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess>(
@@ -42,6 +46,7 @@ public static class ResultHttpExtensions
                 ? success(result.Value)
                 : ValidationErrorProblemDetails.ToHttpResult(result.Error, httpContext);
 
+        /// <summary>Maps success with a value-function struct and failures to a validation problem result.</summary>
         public Results<TSuccess, ValidationProblem> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess,
@@ -57,6 +62,7 @@ public static class ResultHttpExtensions
     extension<T, TError>(in Result<T, TError> result)
         where TError : notnull, IErrorConvertible<Error>
     {
+        /// <summary>Maps success with a delegate and converts a domain error to the default problem result.</summary>
         public Results<TSuccess, ProblemHttpResult> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess>(
@@ -85,6 +91,7 @@ public static class ResultHttpExtensions
                 ? success(result.Value)
                 : failure(result.Error);
 
+        /// <summary>Maps failure with a value-type mapper while retaining a delegate success mapper.</summary>
         public Results<TSuccess, TFailure> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess,
@@ -100,6 +107,7 @@ public static class ResultHttpExtensions
                 ? success(result.Value)
                 : failure.Map(result.Error, httpContext);
 
+        /// <summary>Maps both branches through value-type mappers for allocation-free dispatch.</summary>
         public Results<TSuccess, TFailure> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess,

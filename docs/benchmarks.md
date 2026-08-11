@@ -27,7 +27,7 @@
 Run the complete suite with:
 
 ```powershell
-dotnet run -c Release --project benchmarks\MonadicTypes.Benchmarks -- --filter *
+dotnet run -c Release --project benchmarks\MonadicTypes.Benchmarks -- --filter "*PrimitiveBenchmarks*"
 ```
 
 Run additive composition benchmarks separately so new references cannot change
@@ -36,3 +36,13 @@ the NativeAOT code layout of the accepted primitive baseline:
 ```powershell
 dotnet run -c Release --project benchmarks\MonadicTypes.Composition.Benchmarks
 ```
+
+Run terminal `Switch` benchmarks in their isolated executable:
+
+```powershell
+dotnet run -c Release --project benchmarks\MonadicTypes.Switch.Benchmarks
+```
+
+New benchmark families use separate NativeAOT executables because adding methods
+to an accepted executable can change native code layout and perturb unchanged
+controls. Setup, delegates, and input construction remain in `GlobalSetup`.

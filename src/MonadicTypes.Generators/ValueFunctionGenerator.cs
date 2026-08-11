@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace MonadicTypes.Generators;
 
+/// <summary>Generates allocation-free value-function adapters for attributed static methods.</summary>
 [Generator(LanguageNames.CSharp)]
 public sealed class ValueFunctionGenerator : IIncrementalGenerator
 {
@@ -48,6 +49,8 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    /// <summary>Registers attribute emission, method discovery, validation, and adapter generation.</summary>
+    /// <param name="context">The incremental generator initialization context.</param>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(static output =>

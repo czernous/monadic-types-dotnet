@@ -5,8 +5,13 @@ using MonadicTypes;
 
 namespace MonadicTypes.AspNetCore;
 
+/// <summary>Converts validation issues to strongly typed validation problem results.</summary>
 public static class ValidationErrorProblemDetails
 {
+    /// <summary>Groups validation issues by path and preserves their machine-readable codes.</summary>
+    /// <param name="validationErrors">The validation issues to convert.</param>
+    /// <param name="httpContext">An optional context supplying a fallback trace identifier.</param>
+    /// <returns>A strongly typed validation problem result.</returns>
     public static ValidationProblem ToHttpResult(
         ValidationErrors validationErrors,
         HttpContext? httpContext = null)

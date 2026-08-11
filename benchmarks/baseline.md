@@ -39,6 +39,12 @@ These methods were introduced after the accepted baseline. Their values are the
 best observations across the current review runs, not accepted thresholds and
 not replacements for any accepted row above.
 
+Result `Switch` success and failure paths were targeted at no slower than the
+accepted 2.5200 ns `MatchResult`; Option `Switch` some and none paths were
+targeted at no slower than the accepted 2.7031 ns `MapOption`. Every path had
+to allocate 0 B. Callback delegates and sink state are created in `GlobalSetup`
+and are excluded from measured operations.
+
 | Method | Mean | Allocated |
 |---|---:|---:|
 | ConstructStructuredError | 7.1947 ns | 40 B |
@@ -48,6 +54,25 @@ not replacements for any accepted row above.
 | RecordErrorWithoutActivity | indistinguishable from overhead | 0 B |
 | RecordErrorWithoutMetricsListener | 1.4704 ns | 0 B |
 | FormatErrorToSpan | 14.4170 ns | 0 B |
+
+### Switch
+
+The 2026-08-11 isolated four-method NativeAOT run passed every target. These
+values are the first accepted regression baselines for terminal consumers:
+
+| Method | Accepted mean | Allocated |
+|---|---:|---:|
+| ResultSuccess | 2.140 ns | 0 B |
+| ResultFailure | 2.134 ns | 0 B |
+| OptionSome | 1.877 ns | 0 B |
+| OptionNone | 1.829 ns | 0 B |
+
+Switch originally ran inside `MonadicTypes.Benchmarks`. That 32-method run
+measured all four paths at 0 B and below target, but adding methods changed the
+NativeAOT layout and perturbed unchanged primitive controls. Its timings remain
+diagnostic only. `MonadicTypes.Switch.Benchmarks` now has independent output and
+intermediate paths, and the accepted primitive executable retains its original
+method set.
 
 ## Current Verification
 
@@ -63,6 +88,15 @@ the exact NativeAOT job after unifying the type-changing construction path.
 They measured 2.721 ns and 2.703 ns respectively, both at 0 B. The latter beats
 its 2.7047 ns historical baseline and the same-run control, so the unified
 implementation is retained without changing the accepted threshold.
+
+After moving `Switch` to its isolated executable, the restored 28-method
+primitive run retained 0 B for every accepted path. Seventeen of nineteen timed
+historical controls improved. `MapResult` measured 2.7791 ns with a 0.1802 ns
+99.9% error interval overlapping its 2.7587 ns accepted value. The unchanged
+legacy failure-construction control measured 0.2522 ns versus 0.2168 ns and is
+the only non-overlapping slower control. No accepted best value was replaced.
+This run confirms that the earlier 32-method slowdown was caused by benchmark
+executable layout contamination rather than a retained primitive code change.
 
 ## Decision
 
@@ -226,6 +260,16 @@ measured `GeneratedCompletedAsyncMap` at 6.3249 ns and 0 B against a same-run
 time. Every existing row remained at 0 B and within its architectural target.
 The generated row becomes its first accepted baseline; the same run does not
 replace better historical baselines for existing methods.
+
+An exploratory 2026-08-12 run exposed the internal broad exception filter as a
+new public helper. All 16 methods remained at 0 B and passed their architectural
+targets, including `EffectSuccess` at 2.2610 ns. However,
+`CompletedTaskBindError` measured 5.4780 ns versus its 4.5926 ns accepted best,
+`MixedCompletedPipeline` measured 19.6435 ns versus 18.0510 ns, and the typed
+caller-state Task effect measured 15.5163 ns versus 13.1561 ns. The helper did
+not execute on those success paths, indicating adverse NativeAOT layout rather
+than useful work. The public API expansion was rejected and its timings are not
+accepted; the filter remains an internal Effects implementation detail.
 
 The generated async overload was also instantiated in the NativeAOT smoke
 application. Publication and execution succeeded at 8,116,736 bytes on .NET

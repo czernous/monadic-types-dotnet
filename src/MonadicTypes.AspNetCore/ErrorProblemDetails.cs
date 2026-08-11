@@ -6,8 +6,13 @@ using MonadicTypes;
 
 namespace MonadicTypes.AspNetCore;
 
+/// <summary>Converts structured errors to default RFC 9457 problem details.</summary>
 public static class ErrorProblemDetails
 {
+    /// <summary>Creates problem details using the built-in category, visibility, and trace policy.</summary>
+    /// <param name="error">The initialized error to convert.</param>
+    /// <param name="httpContext">An optional context supplying a fallback trace identifier.</param>
+    /// <returns>A populated problem-details value.</returns>
     public static ProblemDetails Create(in Error error, HttpContext? httpContext = null)
     {
         EnsureInitialized(error);
@@ -30,9 +35,16 @@ public static class ErrorProblemDetails
         return details;
     }
 
+    /// <summary>Creates a strongly typed problem HTTP result for an error.</summary>
+    /// <param name="error">The initialized error to convert.</param>
+    /// <param name="httpContext">An optional context supplying a fallback trace identifier.</param>
+    /// <returns>A strongly typed problem result.</returns>
     public static ProblemHttpResult ToHttpResult(in Error error, HttpContext? httpContext = null) =>
         TypedResults.Problem(Create(error, httpContext));
 
+    /// <summary>Gets the default HTTP status code for an error category.</summary>
+    /// <param name="type">The initialized error category.</param>
+    /// <returns>The corresponding HTTP status code.</returns>
     public static int GetStatusCode(ErrorType type) => type switch
     {
         ErrorType.Validation => StatusCodes.Status400BadRequest,

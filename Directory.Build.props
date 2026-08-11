@@ -18,4 +18,9 @@
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\c\</BaseIntermediateOutputPath>
     <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.Switch.Benchmarks'">
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\s\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\s\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+  </PropertyGroup>
 </Project>

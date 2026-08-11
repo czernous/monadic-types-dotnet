@@ -9,6 +9,12 @@ namespace MonadicTypes;
 /// </summary>
 public static class ErrorTelemetry
 {
+    /// <summary>Records an error on a sampled activity without creating an activity.</summary>
+    /// <param name="activity">The caller-owned activity, or null to perform no work.</param>
+    /// <param name="error">The initialized error to record.</param>
+    /// <param name="statusPolicy">The policy controlling activity status mutation.</param>
+    /// <exception cref="ArgumentNullException">The activity is sampled and <paramref name="error"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="statusPolicy"/> or the error category is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Record(
         Activity? activity,
