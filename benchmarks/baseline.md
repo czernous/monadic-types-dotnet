@@ -58,6 +58,12 @@ primitive method. A focused rerun cleared the apparent `FunctionPointerMap` and
 implementation did not change, so NativeAOT layout or environmental variance
 must be excluded before changing code. The accepted values were not changed.
 
+On 2026-08-11, `MapResult` and `MapResultToOtherType` were run together under
+the exact NativeAOT job after unifying the type-changing construction path.
+They measured 2.721 ns and 2.703 ns respectively, both at 0 B. The latter beats
+its 2.7047 ns historical baseline and the same-run control, so the unified
+implementation is retained without changing the accepted threshold.
+
 ## Decision
 
 The explicit three-state `Result`, strict-null `Option`, and their composition
@@ -73,7 +79,7 @@ run.
 The managed function-pointer experiment did not outperform callable structs and
 does not justify an unsafe public API.
 
-The rich production `Error` is reference-backed: successful `Result<T, Error>`
+The rich `Error` is reference-backed: successful `Result<T, Error>`
 construction and mapping allocate 0 B, while constructing an actual error costs
 40 B on the failure path. Modules with high-rate failures can retain compact
 struct error carriers and convert at a boundary through `IErrorConvertible<T>`.
@@ -122,6 +128,92 @@ from different host states.
 Both candidates remained at 0 B. The extracted build beat the same-session
 control by 9.1% and 14.8%, respectively, but neither degraded host result
 replaces the historical baseline. `Match`'s explicit success-first branch and
-cold uninitialized helper are retained; `Map` remains implementation-identical
-to the accepted source. A cooled-host full rerun is required before claiming a
-new absolute best.
+cold uninitialized helper is retained. A cooled-host full rerun is required
+before claiming a new absolute best.
+
+## Async, Composition, And Effects
+
+Recorded on 2026-08-11 under the additive 250 ms NativeAOT job. Inputs,
+callbacks, errors, and completed awaitables were created in `GlobalSetup`.
+
+New operations do not define their own acceptance standard. Before promotion,
+each must satisfy the provisional architectural target below and allocate 0 B.
+Targets are derived from the accepted optimized primitives on this host; they
+are deliberately separate from the stable regression baseline that a passing
+measurement establishes.
+
+| Method | Architectural target | Reference |
+|---|---:|---|
+| BindErrorFailure | <= 8.8458 ns | no slower than accepted `BindResult` |
+| BindErrorSuccess | <= 5.5174 ns | at most 2x accepted `MapResult` |
+| CompletedTaskBindError | <= 13.7935 ns | at most 5x accepted `MapResult` |
+| CombineTwo | <= 2.2574 ns | at most 2x accepted `DirectResultBranch` |
+| ZipTwo | <= 5.5174 ns | at most 2x accepted `MapResult` |
+| TransposePresent | <= 2.9734 ns | accepted `MapOption` plus 10% shape allowance |
+| CompletedValueTaskMap | <= 13.5175 ns | at most 5x accepted type-changing `Map` |
+| CompletedAsyncMap | <= 13.7935 ns | at most 5x accepted `MapResult` |
+| MixedCompletedPipeline | <= 20.6903 ns | at most 7.5x accepted `MapResult` |
+| CompletedTaskReceiverMap | <= 13.7935 ns | at most 5x accepted `MapResult` |
+| EffectSuccess | <= 2.7587 ns | no slower than accepted `MapResult` |
+| TypedCompletedValueTaskEffectSuccess | <= 20.6903 ns | no slower than the mixed completed async boundary target |
+| TypedCompletedTaskEffectSuccess | <= 20.6903 ns | no slower than the mixed completed async boundary target |
+
+These are host-specific absolute gates, not universal API promises. Future CI
+should additionally compare ratios against an unchanged same-run control to
+separate code regressions from CPU power and thermal state.
+
+The 2026-08-11 full-suite confirmation passed every target. These full-suite
+measurements are the accepted stable regression baseline; focused-filter runs
+are diagnostic only because NativeAOT code layout differs.
+
+| Method | Accepted mean | Allocated |
+|---|---:|---:|
+| BindErrorFailure | 5.5825 ns | 0 B |
+| BindErrorSuccess | 5.0950 ns | 0 B |
+| CompletedTaskBindError | 4.5926 ns | 0 B |
+| CombineTwo | 1.7180 ns | 0 B |
+| ZipTwo | 4.0470 ns | 0 B |
+| TransposePresent | 2.7478 ns | 0 B |
+| CompletedValueTaskMap | 12.1341 ns | 0 B |
+| CompletedAsyncMap | 13.1221 ns | 0 B |
+| MixedCompletedPipeline | 18.0510 ns | 0 B |
+| CompletedTaskReceiverMap | 13.1966 ns | 0 B |
+| EffectSuccess | 2.4475 ns | 0 B |
+| TypedCompletedValueTaskEffectSuccess | 17.3944 ns | 0 B |
+| TypedCompletedTaskEffectSuccess | 15.9606 ns | 0 B |
+
+The additive suite is isolated in its own executable. Re-isolating the
+primitive harness measured `Option.Map` at 2.6744 ns versus 2.7031 ns,
+callable `Option.Map` at 0.4871 ns versus 0.5053 ns, and the function-pointer
+control at 2.055 ns versus 2.5183 ns. Type-changing delegate `Result.Map`
+reached 2.742 ns with a 2.663-2.820 ns confidence interval around its 2.7047 ns
+historical value. It remains at 0 B but needs cooled-host confirmation before
+claiming a better accepted baseline.
+
+Actively instantiating async, effects, typed exception, and caller-state Task
+paths grew the NativeAOT smoke binary from 8,089,088 to 8,128,512 bytes: 39,424
+bytes, or 0.49%. The smoke executable runs successfully after publication.
+
+An intermediate target-gate run measured `CompletedValueTaskMap` at 18.5213 ns
+against its 13.5175 ns target. It exposed both a copied `ValueTask` receiver and
+shared benchmark output directories that allowed one runner to overwrite the
+other. Passing the receiver by readonly reference measured 10.673 ns in a
+focused diagnostic run and 12.1341 ns in the final full-suite layout. Benchmark
+output and intermediate paths now use distinct short project keys, preventing
+cross-runner contamination without exceeding Windows NativeAOT linker path
+limits.
+
+The first typed async Effect targets used one-stage map thresholds and were
+rejected because they omitted the explicit exception boundary. The corrected
+targets compare against the existing mixed completed async boundary, which also
+combines an awaitable callback with Result composition. The 14-method full run
+passed both corrected targets and retained 0 B for every row. A focused check of
+the caller-state typed Task overload measured 16.139 ns and 0 B; it remains an
+additive diagnostic until captured in a future full-suite layout.
+
+The same full run measured the readonly-ValueTask mixed pipeline at 19.9354 ns,
+down from 23.8402 ns before completed-path inlining and copy removal. It passes
+the 20.6903 ns architectural target but does not replace the 18.0510 ns
+historical regression baseline. The older absolute result remains the gate
+until a same-run unchanged control or repeat full run separates native layout
+variance from an implementation regression.

@@ -1,19 +1,24 @@
 <Solution>
   <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/MonadicTypes.Composition.Benchmarks/MonadicTypes.Composition.Benchmarks.csproj" />
     <Project Path="benchmarks/MonadicTypes.Benchmarks/MonadicTypes.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/MonadicTypes.Async/MonadicTypes.Async.csproj" />
     <Project Path="src/MonadicTypes.AspNetCore/MonadicTypes.AspNetCore.csproj" />
     <Project Path="src/MonadicTypes.Diagnostics/MonadicTypes.Diagnostics.csproj" />
     <Project Path="src/MonadicTypes.Errors/MonadicTypes.Errors.csproj" />
+    <Project Path="src/MonadicTypes.Effects/MonadicTypes.Effects.csproj" />
     <Project Path="src/MonadicTypes.Generators/MonadicTypes.Generators.csproj" />
     <Project Path="src/MonadicTypes/MonadicTypes.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/MonadicTypes.Async.Tests/MonadicTypes.Async.Tests.csproj" />
     <Project Path="tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj" />
     <Project Path="tests/MonadicTypes.AspNetCore.Tests/MonadicTypes.AspNetCore.Tests.csproj" />
     <Project Path="tests/MonadicTypes.Diagnostics.Tests/MonadicTypes.Diagnostics.Tests.csproj" />
     <Project Path="tests/MonadicTypes.Errors.Tests/MonadicTypes.Errors.Tests.csproj" />
+    <Project Path="tests/MonadicTypes.Effects.Tests/MonadicTypes.Effects.Tests.csproj" />
     <Project Path="tests/MonadicTypes.FluentValidation.CompatibilityTests/MonadicTypes.FluentValidation.CompatibilityTests.csproj" />
     <Project Path="tests/MonadicTypes.Generators.Tests/MonadicTypes.Generators.Tests.csproj" />
     <Project Path="tests/MonadicTypes.Tests/MonadicTypes.Tests.csproj" />

@@ -164,17 +164,6 @@ public class ResultTests
         Assert.Equal(source, returned);
     }
 
-    [Fact]
-    public void BindError_ConvertsDomainErrorWithoutBoxingOrManualNarrowing()
-    {
-        Result<int, string> source = Result<int, string>.Ok(42);
-
-        Result<long, string> result = source.BindError(
-            static value => Result<long, ConvertibleError>.Fail(new ConvertibleError($"E{value}")));
-
-        Assert.Equal("E42", result.Error);
-    }
-
     private readonly struct Increment : IValueFunction<int, int>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,8 +199,4 @@ public class ResultTests
         public int Invoke(string value) => value.Length;
     }
 
-    private readonly record struct ConvertibleError(string Code) : IErrorConvertible<string>
-    {
-        public string ToError() => Code;
-    }
 }

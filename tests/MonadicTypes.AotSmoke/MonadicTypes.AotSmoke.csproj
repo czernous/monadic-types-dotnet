@@ -7,7 +7,9 @@
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\MonadicTypes.Async\MonadicTypes.Async.csproj" />
     <ProjectReference Include="..\..\src\MonadicTypes.AspNetCore\MonadicTypes.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\MonadicTypes.Diagnostics\MonadicTypes.Diagnostics.csproj" />
+    <ProjectReference Include="..\..\src\MonadicTypes.Effects\MonadicTypes.Effects.csproj" />
   </ItemGroup>
 </Project>

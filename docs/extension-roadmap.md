@@ -5,12 +5,10 @@ with explicit semantics, pure benchmarks, and NativeAOT size measurements.
 
 ## Near Term
 
-- Complete `Option`/nullable and `Option`/`Result` conversions.
-- Add `Flatten` and `Transpose` where signatures remain unambiguous.
-- Add explicit exception-to-error `Try` transformations from the older result
-  experiments without adopting pointer ownership or consumable value semantics.
-- Complete type-changing and caller-state async composition without a combinatorial
-  overload explosion.
+- Complete the remaining intentional `Option`/nullable conversions without
+  introducing ambiguous implicit operators.
+- Add caller-state async composition only where profiling shows delegate capture;
+  do not create a combinatorial overload matrix speculatively.
 - Maintain generic validation-source mappers so FluentValidation compatibility
   needs no runtime dependency. Compatibility tests pin the exact third-party
   version and upgrades are explicit maintenance work.
@@ -19,9 +17,10 @@ with explicit semantics, pure benchmarks, and NativeAOT size measurements.
 
 ## Optional Layers
 
-- Task and ValueTask composition helpers.
-- Effects helpers for explicit exception capture.
-- ASP.NET Core RFC 9457 and OpenAPI integration.
+- Expand Task and ValueTask side-effect composition after its API and allocation
+  behavior have dedicated tests and benchmarks.
+- Extend ASP.NET Core OpenAPI metadata only where generated documents have a
+  verified compatibility gap.
 - Optional `ActivitySource` and `Meter` diagnostics. This adapter remains
   provisional until production audits confirm that its event model is useful;
   core error values remain independently projectable into any telemetry stack.

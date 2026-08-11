@@ -6,10 +6,9 @@ namespace MonadicTypes;
 /// </summary>
 public readonly record struct Unit
 {
+    /// <summary>Gets the sole unit value.</summary>
     public static Unit Value => default;
 
-    [Obsolete("Use Unit.Value.")]
-    public static Unit Default => default;
-
+    /// <summary>Returns the canonical unit representation.</summary>
     public override string ToString() => "()";
 }

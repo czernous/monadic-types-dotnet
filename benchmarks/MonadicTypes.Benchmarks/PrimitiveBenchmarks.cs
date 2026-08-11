@@ -161,9 +161,15 @@ public class PrimitiveBenchmarks
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static unsafe Result<int, BenchmarkError> MapWithPointer(
         in Result<int, BenchmarkError> result,
-        delegate* managed<int, int> map) => result.IsSuccess
-            ? Result<int, BenchmarkError>.Ok(map(result.Value))
-            : Result<int, BenchmarkError>.Fail(result.Error);
+        delegate* managed<int, int> map)
+    {
+        if (result.TryGetValue(out int value))
+        {
+            return Result<int, BenchmarkError>.Ok(map(value));
+        }
+
+        return Result<int, BenchmarkError>.Fail(result.Error);
+    }
 
     public readonly record struct BenchmarkError(int Code);
 

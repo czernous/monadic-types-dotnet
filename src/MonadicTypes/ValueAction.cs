@@ -6,6 +6,7 @@ namespace MonadicTypes;
 public readonly struct ValueAction<T, TAction> : IValueAction<T>
     where TAction : struct, IValueAction<T>
 {
+    /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Invoke(T value) => default(TAction).Invoke(value);
 }

@@ -10,6 +10,7 @@ public sealed class ValidationErrors : IReadOnlyList<ValidationIssue>
 {
     private readonly ValidationIssue[] _issues;
 
+    /// <summary>Copies a non-empty sequence of validation issues.</summary>
     public ValidationErrors(IEnumerable<ValidationIssue> issues)
     {
         ArgumentNullException.ThrowIfNull(issues);
@@ -20,6 +21,7 @@ public sealed class ValidationErrors : IReadOnlyList<ValidationIssue>
         }
     }
 
+    /// <summary>Copies a non-empty array of validation issues.</summary>
     public ValidationErrors(params ValidationIssue[] issues)
     {
         ArgumentNullException.ThrowIfNull(issues);
@@ -84,9 +86,13 @@ public sealed class ValidationErrors : IReadOnlyList<ValidationIssue>
         return new ValidationErrors(issues, takeOwnership: true);
     }
 
+    /// <summary>Gets the number of validation issues.</summary>
     public int Count => _issues.Length;
+    /// <summary>Gets the issue at <paramref name="index"/>.</summary>
     public ValidationIssue this[int index] => _issues[index];
+    /// <summary>Returns a zero-allocation readonly view over the owned issues.</summary>
     public ReadOnlySpan<ValidationIssue> AsSpan() => _issues;
+    /// <summary>Returns an enumerator over the owned issues.</summary>
     public IEnumerator<ValidationIssue> GetEnumerator() =>
         ((IEnumerable<ValidationIssue>)_issues).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => _issues.GetEnumerator();

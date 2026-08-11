@@ -5,6 +5,17 @@ namespace MonadicTypes.Tests;
 public class ErrorTests
 {
     [Fact]
+    public void BindWidened_ConvertsOnlyContinuationFailure()
+    {
+        Result<int, Error> source = Result<int, Error>.Ok(42);
+
+        Result<long, Error> result = source.BindWidened(
+            static value => Result<long, DomainError>.Fail(new DomainError($"E{value}")));
+
+        Assert.Equal("E42", result.Error.Code);
+    }
+
+    [Fact]
     public void ResultStoresErrorAsOneReferenceOnSuccess()
     {
         Assert.Equal(IntPtr.Size, Unsafe.SizeOf<Error>());
@@ -73,6 +84,21 @@ public class ErrorTests
     }
 
     [Fact]
+    public void CategoryFactory_PreservesCauseWithoutChangingClassification()
+    {
+        TimeoutException cause = new("gateway timeout");
+
+        Error error = Error.Unavailable(
+            "PAYMENT_UNAVAILABLE",
+            "Payment is temporarily unavailable.",
+            cause: cause);
+
+        Assert.Equal(ErrorType.Unavailable, error.Type);
+        Assert.Same(cause, error.Cause);
+        Assert.False(error.IsMessagePublic);
+    }
+
+    [Fact]
     public void Custom_PreservesApplicationDefinedNumericType()
     {
         Error error = Error.Custom(1001, "PAYMENT_DECLINED", "Payment declined", true);
@@ -103,4 +129,9 @@ public class ErrorTests
     }
 
     private static void ThrowOriginalException() => throw new InvalidOperationException("failure");
+
+    private readonly record struct DomainError(string Code) : IErrorConvertible<Error>
+    {
+        public Error ToError() => Error.Failure(Code, "Domain failure");
+    }
 }

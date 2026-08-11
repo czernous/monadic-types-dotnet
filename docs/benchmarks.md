@@ -9,10 +9,21 @@
   BenchmarkDotNet adapt invocation counts to the host.
 - Any managed allocation in an accepted success/composition path is a failure.
 - A slower run does not replace the accepted baseline without repeat evidence.
+- New methods receive an architectural target derived from an analogous accepted
+  primitive before their first result can become a regression baseline.
+- Architectural targets and stable regression baselines are recorded separately;
+  passing a regression baseline alone does not prove that an implementation is fast.
 - NativeAOT size is verified separately by the smoke executable.
 
 Run the complete suite with:
 
 ```powershell
 dotnet run -c Release --project benchmarks\MonadicTypes.Benchmarks -- --filter *
+```
+
+Run additive composition benchmarks separately so new references cannot change
+the NativeAOT code layout of the accepted primitive baseline:
+
+```powershell
+dotnet run -c Release --project benchmarks\MonadicTypes.Composition.Benchmarks
 ```

@@ -20,6 +20,7 @@ public sealed record Error : ISpanFormattable
         public Exception Cause { get; } = cause;
     }
 
+    /// <summary>Creates an error in a built-in category.</summary>
     public Error(
         ErrorType type,
         string code,
@@ -34,6 +35,7 @@ public sealed record Error : ISpanFormattable
         }
     }
 
+    /// <summary>Creates a general failure with a private diagnostic message.</summary>
     public Error(string code, string message)
         : this(ErrorType.Failure, code, message)
     {
@@ -62,9 +64,13 @@ public sealed record Error : ISpanFormattable
         IsMessagePublic = isMessagePublic;
     }
 
+    /// <summary>Gets the broad built-in category.</summary>
     public ErrorType Type { get; }
+    /// <summary>Gets the stable numeric category, including custom categories.</summary>
     public int NumericType { get; }
+    /// <summary>Gets the stable machine-readable error code.</summary>
     public string Code => _code ?? throw UninitializedError();
+    /// <summary>Gets the diagnostic message.</summary>
     public string Message => _detail switch
     {
         string message => message,
@@ -72,6 +78,7 @@ public sealed record Error : ISpanFormattable
         MessageAndCause detail => detail.Message,
         _ => throw UninitializedError()
     };
+    /// <summary>Gets whether adapters may safely expose <see cref="Message"/> to clients.</summary>
     public bool IsMessagePublic { get; }
     /// <summary>
     /// Retained exception for telemetry. Use <see cref="ThrowCause"/> rather than
@@ -84,6 +91,8 @@ public sealed record Error : ISpanFormattable
         _ => null
     };
 
+    /// <summary>Rethrows the retained cause while preserving its original stack trace.</summary>
+    /// <exception cref="InvalidOperationException">No cause is retained.</exception>
     [DoesNotReturn]
     public void ThrowCause()
     {
@@ -95,51 +104,98 @@ public sealed record Error : ISpanFormattable
         ExceptionDispatchInfo.Throw(cause);
     }
 
+    /// <summary>Creates a general failure with the default code.</summary>
     public static Error Failure(string message) =>
         new(ErrorType.Failure, "FAILURE", message);
 
-    public static Error Failure(string code, string message, bool isMessagePublic = false) =>
-        new(ErrorType.Failure, code, message, isMessagePublic);
+    /// <summary>Creates a general failure with a caller-defined code and visibility.</summary>
+    public static Error Failure(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Failure, code, message, isMessagePublic, cause);
 
+    /// <summary>Creates an unexpected failure without a retained exception.</summary>
     public static Error Unexpected(string message) =>
         new(ErrorType.Unexpected, "UNEXPECTED_FAILURE", message);
 
+    /// <summary>Creates an unexpected failure that retains <paramref name="cause"/> for telemetry and rethrow.</summary>
     public static Error Unexpected(Exception cause, string code = "UNEXPECTED_FAILURE")
     {
         ArgumentNullException.ThrowIfNull(cause);
         return new(ErrorType.Unexpected, code, cause.Message, cause: cause);
     }
 
+    /// <summary>Creates a public validation failure with the default code.</summary>
     public static Error Validation(string message) =>
         new(ErrorType.Validation, "VALIDATION_FAILURE", message, isMessagePublic: true);
 
-    public static Error Validation(string code, string message) =>
-        new(ErrorType.Validation, code, message, isMessagePublic: true);
+    /// <summary>Creates a public validation failure with a caller-defined code.</summary>
+    public static Error Validation(string code, string message, Exception? cause = null) =>
+        new(ErrorType.Validation, code, message, isMessagePublic: true, cause);
 
-    public static Error Conflict(string code, string message, bool isMessagePublic = true) =>
-        new(ErrorType.Conflict, code, message, isMessagePublic);
+    /// <summary>Creates a conflict error.</summary>
+    public static Error Conflict(
+        string code,
+        string message,
+        bool isMessagePublic = true,
+        Exception? cause = null) =>
+        new(ErrorType.Conflict, code, message, isMessagePublic, cause);
 
-    public static Error NotFound(string code, string message, bool isMessagePublic = true) =>
-        new(ErrorType.NotFound, code, message, isMessagePublic);
+    /// <summary>Creates a resource-not-found error.</summary>
+    public static Error NotFound(
+        string code,
+        string message,
+        bool isMessagePublic = true,
+        Exception? cause = null) =>
+        new(ErrorType.NotFound, code, message, isMessagePublic, cause);
 
-    public static Error Unauthorized(string code, string message, bool isMessagePublic = false) =>
-        new(ErrorType.Unauthorized, code, message, isMessagePublic);
+    /// <summary>Creates an authentication-required error.</summary>
+    public static Error Unauthorized(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Unauthorized, code, message, isMessagePublic, cause);
 
-    public static Error Forbidden(string code, string message, bool isMessagePublic = false) =>
-        new(ErrorType.Forbidden, code, message, isMessagePublic);
+    /// <summary>Creates an authorization-denied error.</summary>
+    public static Error Forbidden(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Forbidden, code, message, isMessagePublic, cause);
 
-    public static Error Unavailable(string code, string message, bool isMessagePublic = false) =>
-        new(ErrorType.Unavailable, code, message, isMessagePublic);
+    /// <summary>Creates a service-unavailable error.</summary>
+    public static Error Unavailable(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Unavailable, code, message, isMessagePublic, cause);
 
-    public static Error Timeout(string code, string message, bool isMessagePublic = false) =>
-        new(ErrorType.Timeout, code, message, isMessagePublic);
+    /// <summary>Creates a timeout error.</summary>
+    public static Error Timeout(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Timeout, code, message, isMessagePublic, cause);
 
-    public static Error RateLimited(string code, string message, bool isMessagePublic = false) =>
-        new(ErrorType.RateLimited, code, message, isMessagePublic);
+    /// <summary>Creates a rate-limit error.</summary>
+    public static Error RateLimited(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.RateLimited, code, message, isMessagePublic, cause);
 
-    public static Error Cancelled(string code, string message) =>
-        new(ErrorType.Cancelled, code, message);
+    /// <summary>Creates a cancellation error.</summary>
+    public static Error Cancelled(string code, string message, Exception? cause = null) =>
+        new(ErrorType.Cancelled, code, message, cause: cause);
 
+    /// <summary>Creates a consumer-defined error category with a positive numeric identifier.</summary>
     public static Error Custom(
         int numericType,
         string code,
@@ -155,23 +211,28 @@ public sealed record Error : ISpanFormattable
         return new(ErrorType.Custom, numericType, code, message, isMessagePublic, cause);
     }
 
+    /// <summary>Creates a general input/output failure with the standard code.</summary>
     public static Error IO(string message) =>
         new(ErrorType.Failure, "IO_FAILURE", message);
 
+    /// <summary>Creates an unexpected system failure with the standard code.</summary>
     public static Error System(string message) =>
         new(ErrorType.Unexpected, "SYSTEM_FAILURE", message);
 
+    /// <inheritdoc />
     public override string ToString() => string.Create(
         GetFormattedLength(),
         this,
         static (destination, error) => error.Format(destination));
 
+    /// <inheritdoc />
     public string ToString(string? format, IFormatProvider? formatProvider)
     {
         ValidateFormat(format);
         return ToString();
     }
 
+    /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryFormat(
         Span<char> destination,

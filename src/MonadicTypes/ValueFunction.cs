@@ -11,8 +11,11 @@ public struct ValueFunction<TIn, TOut, TFunction> : IValueFunction<TIn, TOut>
 {
     private TFunction _function;
 
+    /// <summary>Creates a wrapper around <paramref name="function"/>.</summary>
+    /// <param name="function">Callable value to wrap.</param>
     public ValueFunction(TFunction function) => _function = function;
 
+    /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TOut Invoke(TIn value) => _function.Invoke(value);
 }

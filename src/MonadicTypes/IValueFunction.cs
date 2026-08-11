@@ -6,5 +6,8 @@ namespace MonadicTypes;
 /// </summary>
 public interface IValueFunction<in TIn, out TOut>
 {
+    /// <summary>Transforms <paramref name="value"/> into an output value.</summary>
+    /// <param name="value">Input value.</param>
+    /// <returns>The transformed output.</returns>
     TOut Invoke(TIn value);
 }
