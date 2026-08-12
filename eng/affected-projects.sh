@@ -40,7 +40,7 @@ done < <(git diff --name-only --diff-filter=ACMRTUXB "$base" "$head")
 affects_all=false
 for changed in "${changed_files[@]:-}"; do
     case "$changed" in
-        .editorconfig|.gitattributes|BannedSymbols.txt|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|global.json|MonadicTypes.slnx|src/Directory.Build.props|docs/package-readme.md|eng/*)
+        .editorconfig|.gitattributes|.github/*|BannedSymbols.txt|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|global.json|MonadicTypes.slnx|src/Directory.Build.props|docs/package-readme.md|eng/*)
             affects_all=true
             break
             ;;
