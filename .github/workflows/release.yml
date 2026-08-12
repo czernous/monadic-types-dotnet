@@ -23,8 +23,35 @@ env:
   DOTNET_NOLOGO: true
 
 jobs:
+  validate-aot:
+    name: Validate NativeAOT (${{ matrix.rid }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-latest
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.3xx
+      - name: Restore NativeAOT toolchain
+        run: dotnet restore tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -r ${{ matrix.rid }} --force-evaluate
+      - name: Publish NativeAOT smoke executable
+        run: dotnet publish tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -c Release -r ${{ matrix.rid }} --no-restore
+
   release:
     name: Build GitHub release
+    needs: validate-aot
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.version.outputs.tag }}
