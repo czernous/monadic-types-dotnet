@@ -60,6 +60,25 @@ where measurement justifies generated callables:
 dotnet add package MonadicTypes.NET.Generators --prerelease
 ```
 
+## Contents
+
+- [Mental model](#mental-model)
+- [Public API index](#api-guide)
+- [Efficient use](#efficient-use)
+- [Designing pipelines](#designing-pipelines)
+- [Result](#result)
+- [Option](#option)
+- [Async pipelines](#async-pipelines)
+- [Exception boundaries](#exception-boundaries)
+- [Structured errors](#structured-errors)
+- [Validation compatibility](#validation-compatibility)
+- [ASP.NET Core](#aspnet-core)
+- [Diagnostics](#diagnostics)
+- [Complete application flow](#complete-application-flow)
+- [Hot paths and generated callables](#hot-paths)
+- [Performance contract](#performance-contract)
+- [Status and licensing](#status-and-licensing)
+
 FluentValidation, OpenAPI test packages, and telemetry exporters are not runtime
 dependencies. Compatibility is pinned and tested separately.
 
@@ -1707,14 +1726,14 @@ and [dependency policy](docs/dependency-policy.md).
 
 ## Status And Licensing
 
-Versioning, Git tags, GitHub Releases, and optional trusted NuGet publication are
-defined in the [release policy](docs/releases.md). Development builds use a
-`0.1.0-dev` version until an explicit release tag supplies the immutable package
+Versioning, Git tags, GitHub Releases, and trusted NuGet publication are defined
+in the [release policy](docs/releases.md). Development builds use a
+`0.1.0-dev` version; release builds receive the exact immutable workflow
 version.
 
-This repository is maintained primarily for use in the maintainer's applications
-and projects. Before its first versioned release, it carries no support or
-stability commitment.
+This repository is maintained primarily for use in the maintainer's
+applications and projects. Preview releases carry no stability or support
+commitment.
 
 Contributions require prior arrangement; unsolicited pull requests may not be
 reviewed.

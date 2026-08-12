@@ -9,6 +9,7 @@
     <RepositoryUrl>https://github.com/czernous/monadic-types-dotnet.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReadmeSource>$(MSBuildThisFileDirectory)..\docs\package-readmes\$(MSBuildProjectName).md</PackageReadmeSource>
     <PackageTags>csharp;dotnet;functional-programming;result;option;nativeaot;aot</PackageTags>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -20,8 +21,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)..\BannedSymbols.txt" />
-    <None Include="$(MSBuildThisFileDirectory)..\docs\package-readme.md" Pack="true" PackagePath="README.md" Visible="false" />
+    <None Include="$(PackageReadmeSource)" Pack="true" PackagePath="README.md" Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="" Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)..\NOTICE" Pack="true" PackagePath="" Visible="false" />
   </ItemGroup>
+  <Target Name="ValidatePackageReadme" BeforeTargets="Pack">
+    <Error Condition="!Exists('$(PackageReadmeSource)')" Text="Package README not found: $(PackageReadmeSource)" />
+  </Target>
 </Project>
