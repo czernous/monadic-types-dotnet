@@ -9,8 +9,8 @@ usage; caller-state overloads, callable structs, and generated wrappers provide
 allocation-free alternatives for measured hot paths.
 
 > [!IMPORTANT]
-> This repository is experimental and unpublished. APIs can change without
-> compatibility shims until the first versioned release.
+> This repository is experimental. APIs can change without compatibility
+> shims before `1.0.0`.
 
 ## Project Intent
 
@@ -23,15 +23,42 @@ NativeAOT, allocation, performance, and compatibility gates.
 
 ## Packages
 
-| Project | Purpose | Guide | Runtime dependencies |
+Install the smallest feature package that provides what the application needs.
+NuGet restores the dependencies shown below transitively, so they should not be
+installed again. Preview releases require `--prerelease` when the version is not
+specified explicitly.
+
+```bash
+dotnet add package MonadicTypes.NET --prerelease
+```
+
+| NuGet package | Install it when | Included transitively | Guide |
 | --- | --- | --- | --- |
-| `MonadicTypes` | `Result<T,E>`, `Option<T>`, `Unit`, composition, callable values | [Result](#result), [Option](#option), [combination](#combining-independent-results), [hot paths](#hot-paths) | BCL only |
-| `MonadicTypes.Errors` | Structured `Error`, validation issues, domain-error widening | [Errors](#structured-errors), [validation](#validation-compatibility) | Core only |
-| `MonadicTypes.Async` | Fluent Task and ValueTask result composition | [Async pipelines](#async-pipelines) | Core only |
-| `MonadicTypes.Effects` | Explicit exception-to-error boundaries | [Exception boundaries](#exception-boundaries) | Core only |
-| `MonadicTypes.Diagnostics` | Optional `Activity` and `Meter` projection | [Diagnostics](#diagnostics) | Errors and BCL diagnostics |
-| `MonadicTypes.AspNetCore` | Typed HTTP results, RFC problem responses, endpoint metadata | [ASP.NET Core](#aspnet-core) | ASP.NET Core shared framework |
-| `MonadicTypes.Generators` | Compile-time callable wrappers for annotated methods | [Generated callables](#generated-callables) | Analyzer only |
+| `MonadicTypes.NET` | You need `Result<T,E>`, `Option<T>`, `Unit`, composition, or callable values. This is the normal starting package. | None | [Result](#result), [Option](#option), [combination](#combining-independent-results), [hot paths](#hot-paths) |
+| `MonadicTypes.NET.Errors` | You need the built-in immutable `Error`, validation issues, or domain-error widening. | `MonadicTypes.NET` | [Errors](#structured-errors), [validation](#validation-compatibility) |
+| `MonadicTypes.NET.Async` | A pipeline must compose `Task` or `ValueTask` operations fluently. | `MonadicTypes.NET` | [Async pipelines](#async-pipelines) |
+| `MonadicTypes.NET.Effects` | Code at a controlled boundary can throw and must become a typed failure. | `MonadicTypes.NET` | [Exception boundaries](#exception-boundaries) |
+| `MonadicTypes.NET.Diagnostics` | Structured errors should be projected to optional `Activity` and `Meter` signals. | `MonadicTypes.NET.Errors`, then core | [Diagnostics](#diagnostics) |
+| `MonadicTypes.NET.AspNetCore` | An ASP.NET Core API needs typed HTTP results, RFC problem responses, validation conversion, or endpoint metadata. | `MonadicTypes.NET.Errors`, then core | [ASP.NET Core](#aspnet-core) |
+| `MonadicTypes.NET.Generators` | Annotated methods need compile-time struct-callable adapters for measured hot paths. | None; analyzer only | [Generated callables](#generated-callables) |
+
+For example, a web API that needs HTTP conversion, asynchronous pipelines, and
+exception boundaries installs these three top-level features:
+
+```bash
+dotnet add package MonadicTypes.NET.AspNetCore --prerelease
+dotnet add package MonadicTypes.NET.Async --prerelease
+dotnet add package MonadicTypes.NET.Effects --prerelease
+```
+
+There is intentionally no all-in-one package: optional features remain explicit
+and do not add unused runtime or framework dependencies. Add diagnostics only
+when using the provided projection helpers. Add the generator only for paths
+where measurement justifies generated callables:
+
+```bash
+dotnet add package MonadicTypes.NET.Generators --prerelease
+```
 
 FluentValidation, OpenAPI test packages, and telemetry exporters are not runtime
 dependencies. Compatibility is pinned and tested separately.
