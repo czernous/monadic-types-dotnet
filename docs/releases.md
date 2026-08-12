@@ -3,9 +3,9 @@
 ## Release Model
 
 The repository uses one long-lived branch, `master`, and immutable annotated
-Git tags. There are no release branches. Direct pushes to `master` remain
-possible while the project has one maintainer; CI reports failures but branch
-protection does not currently prohibit a push.
+Git tags. There are no release branches. Changes normally reach `master`
+through a pull request. Authorized repository administrators retain an
+emergency bypass, but every push still runs post-merge validation.
 
 A release tag has one of these forms:
 
@@ -40,23 +40,61 @@ NuGet package may additionally be unlisted.
 
 ## Creating A Release
 
-Keep `master` releasable. The shortest deliberate release procedure is:
+Keep `master` releasable. Publishing is separate from merging: merging to
+`master` never creates a package or tag. Several changes may accumulate before
+an operator starts a release.
 
-1. Open GitHub Actions, select `Release`, choose `master`, and enter a semantic
-   version such as `0.1.0-preview.1`.
-2. Run the workflow.
+Before releasing:
+
+1. Confirm the latest `master` CI and CodeQL runs succeeded.
+2. Confirm the intended version has not already been published or tagged.
+3. Select the next version using the policy above. Never reuse a published
+   version.
+
+To release with the GitHub UI:
+
+1. Open the repository's **Actions** page.
+2. Select the **Release** workflow in the left sidebar.
+3. Select **Run workflow** and choose `master`.
+4. Enter a semantic version without a leading `v`, such as
+   `0.1.0-preview.1`.
+5. Select **Run workflow** and monitor every job until completion.
 
 The same action can be started from an authenticated GitHub CLI:
 
 ```bash
 gh workflow run release.yml --ref master -f version=0.1.0-preview.1
+gh run list --workflow release.yml --limit 1
+gh run watch <run-id> --exit-status
 ```
 
-The version number is the only required release decision. The workflow runs all
-gates, creates and pushes the annotated tag, publishes to NuGet.org and GitHub
-Packages, and then creates the GitHub Release with generated notes. Updating
+The version number is the only required release decision. The workflow first
+publishes NativeAOT smoke applications on Windows, Linux, and macOS. It then
+runs restore auditing, formatting, build, tests, package inspection, and
+package-consumption NativeAOT validation. Only after those gates succeed does
+it publish to NuGet.org and GitHub Packages. The annotated tag and GitHub
+Release are created after both registries accept the packages. Updating
 `CHANGELOG.md` remains useful for curated notes but is not a mechanical release
 requirement.
+
+After a successful release, verify:
+
+1. The workflow completed successfully.
+2. The `v<version>` tag and corresponding GitHub Release exist.
+3. Every expected `MonadicTypes.NET*` package appears on NuGet.org after its
+   indexing delay.
+4. A clean sample project can restore the version from NuGet.org.
+
+NuGet.org temporarily displays newly uploaded packages under **Unlisted
+Packages** while validation and indexing are in progress. This normally clears
+within 15 minutes and is not the same as an owner deliberately unlisting a
+published version. Check the package validation message and notification email;
+investigate if indexing fails or remains incomplete for an hour.
+
+If publication fails, inspect the failed job before retrying. Reusing the same
+version is valid only when no registry accepted any package. If any package was
+accepted, fix the issue and choose a new version. Never delete and reuse package
+versions or tags.
 
 Run the same checks locally when investigating a release or package change:
 
@@ -79,7 +117,7 @@ stable-machine check and do not run as a hosted release gate.
 Every release publishes automatically to:
 
 ```text
-https://nuget.pkg.github.com/czernous/index.json
+https://nuget.pkg.github.com/<package-owner>/index.json
 ```
 
 The workflow uses its short-lived `GITHUB_TOKEN`; no publishing secret is
@@ -90,11 +128,11 @@ source:
 
 ```bash
 dotnet nuget add source \
-  --username czernous \
+  --username <package-owner> \
   --password "$GITHUB_PACKAGES_TOKEN" \
   --store-password-in-clear-text \
   --name monadic-types-github \
-  https://nuget.pkg.github.com/czernous/index.json
+  https://nuget.pkg.github.com/<package-owner>/index.json
 ```
 
 Do not commit the token. When both GitHub Packages and nuget.org are configured,
