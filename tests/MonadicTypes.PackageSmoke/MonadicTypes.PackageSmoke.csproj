@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>true</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <RestoreLockedMode>false</RestoreLockedMode>
+    <SkipRepositoryAnalyzers>true</SkipRepositoryAnalyzers>
+    <PackageVersionToTest Condition="'$(PackageVersionToTest)' == ''">0.1.0-dev</PackageVersionToTest>
+    <NoWarn>$(NoWarn);CA2012</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MonadicTypes.NET" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Async" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Effects" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Errors" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Diagnostics" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.AspNetCore" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Generators" Version="$(PackageVersionToTest)" />
+  </ItemGroup>
+</Project>

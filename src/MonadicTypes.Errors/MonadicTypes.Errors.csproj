@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <PackageId>MonadicTypes.NET.Errors</PackageId>
+    <Title>MonadicTypes.NET Errors</Title>
+    <Description>Structured, immutable, allocation-conscious errors and validation values for MonadicTypes.NET.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
   </PropertyGroup>

@@ -93,9 +93,6 @@ public static class ErrorProblemDetails
 
     private static void EnsureInitialized(in Error error)
     {
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentNullException.ThrowIfNull(error);
     }
 }

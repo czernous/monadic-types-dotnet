@@ -8,6 +8,6 @@ namespace MonadicTypes.AspNetCore;
 public readonly struct DefaultErrorHttpResultMapper : IHttpResultMapper<Error, ProblemHttpResult>
 {
     /// <inheritdoc />
-    public ProblemHttpResult Map(in Error error, HttpContext? httpContext) =>
-        ErrorProblemDetails.ToHttpResult(error, httpContext);
+    public ProblemHttpResult Map(in Error failure, HttpContext? httpContext) =>
+        ErrorProblemDetails.ToHttpResult(failure, httpContext);
 }

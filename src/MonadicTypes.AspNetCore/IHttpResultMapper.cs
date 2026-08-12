@@ -8,8 +8,8 @@ public interface IHttpResultMapper<TError, out TResult>
     where TResult : IResult
 {
     /// <summary>Maps an error to a strongly typed HTTP result.</summary>
-    /// <param name="error">The error value to map.</param>
+    /// <param name="failure">The failure value to map.</param>
     /// <param name="httpContext">Optional request context for transport-specific metadata.</param>
     /// <returns>The mapped HTTP result.</returns>
-    TResult Map(in TError error, HttpContext? httpContext);
+    TResult Map(in TError failure, HttpContext? httpContext);
 }

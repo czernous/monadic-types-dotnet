@@ -47,10 +47,7 @@ public readonly struct ErrorMetrics
             return;
         }
 
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentNullException.ThrowIfNull(error);
 
         string category = ErrorTelemetry.GetCategoryName(error.Type);
         if (_includeErrorCode)

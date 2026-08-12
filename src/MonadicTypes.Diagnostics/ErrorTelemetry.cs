@@ -26,10 +26,7 @@ public static class ErrorTelemetry
             return;
         }
 
-        if (error is null)
-        {
-            throw new ArgumentNullException(nameof(error));
-        }
+        ArgumentNullException.ThrowIfNull(error);
 
         string category = GetCategoryName(error.Type);
         activity.SetTag("error.type", error.Code);

@@ -55,7 +55,7 @@ public static class ValidationErrorProblemDetails
             codes.Add(first.Path, pathCodes);
         }
 
-        Dictionary<string, object?> extensions = new(2)
+        Dictionary<string, object?> extensions = new(2, StringComparer.Ordinal)
         {
             ["codes"] = codes
         };

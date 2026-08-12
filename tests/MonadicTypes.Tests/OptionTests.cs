@@ -1,6 +1,6 @@
-namespace MonadicTypes.Tests;
-
 using System.Runtime.CompilerServices;
+
+namespace MonadicTypes.Tests;
 
 public class OptionTests
 {
@@ -33,7 +33,8 @@ public class OptionTests
         Option<string> option = Option<int>.Some(20)
             .Map(static value => value * 2)
             .Filter(static value => value > 10)
-            .Bind(static value => Option<string>.Some(value.ToString()));
+            .Bind(static value => Option<string>.Some(
+                value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
         Assert.Equal("40", option.Value);
     }

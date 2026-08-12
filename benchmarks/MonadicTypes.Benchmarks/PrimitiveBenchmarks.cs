@@ -1,8 +1,8 @@
+using System.Diagnostics.Metrics;
+using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using MonadicTypes;
-using System.Diagnostics.Metrics;
-using System.Runtime.CompilerServices;
 
 namespace Benchmarks;
 

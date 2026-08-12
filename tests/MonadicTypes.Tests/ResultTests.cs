@@ -1,6 +1,6 @@
-namespace MonadicTypes.Tests;
-
 using System.Runtime.CompilerServices;
+
+namespace MonadicTypes.Tests;
 
 public class ResultTests
 {
@@ -42,7 +42,8 @@ public class ResultTests
         Result<string, string> result = Result<int, string>.Ok(20)
             .Map(static value => value * 2)
             .Ensure(static value => value > 10, static _ => "too-small")
-            .Bind(static value => Result<string, string>.Ok(value.ToString()));
+            .Bind(static value => Result<string, string>.Ok(
+                value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
         Assert.Equal("40", result.Value);
     }

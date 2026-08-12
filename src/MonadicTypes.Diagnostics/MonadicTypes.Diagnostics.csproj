@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <PackageId>MonadicTypes.NET.Diagnostics</PackageId>
+    <Title>MonadicTypes.NET Diagnostics</Title>
+    <Description>Optional Activity and Meter instrumentation for structured MonadicTypes.NET errors.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
   </PropertyGroup>

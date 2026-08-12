@@ -1675,13 +1675,22 @@ a generic instantiation to the native binary.
   wrong harness.
 
 See [benchmark policy](docs/benchmarks.md), [accepted baselines](benchmarks/baseline.md),
-[compatibility](docs/compatibility.md), and [dependency policy](docs/dependency-policy.md).
+[compatibility](docs/compatibility.md), [development policy](docs/development.md),
+and [dependency policy](docs/dependency-policy.md).
 
 ## Status And Licensing
+
+Versioning, Git tags, GitHub Releases, and optional trusted NuGet publication are
+defined in the [release policy](docs/releases.md). Development builds use a
+`0.1.0-dev` version until an explicit release tag supplies the immutable package
+version.
 
 This repository is maintained primarily for use in the maintainer's applications
 and projects. Before its first versioned release, it carries no support or
 stability commitment.
+
+Contributions require prior arrangement; unsolicited pull requests may not be
+reviewed.
 
 Licensed under the [Apache License 2.0](LICENSE). Commercial and workplace use,
 modification, and redistribution are permitted subject to the license terms,

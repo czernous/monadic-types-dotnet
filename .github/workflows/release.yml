@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic version without the leading v
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  release:
+    name: Build GitHub release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.3xx
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Validate release tag
+        id: version
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$GITHUB_REF" == "refs/heads/master" ]] || { echo "releases must run from master" >&2; exit 1; }
+          version="$REQUESTED_VERSION"
+          tag="v$version"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "tag already exists: $tag" >&2
+            exit 1
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
+            echo "invalid semantic version: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          [[ "$version" == *-* ]] && echo "prerelease=true" >> "$GITHUB_OUTPUT" || echo "prerelease=false" >> "$GITHUB_OUTPUT"
+      - name: Restore and audit locked dependencies
+        run: dotnet restore MonadicTypes.slnx --locked-mode
+      - name: Verify formatting
+        run: dotnet format whitespace MonadicTypes.slnx --verify-no-changes --no-restore
+      - name: Build
+        run: dotnet build MonadicTypes.slnx -c Release --no-restore
+      - name: Test
+        run: dotnet test MonadicTypes.slnx -c Release --no-build --no-restore
+      - name: Pack and inspect
+        run: ./eng/pack.sh ${{ steps.version.outputs.version }}
+      - name: Consume packages under NativeAOT
+        run: ./eng/test-packages.sh ${{ steps.version.outputs.version }} linux-x64
+      - name: Attest package provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+      - uses: actions/upload-artifact@v5
+        with:
+          name: release-${{ steps.version.outputs.tag }}
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error
+  publish-nuget:
+    name: Publish to NuGet.org
+    needs: release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: release-${{ needs.release.outputs.tag }}
+          path: artifacts/packages
+      - name: Obtain short-lived NuGet credential
+        id: nuget
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Publish immutable packages
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+        run: |
+          for package in artifacts/packages/*.nupkg; do
+            dotnet nuget push "$package" \
+              --api-key "$NUGET_API_KEY" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+
+  publish-github-packages:
+    name: Publish to GitHub Packages
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: release-${{ needs.release.outputs.tag }}
+          path: artifacts/packages
+      - name: Publish immutable packages
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PACKAGE_OWNER: ${{ github.repository_owner }}
+        run: |
+          for package in artifacts/packages/*.nupkg; do
+            dotnet nuget push "$package" \
+              --api-key "$GITHUB_TOKEN" \
+              --source "https://nuget.pkg.github.com/$PACKAGE_OWNER/index.json" \
+              --no-symbols \
+              --skip-duplicate
+          done
+
+  github-release:
+    name: Publish GitHub release
+    needs: [release, publish-nuget, publish-github-packages]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v6
+        with:
+          name: release-${{ needs.release.outputs.tag }}
+          path: artifacts/packages
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+        shell: bash
+        run: |
+          version=${RELEASE_TAG#v}
+          if ! git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git tag -a "$RELEASE_TAG" -m "MonadicTypes.NET $version"
+            git push origin "$RELEASE_TAG"
+          fi
+          args=(--verify-tag --generate-notes --title "$RELEASE_TAG")
+          [[ "$version" == *-* ]] && args+=(--prerelease)
+          gh release create "$RELEASE_TAG" artifacts/packages/*.nupkg artifacts/packages/*.snupkg "${args[@]}"

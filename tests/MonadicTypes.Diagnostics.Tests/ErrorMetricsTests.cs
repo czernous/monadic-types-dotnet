@@ -39,7 +39,7 @@ public class ErrorMetricsTests
         KeyValuePair<string, object?> observedTag = default;
         listener.InstrumentPublished = (instrument, current) =>
         {
-            if (instrument.Meter.Name == meter.Name)
+            if (string.Equals(instrument.Meter.Name, meter.Name, StringComparison.Ordinal))
             {
                 current.EnableMeasurementEvents(instrument);
             }

@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <PackageId>MonadicTypes.NET.Async</PackageId>
+    <Title>MonadicTypes.NET Async</Title>
+    <Description>ValueTask- and Task-aware railway operators for MonadicTypes.NET results.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
   </PropertyGroup>

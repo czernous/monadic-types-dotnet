@@ -146,6 +146,6 @@ public class ErrorProblemDetailsTests
 
     private readonly struct NotFoundMapper : IHttpResultMapper<Error, NotFound>
     {
-        public NotFound Map(in Error error, HttpContext? httpContext) => TypedResults.NotFound();
+        public NotFound Map(in Error failure, HttpContext? httpContext) => TypedResults.NotFound();
     }
 }

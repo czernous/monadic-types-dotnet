@@ -11,7 +11,8 @@ public class AsyncResultTests
             .Map(static value => value + 1)
             .BindAsync(static value => ValueTask.FromResult(Result<long, string>.Ok(value + 1L)))
             .Map(static value => value * 2)
-            .Bind(static value => Result<string, string>.Ok(value.ToString()));
+            .Bind(static value => Result<string, string>.Ok(
+                value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
         Assert.Equal("12", result.Value);
     }

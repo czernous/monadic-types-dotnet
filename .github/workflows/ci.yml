@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: true
+
+jobs:
+  changes:
+    name: Resolve affected projects
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.affected.outputs.projects }}
+      has-projects: ${{ steps.affected.outputs.has-projects }}
+      aot: ${{ steps.affected.outputs.aot }}
+      packages: ${{ steps.affected.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: affected
+        name: Compute reverse dependency closure
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE"
+          elif [[ -n "${EVENT_BEFORE:-}" && ! "$EVENT_BEFORE" =~ ^0+$ ]]; then
+            base="$EVENT_BEFORE"
+          else
+            base=$(git rev-parse HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          fi
+
+          mkdir -p artifacts/ci
+          ./eng/affected-projects.sh "$base" HEAD > artifacts/ci/affected-projects.txt
+          projects=$(paste -sd ';' artifacts/ci/affected-projects.txt)
+          echo "projects=$projects" >> "$GITHUB_OUTPUT"
+          [[ -n "$projects" ]] && echo "has-projects=true" >> "$GITHUB_OUTPUT" || echo "has-projects=false" >> "$GITHUB_OUTPUT"
+          grep -q '^tests/MonadicTypes.AotSmoke/' artifacts/ci/affected-projects.txt && echo "aot=true" >> "$GITHUB_OUTPUT" || echo "aot=false" >> "$GITHUB_OUTPUT"
+          grep -q '^src/' artifacts/ci/affected-projects.txt && echo "packages=true" >> "$GITHUB_OUTPUT" || echo "packages=false" >> "$GITHUB_OUTPUT"
+          cat artifacts/ci/affected-projects.txt
+
+  quality:
+    name: Build and test (${{ matrix.os }})
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.3xx
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Restore and audit locked dependencies
+        run: dotnet restore MonadicTypes.slnx --locked-mode
+      - name: Report vulnerable dependencies
+        run: |
+          while IFS= read -r project; do
+            dotnet package list --project "$project" --vulnerable --include-transitive --no-restore
+          done < <(find src tests benchmarks \
+            -type d \( -name bin -o -name obj -o -name artifacts \) -prune -o \
+            -name '*.csproj' -type f \
+            ! -path 'tests/MonadicTypes.AotSmoke/*' \
+            ! -path 'tests/MonadicTypes.PackageSmoke/*' -print | sort)
+      - name: Verify formatting
+        if: runner.os == 'Linux'
+        run: dotnet format whitespace MonadicTypes.slnx --verify-no-changes --no-restore
+      - name: Build affected projects
+        if: needs.changes.outputs.has-projects == 'true'
+        env:
+          AFFECTED_PROJECTS: ${{ needs.changes.outputs.projects }}
+        run: |
+          mkdir -p artifacts/ci
+          dotnet new sln --name Affected --format slnx --output artifacts/ci
+          IFS=';' read -ra projects <<< "$AFFECTED_PROJECTS"
+          dotnet sln artifacts/ci/Affected.slnx add "${projects[@]}"
+          dotnet build artifacts/ci/Affected.slnx -c Release --no-restore
+          dotnet test artifacts/ci/Affected.slnx -c Release --no-build --no-restore
+
+  native-aot:
+    name: NativeAOT (${{ matrix.rid }})
+    needs: [changes, quality]
+    if: needs.changes.outputs.aot == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-latest
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.3xx
+      - name: Restore audited NativeAOT toolchain
+        run: dotnet restore tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -r ${{ matrix.rid }}
+      - name: Publish NativeAOT smoke executable
+        run: dotnet publish tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -c Release -r ${{ matrix.rid }} --no-restore
+
+  packages:
+    name: Pack and consume NuGet artifacts
+    needs: [changes, quality]
+    if: needs.changes.outputs.packages == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.3xx
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Restore locked dependencies
+        run: dotnet restore MonadicTypes.slnx --locked-mode
+      - name: Build and verify packages
+        run: ./eng/pack.sh 0.1.0-ci.${{ github.run_number }}
+      - name: Consume packages under NativeAOT
+        run: ./eng/test-packages.sh 0.1.0-ci.${{ github.run_number }} linux-x64
+      - uses: actions/upload-artifact@v5
+        with:
+          name: packages-${{ github.sha }}
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/dependency-review-action@v4
+        with:
+          config-file: ./.github/dependency-review-config.yml

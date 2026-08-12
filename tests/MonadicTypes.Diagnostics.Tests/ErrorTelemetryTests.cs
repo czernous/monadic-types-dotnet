@@ -22,7 +22,8 @@ public class ErrorTelemetryTests
         ActivityEvent errorEvent = Assert.Single(activity.Events);
         Assert.Equal("error", errorEvent.Name);
         Assert.Contains(activity.Tags, tag =>
-            tag.Key == "error.type" && Equals(tag.Value, "INVALID"));
+            string.Equals(tag.Key, "error.type", StringComparison.Ordinal)
+            && string.Equals(tag.Value, "INVALID", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -38,7 +39,9 @@ public class ErrorTelemetryTests
         ActivityEvent exceptionEvent = Assert.Single(activity.Events);
         Assert.Equal("exception", exceptionEvent.Name);
         Assert.Contains(exceptionEvent.Tags, tag =>
-            tag.Key == "exception.type" && Equals(tag.Value, cause.GetType().FullName));
+            string.Equals(tag.Key, "exception.type", StringComparison.Ordinal)
+            && tag.Value is string value
+            && string.Equals(value, cause.GetType().FullName, StringComparison.Ordinal));
     }
 
     [Fact]

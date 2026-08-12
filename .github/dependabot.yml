@@ -1,0 +1,30 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: FluentValidation
+      - dependency-name: Microsoft.AspNetCore.OpenApi
+      - dependency-name: Microsoft.AspNetCore.TestHost
+      - dependency-name: Microsoft.OpenApi
+    groups:
+      dotnet-tooling:
+        patterns:
+          - 'Microsoft.CodeAnalysis.*'
+          - 'Microsoft.NET.Test.Sdk'
+          - 'Meziantou.Analyzer'
+      test-dependencies:
+        dependency-type: development
+        patterns:
+          - 'xunit*'
+          - 'BenchmarkDotNet'
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3

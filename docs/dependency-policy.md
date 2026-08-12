@@ -13,6 +13,15 @@ Current development dependencies use licenses permitting commercial use:
   OpenTelemetry runtime package is required.
 - BenchmarkDotNet: MIT, benchmarks only.
 - xUnit: Apache-2.0, tests only.
+- Meziantou.Analyzer: MIT, private build-time analysis only.
+- Microsoft.CodeAnalysis.BannedApiAnalyzers: MIT, private build-time architecture
+  enforcement for shipping source projects only.
+
+The .NET SDK's built-in analyzers run at the pinned .NET 10 recommended level.
+Analyzer references use `PrivateAssets="all"` and do not flow into runtime or
+consumer packages. SonarAnalyzer.CSharp is intentionally not referenced because
+its current source-available license is not suitable for this repository's
+commercial and AI-assisted usage requirements.
 
 Every dependency update requires license and vulnerability review. MonadicTypes
 itself is distributed under the repository's Apache License 2.0; dependency

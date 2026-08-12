@@ -1,0 +1,13 @@
+# Reflection and runtime code generation violate the NativeAOT architecture.
+T:System.Activator; Use explicit construction or compile-time generated factories.
+T:System.Dynamic.DynamicObject; Use statically typed contracts.
+T:System.Linq.Expressions.Expression; Use static delegates, callable structs, or generated code.
+T:System.Reflection.Assembly; Reflection is not permitted in this repository.
+T:System.Reflection.ConstructorInfo; Reflection is not permitted in this repository.
+T:System.Reflection.EventInfo; Reflection is not permitted in this repository.
+T:System.Reflection.FieldInfo; Reflection is not permitted in this repository.
+T:System.Reflection.MemberInfo; Reflection is not permitted in this repository.
+T:System.Reflection.MethodInfo; Reflection is not permitted in this repository.
+T:System.Reflection.PropertyInfo; Reflection is not permitted in this repository.
+T:System.Reflection.Emit.AssemblyBuilder; Runtime code generation is not permitted.
+T:System.Runtime.Loader.AssemblyLoadContext; Runtime assembly loading is not permitted.

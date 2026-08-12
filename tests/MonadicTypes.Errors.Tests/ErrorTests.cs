@@ -56,7 +56,9 @@ public class ErrorTests
         Error error = Error.System("unavailable");
 
         Assert.Equal("[SYSTEM_FAILURE] unavailable", error.ToString());
-        Assert.Equal(error.ToString(), error.ToString("G", null));
+        Assert.Equal(
+            error.ToString(),
+            error.ToString("G", System.Globalization.CultureInfo.InvariantCulture));
         Assert.Throws<FormatException>(() => error.ToString("X", null));
     }
 
@@ -125,7 +127,7 @@ public class ErrorTests
         InvalidOperationException rethrown = Assert.Throws<InvalidOperationException>(error.ThrowCause);
 
         Assert.Same(error.Cause, rethrown);
-        Assert.Contains(nameof(ThrowOriginalException), rethrown.StackTrace);
+        Assert.Contains(nameof(ThrowOriginalException), rethrown.StackTrace, StringComparison.Ordinal);
     }
 
     private static void ThrowOriginalException() => throw new InvalidOperationException("failure");

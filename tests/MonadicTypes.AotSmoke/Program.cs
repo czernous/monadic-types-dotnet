@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using MonadicTypes;
-using MonadicTypes.Async;
 using MonadicTypes.AspNetCore;
+using MonadicTypes.Async;
 using MonadicTypes.Effects;
 
 WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(args);

@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <PackageId>MonadicTypes.NET.AspNetCore</PackageId>
+    <Title>MonadicTypes.NET ASP.NET Core</Title>
+    <Description>NativeAOT-compatible typed HTTP results, problem details, validation, and OpenAPI metadata for MonadicTypes.NET.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
   </PropertyGroup>

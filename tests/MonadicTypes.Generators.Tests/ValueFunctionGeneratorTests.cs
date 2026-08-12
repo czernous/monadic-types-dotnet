@@ -64,7 +64,8 @@ public partial class Operations
 
         GeneratorDriverRunResult result = Run(source);
 
-        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "MTGEN001");
+        Assert.Contains(result.Diagnostics, static diagnostic =>
+            string.Equals(diagnostic.Id, "MTGEN001", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -82,7 +83,8 @@ public static class Operations
 
         GeneratorDriverRunResult result = Run(source);
 
-        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "MTGEN002");
+        Assert.Contains(result.Diagnostics, static diagnostic =>
+            string.Equals(diagnostic.Id, "MTGEN002", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -103,7 +105,8 @@ public static partial class Operations
 
         GeneratorDriverRunResult result = Run(source);
 
-        Assert.Equal(2, result.Diagnostics.Count(static diagnostic => diagnostic.Id == "MTGEN004"));
+        Assert.Equal(2, result.Diagnostics.Count(static diagnostic =>
+            string.Equals(diagnostic.Id, "MTGEN004", StringComparison.Ordinal)));
     }
 
     private static GeneratorDriverRunResult Run(string source)
@@ -121,9 +124,10 @@ public static partial class Operations
     }
 
     private static readonly ImmutableArray<PortableExecutableReference> PlatformReferences =
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
-        .Split(Path.PathSeparator)
-        .Select(static path => MetadataReference.CreateFromFile(path))
-        .Append(MetadataReference.CreateFromFile(typeof(IValueFunction<,>).Assembly.Location))
-        .ToImmutableArray();
+    [
+        .. ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+            .Split(Path.PathSeparator)
+            .Select(static path => MetadataReference.CreateFromFile(path))
+            .Append(MetadataReference.CreateFromFile(typeof(IValueFunction<,>).Assembly.Location))
+    ];
 }

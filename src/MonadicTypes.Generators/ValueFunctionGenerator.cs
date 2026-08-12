@@ -69,7 +69,8 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
         var method = (IMethodSymbol)context.TargetSymbol;
         string generatedName = method.Name;
         AttributeData attribute = context.Attributes[0];
-        if (attribute.ConstructorArguments is [{ Value: string requestedName }])
+        if (attribute.ConstructorArguments.Length == 1
+            && attribute.ConstructorArguments[0].Value is string requestedName)
         {
             generatedName = requestedName;
         }
@@ -88,9 +89,10 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
                 continue;
             }
 
-            MethodCandidate[] validCandidates = typeGroup
-                .Where(candidate => Validate(context, candidate))
-                .ToArray();
+            MethodCandidate[] validCandidates =
+            [
+                .. typeGroup.Where(candidate => Validate(context, candidate))
+            ];
 
             foreach (IGrouping<string, MethodCandidate> duplicate in validCandidates.GroupBy(
                          static candidate => candidate.GeneratedName,
@@ -109,11 +111,13 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
                 }
             }
 
-            MethodCandidate[] uniqueCandidates = validCandidates
-                .GroupBy(static candidate => candidate.GeneratedName, StringComparer.Ordinal)
-                .Where(static group => !group.Skip(1).Any())
-                .Select(static group => group.First())
-                .ToArray();
+            MethodCandidate[] uniqueCandidates =
+            [
+                .. validCandidates
+                    .GroupBy(static candidate => candidate.GeneratedName, StringComparer.Ordinal)
+                    .Where(static group => !group.Skip(1).Any())
+                    .Select(static group => group.First())
+            ];
 
             if (uniqueCandidates.Length != 0)
             {
@@ -127,7 +131,8 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
         IMethodSymbol method = candidate.Method;
         bool methodIsValid = method.IsStatic
             && !method.IsGenericMethod
-            && method.Parameters is [{ RefKind: RefKind.None }]
+            && method.Parameters.Length == 1
+            && method.Parameters[0].RefKind == RefKind.None
             && !method.IsAbstract
             && !method.IsExtern;
 
@@ -298,17 +303,13 @@ internal sealed class GenerateValueFunctionAttribute : global::System.Attribute
 }
 """;
 
-    private sealed class MethodCandidate
+    private sealed class MethodCandidate(
+        IMethodSymbol method,
+        string generatedName,
+        Location location)
     {
-        public MethodCandidate(IMethodSymbol method, string generatedName, Location location)
-        {
-            Method = method;
-            GeneratedName = generatedName;
-            Location = location;
-        }
-
-        public IMethodSymbol Method { get; }
-        public string GeneratedName { get; }
-        public Location Location { get; }
+        public IMethodSymbol Method { get; } = method;
+        public string GeneratedName { get; } = generatedName;
+        public Location Location { get; } = location;
     }
 }

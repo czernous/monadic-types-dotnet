@@ -5,6 +5,8 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <RestoreLockedMode>false</RestoreLockedMode>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\MonadicTypes.Async\MonadicTypes.Async.csproj" />

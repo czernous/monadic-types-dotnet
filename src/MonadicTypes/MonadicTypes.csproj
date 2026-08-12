@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <PackageId>MonadicTypes.NET</PackageId>
+    <Title>MonadicTypes.NET</Title>
+    <Description>Allocation-conscious Result, Option, Unit, and struct-callable primitives for C# and NativeAOT.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
   </PropertyGroup>

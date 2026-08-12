@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <PackageId>MonadicTypes.NET.Effects</PackageId>
+    <Title>MonadicTypes.NET Effects</Title>
+    <Description>Explicit exception boundaries and side-effect operators for MonadicTypes.NET pipelines.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
   </PropertyGroup>

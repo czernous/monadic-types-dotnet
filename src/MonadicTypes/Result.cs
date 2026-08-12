@@ -106,22 +106,22 @@ public readonly record struct Result<T, E> where E : notnull
         TState state,
         Func<T, TState, TR> ok,
         Func<E, TState, TR> error) => _state switch
-    {
-        Success => ok(_value!, state),
-        Failure => error(_error!, state),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => ok(_value!, state),
+            Failure => error(_error!, state),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Folds the active case through allocation-free callable values.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TR Match<TR, TOk, TError>(TOk ok, TError error)
         where TOk : struct, IValueFunction<T, TR>
         where TError : struct, IValueFunction<E, TR> => _state switch
-    {
-        Success => ok.Invoke(_value!),
-        Failure => error.Invoke(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => ok.Invoke(_value!),
+            Failure => error.Invoke(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Executes exactly one action for the active case.</summary>
     public void Switch(Action<T> ok, Action<E> error)
@@ -152,21 +152,21 @@ public readonly record struct Result<T, E> where E : notnull
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E> Map<TFunction>(TFunction map)
         where TFunction : struct, IValueFunction<T, T> => _state switch
-    {
-        Success => Ok(map.Invoke(_value!)),
-        Failure => this,
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Ok(map.Invoke(_value!)),
+            Failure => this,
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Maps a successful value through a generated callable wrapper and propagates failures.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TR, E> Map<TR, TFunction>(ValueFunction<T, TR, TFunction> map)
         where TFunction : struct, IValueFunction<T, TR> => _state switch
-    {
-        Success => Result<TR, E>.Ok(map.Invoke(_value!)),
-        Failure => Result<TR, E>.Fail(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Result<TR, E>.Ok(map.Invoke(_value!)),
+            Failure => Result<TR, E>.Fail(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Maps a successful value with caller-owned state and propagates failures.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -195,11 +195,11 @@ public readonly record struct Result<T, E> where E : notnull
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TR, E> Map<TR, TFunction>(TFunction map)
         where TFunction : struct, IValueFunction<T, TR> => _state switch
-    {
-        Success => Result<TR, E>.Ok(map.Invoke(_value!)),
-        Failure => Result<TR, E>.Fail(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Result<TR, E>.Ok(map.Invoke(_value!)),
+            Failure => Result<TR, E>.Fail(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Maps the active error to another non-null type and preserves successes.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -214,11 +214,11 @@ public readonly record struct Result<T, E> where E : notnull
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, TE> MapError<TState, TE>(TState state, Func<E, TState, TE> map)
         where TE : notnull => _state switch
-    {
-        Success => Result<T, TE>.Ok(_value!),
-        Failure => Result<T, TE>.Fail(map(_error!, state)),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Result<T, TE>.Ok(_value!),
+            Failure => Result<T, TE>.Fail(map(_error!, state)),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes a success with another same-shaped result and propagates failures.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -233,21 +233,21 @@ public readonly record struct Result<T, E> where E : notnull
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E> Bind<TFunction>(TFunction next)
         where TFunction : struct, IValueFunction<T, Result<T, E>> => _state switch
-    {
-        Success => next.Invoke(_value!),
-        Failure => this,
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => next.Invoke(_value!),
+            Failure => this,
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes a success through a generated callable wrapper and propagates failures.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TR, E> Bind<TR, TFunction>(ValueFunction<T, Result<TR, E>, TFunction> next)
         where TFunction : struct, IValueFunction<T, Result<TR, E>> => _state switch
-    {
-        Success => next.Invoke(_value!),
-        Failure => Result<TR, E>.Fail(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => next.Invoke(_value!),
+            Failure => Result<TR, E>.Fail(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes a success with caller-owned state and propagates failures.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -273,11 +273,11 @@ public readonly record struct Result<T, E> where E : notnull
         Func<T, Result<TR, TNextError>> next,
         Func<TNextError, E> mapNextError)
         where TNextError : notnull => _state switch
-    {
-        Success => next(_value!).MapError(mapNextError),
-        Failure => Result<TR, E>.Fail(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => next(_value!).MapError(mapNextError),
+            Failure => Result<TR, E>.Fail(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes with caller-owned state and maps the continuation's error type.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -286,11 +286,11 @@ public readonly record struct Result<T, E> where E : notnull
         Func<T, TState, Result<TR, TNextError>> next,
         Func<TNextError, E> mapNextError)
         where TNextError : notnull => _state switch
-    {
-        Success => next(_value!, state).MapError(mapNextError),
-        Failure => Result<TR, E>.Fail(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => next(_value!, state).MapError(mapNextError),
+            Failure => Result<TR, E>.Fail(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes the failure case while preserving a successful value.</summary>
     /// <typeparam name="TNextError">Error type returned by the failure continuation.</typeparam>
@@ -299,11 +299,11 @@ public readonly record struct Result<T, E> where E : notnull
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, TNextError> BindError<TNextError>(Func<E, Result<T, TNextError>> next)
         where TNextError : notnull => _state switch
-    {
-        Success => Result<T, TNextError>.Ok(_value!),
-        Failure => next(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Result<T, TNextError>.Ok(_value!),
+            Failure => next(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes the failure case with caller-owned state.</summary>
     /// <typeparam name="TState">Caller state passed to the continuation.</typeparam>
@@ -316,11 +316,11 @@ public readonly record struct Result<T, E> where E : notnull
         TState state,
         Func<E, TState, Result<T, TNextError>> next)
         where TNextError : notnull => _state switch
-    {
-        Success => Result<T, TNextError>.Ok(_value!),
-        Failure => next(_error!, state),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Result<T, TNextError>.Ok(_value!),
+            Failure => next(_error!, state),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes the failure case through an allocation-free callable value.</summary>
     /// <typeparam name="TNextError">Error type returned by the failure continuation.</typeparam>
@@ -331,11 +331,11 @@ public readonly record struct Result<T, E> where E : notnull
     public Result<T, TNextError> BindError<TNextError, TFunction>(TFunction next)
         where TNextError : notnull
         where TFunction : struct, IValueFunction<E, Result<T, TNextError>> => _state switch
-    {
-        Success => Result<T, TNextError>.Ok(_value!),
-        Failure => next.Invoke(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Result<T, TNextError>.Ok(_value!),
+            Failure => next.Invoke(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Transforms both cases without invoking the inactive branch.</summary>
     /// <typeparam name="TResult">Mapped success type.</typeparam>
@@ -348,21 +348,21 @@ public readonly record struct Result<T, E> where E : notnull
         Func<T, TResult> mapValue,
         Func<E, TNextError> mapError)
         where TNextError : notnull => _state switch
-    {
-        Success => Result<TResult, TNextError>.Ok(mapValue(_value!)),
-        Failure => Result<TResult, TNextError>.Fail(mapError(_error!)),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => Result<TResult, TNextError>.Ok(mapValue(_value!)),
+            Failure => Result<TResult, TNextError>.Fail(mapError(_error!)),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Composes a success through an allocation-free callable and propagates failures.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TR, E> Bind<TR, TFunction>(TFunction next)
         where TFunction : struct, IValueFunction<T, Result<TR, E>> => _state switch
-    {
-        Success => next.Invoke(_value!),
-        Failure => Result<TR, E>.Fail(_error!),
-        _ => throw UninitializedResult()
-    };
+        {
+            Success => next.Invoke(_value!),
+            Failure => Result<TR, E>.Fail(_error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Recovers a failure through <paramref name="recover"/> and preserves successes.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -411,12 +411,12 @@ public readonly record struct Result<T, E> where E : notnull
         TState state,
         Func<T, TState, bool> predicate,
         Func<T, TState, E> onFailure) => _state switch
-    {
-        Success when predicate(_value!, state) => this,
-        Success => Fail(onFailure(_value!, state)),
-        Failure => this,
-        _ => throw UninitializedResult()
-    };
+        {
+            Success when predicate(_value!, state) => this,
+            Success => Fail(onFailure(_value!, state)),
+            Failure => this,
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Invokes <paramref name="action"/> only for success and returns this result.</summary>
     public Result<T, E> Tap(Action<T> action)

@@ -1,5 +1,5 @@
-using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace MonadicTypes;
@@ -203,10 +203,7 @@ public sealed record Error : ISpanFormattable
         bool isMessagePublic = false,
         Exception? cause = null)
     {
-        if (numericType <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(numericType));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(numericType);
 
         return new(ErrorType.Custom, numericType, code, message, isMessagePublic, cause);
     }
