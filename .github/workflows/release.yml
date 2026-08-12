@@ -97,7 +97,7 @@ jobs:
       - name: Consume packages under NativeAOT
         run: ./eng/test-packages.sh ${{ steps.version.outputs.version }} linux-x64
       - name: Attest package provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             artifacts/packages/*.nupkg
