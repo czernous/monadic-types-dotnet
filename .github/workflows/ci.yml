@@ -56,9 +56,41 @@ jobs:
           grep -q '^src/' artifacts/ci/affected-projects.txt && echo "packages=true" >> "$GITHUB_OUTPUT" || echo "packages=false" >> "$GITHUB_OUTPUT"
           cat artifacts/ci/affected-projects.txt
 
-  quality:
-    name: Build and test (${{ matrix.os }})
+  pull-request:
+    name: Pull request validation
     needs: changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.3xx
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Restore and audit locked dependencies
+        run: dotnet restore MonadicTypes.slnx --locked-mode
+      - name: Verify formatting
+        run: dotnet format whitespace MonadicTypes.slnx --verify-no-changes --no-restore
+      - name: Build and test affected projects
+        if: needs.changes.outputs.has-projects == 'true'
+        env:
+          AFFECTED_PROJECTS: ${{ needs.changes.outputs.projects }}
+        run: |
+          mkdir -p artifacts/ci
+          dotnet new sln --name Affected --format slnx --output artifacts/ci
+          IFS=';' read -ra projects <<< "$AFFECTED_PROJECTS"
+          dotnet sln artifacts/ci/Affected.slnx add "${projects[@]}"
+          dotnet build artifacts/ci/Affected.slnx -c Release --no-restore
+          dotnet test artifacts/ci/Affected.slnx -c Release --no-build --no-restore
+
+  master-quality:
+    name: Master build and test (${{ matrix.os }})
+    needs: changes
+    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -102,8 +134,8 @@ jobs:
 
   native-aot:
     name: NativeAOT (${{ matrix.rid }})
-    needs: [changes, quality]
-    if: needs.changes.outputs.aot == 'true'
+    needs: [changes, master-quality]
+    if: github.event_name != 'pull_request' && needs.changes.outputs.aot == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -130,8 +162,8 @@ jobs:
 
   packages:
     name: Pack and consume NuGet artifacts
-    needs: [changes, quality]
-    if: needs.changes.outputs.packages == 'true'
+    needs: [changes, master-quality]
+    if: github.event_name != 'pull_request' && needs.changes.outputs.packages == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

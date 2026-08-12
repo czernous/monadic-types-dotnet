@@ -119,14 +119,20 @@ than silently creating a GitHub-only release.
 
 ## Pull Requests And Future Protection
 
-PRs and direct pushes run the same affected-project graph. A changed project
-causes its tests and all reverse dependants to build; repository-wide compiler,
-package, analyzer, and engineering files invalidate the full graph. PRs also run
-dependency review. CodeQL runs for PRs, `master`, and on a weekly schedule.
+PRs run locked audited restore, formatting, and affected-project build/tests on
+Linux. A changed project causes all reverse dependants to build; repository-wide
+compiler, package, analyzer, and engineering files invalidate the full graph.
+PRs also run dependency and license review.
 
-When direct pushes are eventually disabled, require the existing CI, CodeQL,
-dependency-review, package, and NativeAOT checks in a repository ruleset. No
-release branches or workflow redesign are needed.
+After merge, `master` runs the full Windows, Linux, and macOS graph plus package
+consumption and cross-platform NativeAOT where affected. CodeQL runs on `master`
+and weekly. This avoids paying twice for the same platform matrix while keeping
+PR feedback fast and making the releasable branch the authoritative integration
+boundary.
+
+The `master` ruleset requires a pull request and the PR validation checks.
+Repository administrators have bypass permission for exceptional direct pushes;
+using that bypass still triggers the complete post-push `master` validation.
 
 ## Dependency Security
 
