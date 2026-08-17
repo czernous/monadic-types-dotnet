@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\NativeTool.props" />
+  <PropertyGroup>
+    <AssemblyName>mt-affected</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="..\MonadicTypes.Tooling\AffectedProjects.cs" Link="AffectedProjects.cs" />
+  </ItemGroup>
+</Project>

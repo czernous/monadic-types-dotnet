@@ -17,6 +17,24 @@ public static class ErrorProblemDetails
     {
         EnsureInitialized(error);
 
+        string? traceId = Activity.Current?.Id ?? httpContext?.TraceIdentifier;
+        return CreateCore(error, traceId);
+    }
+
+    /// <summary>
+    /// Creates deterministic problem details for documentation without request or activity data.
+    /// </summary>
+    /// <param name="error">The initialized error to convert.</param>
+    /// <returns>Problem details without a trace identifier.</returns>
+    public static ProblemDetails CreateExample(in Error error)
+    {
+        EnsureInitialized(error);
+        return CreateCore(error, traceId: null);
+    }
+
+    private static ProblemDetails CreateCore(in Error error, string? traceId)
+    {
+
         ProblemDetails details = new()
         {
             Status = GetStatusCode(error.Type),
@@ -26,7 +44,6 @@ public static class ErrorProblemDetails
         };
 
         details.Extensions["code"] = error.Code;
-        string? traceId = Activity.Current?.Id ?? httpContext?.TraceIdentifier;
         if (traceId is not null)
         {
             details.Extensions["traceId"] = traceId;

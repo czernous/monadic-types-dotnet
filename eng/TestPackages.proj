@@ -1,0 +1,39 @@
+<Project>
+  <PropertyGroup>
+    <PackageSmokeProject>$(MSBuildThisFileDirectory)../tests/MonadicTypes.PackageSmoke/MonadicTypes.PackageSmoke.csproj</PackageSmokeProject>
+    <RuntimeProperty Condition="'$(RuntimeIdentifier)' != ''">RuntimeIdentifier=$(RuntimeIdentifier);</RuntimeProperty>
+    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</RepositoryRoot>
+    <RuntimeSuffix Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)/</RuntimeSuffix>
+    <PackageSource>$([MSBuild]::Escape('$(RepositoryRoot)/artifacts/packages'))</PackageSource>
+    <DefaultOutput>$([MSBuild]::Escape('$(RepositoryRoot)/artifacts/package-smoke/$(RuntimeSuffix)'))</DefaultOutput>
+    <OptInOutput>$([MSBuild]::Escape('$(RepositoryRoot)/artifacts/package-smoke-xml-opt-in/$(RuntimeSuffix)'))</OptInOutput>
+    <DefaultIntermediate>$([MSBuild]::Escape('$(RepositoryRoot)/artifacts/package-smoke-obj/$(RuntimeSuffix)default/'))</DefaultIntermediate>
+    <OptInIntermediate>$([MSBuild]::Escape('$(RepositoryRoot)/artifacts/package-smoke-obj/$(RuntimeSuffix)xml-opt-in/'))</OptInIntermediate>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageConfiguration Include="$(PackageSmokeProject)">
+      <AdditionalProperties>
+        $(RuntimeProperty)PackageVersionToTest=$(PackageVersionToTest);RestoreAdditionalProjectSources=$(PackageSource);BaseIntermediateOutputPath=$(DefaultIntermediate);MSBuildProjectExtensionsPath=$(DefaultIntermediate);OutputPath=$(DefaultIntermediate)bin/;PackageSmokeTarget=Publish;PublishDir=$(DefaultOutput);SelfContained=true
+      </AdditionalProperties>
+    </PackageConfiguration>
+    <PackageConfiguration Include="$(PackageSmokeProject)">
+      <AdditionalProperties>
+        $(RuntimeProperty)PackageVersionToTest=$(PackageVersionToTest);RestoreAdditionalProjectSources=$(PackageSource);BaseIntermediateOutputPath=$(OptInIntermediate);MSBuildProjectExtensionsPath=$(OptInIntermediate);PackageSmokeTarget=Build;OutputPath=$(OptInOutput);EnableMicrosoftOpenApiXmlComments=true;WarningsAsErrors=MTAPI001
+      </AdditionalProperties>
+    </PackageConfiguration>
+  </ItemGroup>
+
+  <Target Name="Test">
+    <MSBuild
+      Projects="@(PackageConfiguration)"
+      Targets="Restore"
+      BuildInParallel="true"
+      Properties="Configuration=Release" />
+    <MSBuild
+      Projects="@(PackageConfiguration)"
+      Targets="VerifyPackageConfiguration"
+      BuildInParallel="true"
+      Properties="Configuration=Release" />
+  </Target>
+</Project>

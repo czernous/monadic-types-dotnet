@@ -25,7 +25,7 @@
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE" Pack="true" PackagePath="" Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)..\NOTICE" Pack="true" PackagePath="" Visible="false" />
   </ItemGroup>
-  <Target Name="ValidatePackageReadme" BeforeTargets="Pack">
+  <Target Name="ValidatePackageReadme" BeforeTargets="Pack" Condition="'$(IsPackable)' == 'true'">
     <Error Condition="!Exists('$(PackageReadmeSource)')" Text="Package README not found: $(PackageReadmeSource)" />
   </Target>
 </Project>

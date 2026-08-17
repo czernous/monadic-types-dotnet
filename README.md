@@ -38,8 +38,11 @@ dotnet add package MonadicTypes.NET --prerelease
 | `MonadicTypes.NET.Errors` | You need the built-in immutable `Error`, validation issues, or domain-error widening. | `MonadicTypes.NET` | [Errors](#structured-errors), [validation](#validation-compatibility) |
 | `MonadicTypes.NET.Async` | A pipeline must compose `Task` or `ValueTask` operations fluently. | `MonadicTypes.NET` | [Async pipelines](#async-pipelines) |
 | `MonadicTypes.NET.Effects` | Code at a controlled boundary can throw and must become a typed failure. | `MonadicTypes.NET` | [Exception boundaries](#exception-boundaries) |
+| `MonadicTypes.NET.Collections` | A count-known collection needs fail-fast traversal into one owned array. | `MonadicTypes.NET` | [Collections and LINQ](#collections-and-linq) |
+| `MonadicTypes.NET.Linq` | Result or Option pipelines should use opt-in LINQ method or query syntax. | `MonadicTypes.NET` | [Collections and LINQ](#collections-and-linq) |
 | `MonadicTypes.NET.Diagnostics` | Structured errors should be projected to optional `Activity` and `Meter` signals. | `MonadicTypes.NET.Errors`, then core | [Diagnostics](#diagnostics) |
 | `MonadicTypes.NET.AspNetCore` | An ASP.NET Core API needs typed HTTP results, RFC problem responses, validation conversion, or endpoint metadata. | `MonadicTypes.NET.Errors`, then core | [ASP.NET Core](#aspnet-core) |
+| `MonadicTypes.NET.AspNetCore.OpenApi` | Explicit error catalogs should become status-scoped OpenAPI code enums and problem examples. | ASP.NET Core package, Microsoft OpenAPI runtime assemblies | [OpenAPI error catalogs](#openapi-error-catalogs) |
 | `MonadicTypes.NET.Generators` | Annotated methods need compile-time struct-callable adapters for measured hot paths. | None; analyzer only | [Generated callables](#generated-callables) |
 
 For example, a web API that needs HTTP conversion, asynchronous pipelines, and
@@ -68,11 +71,13 @@ dotnet add package MonadicTypes.NET.Generators --prerelease
 - [Designing pipelines](#designing-pipelines)
 - [Result](#result)
 - [Option](#option)
+- [Collections and LINQ](#collections-and-linq)
 - [Async pipelines](#async-pipelines)
 - [Exception boundaries](#exception-boundaries)
 - [Structured errors](#structured-errors)
 - [Validation compatibility](#validation-compatibility)
 - [ASP.NET Core](#aspnet-core)
+- [OpenAPI error catalogs](#openapi-error-catalogs)
 - [Diagnostics](#diagnostics)
 - [Complete application flow](#complete-application-flow)
 - [Hot paths and generated callables](#hot-paths)
@@ -96,6 +101,11 @@ an operation can fail but a successful lookup may still find nothing.
 The types are deeply immutable value types. `default(Result<T,E>)` is an
 invalid, uninitialized state and throws when observed; always construct it with
 `Ok` or `Fail`. `default(Option<T>)` is `None`, and `Some(null)` is rejected.
+
+Both values support positional patterns. Result exposes
+`(isSuccess, value, error)` and Option exposes `(hasValue, value)`, allowing
+property and relational patterns without delegate callbacks. Pattern paths are
+allocation-free and beat `Match` in the isolated NativeAOT measurements.
 
 If the individual operators are familiar but structuring an application around
 them is not, start with [Designing Pipelines](#designing-pipelines) before using
@@ -124,6 +134,7 @@ has identical branch semantics.
 | [`Result<T,E>.Error`](docs/api-reference.md#result-error) | `E` | Read failure or throw for success/uninitialized state. |
 | [`Result<T,E>.TryGetValue`](docs/api-reference.md#result-try-get) | `out T` | Read success at an imperative boundary. |
 | [`Result<T,E>.TryGetError`](docs/api-reference.md#result-try-get) | `out E` | Read failure at an imperative boundary. |
+| [`Result<T,E>.Deconstruct`](docs/api-reference.md#result-deconstruct) | `out bool`, `out T`, `out E` | Expose the active case to positional patterns. |
 | [`Result<T,E>.Map`](docs/api-reference.md#result-map) | same-type delegate; type-changing delegate; caller-state; struct callable; generated token | Transform success without changing failure. |
 | [`Result<T,E>.Bind`](docs/api-reference.md#result-bind) | same/type-changing delegate; caller-state; struct callable; generated token; convertible error | Continue success with another Result. |
 | [`Result<T,E>.MapError`](docs/api-reference.md#result-map-error) | delegate; caller-state | Transform failure without changing success. |
@@ -148,7 +159,8 @@ has identical branch semantics.
 | [`Option<Result<T,E>>.Transpose`](docs/api-reference.md#option-result-transpose) | Option to Result | Convert to `Result<Option<T>,E>`. |
 | [`ResultCombination.Combine`](docs/api-reference.md#combine) | two Results; `ReadOnlySpan<Result<Unit,E>>` | Return the first existing failure or `Unit` success. |
 | [`ResultCombination.Zip`](docs/api-reference.md#zip) | two heterogeneous Results | Combine successes into a named tuple. |
-| [`ResultCombination.Map`](docs/api-reference.md#combination-map) | two Results plus projection | Combine and project without an intermediate tuple API. |
+| [`ResultCombination.Map`](docs/api-reference.md#combination-map) | two through six Results plus projection | Combine and project without an intermediate tuple API. |
+| [`ResultCombination.Bind`](docs/api-reference.md#combination-bind) | two through six Results plus Result projection | Combine and flatten a fallible projection. |
 | [`Unit.Value`](docs/api-reference.md#unit) | singleton value | Represent a successful operation with no payload. |
 | [`Unit.ToString`](docs/api-reference.md#unit) | `()` | Produce the conventional unit representation. |
 
@@ -163,6 +175,7 @@ has identical branch semantics.
 | [`Option<T>.IsNone`](docs/api-reference.md#option-state) | `bool` | Test absence. |
 | [`Option<T>.Value`](docs/api-reference.md#option-value) | `T` | Read presence or throw for `None`. |
 | [`Option<T>.TryGetValue`](docs/api-reference.md#option-try-get) | `out T` | Read presence at an imperative boundary. |
+| [`Option<T>.Deconstruct`](docs/api-reference.md#option-deconstruct) | `out bool`, `out T` | Expose presence to positional patterns. |
 | [`Option<T>.Map`](docs/api-reference.md#option-map) | delegate; caller-state; struct callable; generated token | Transform a present value. |
 | [`Option<T>.Bind`](docs/api-reference.md#option-bind) | delegate; caller-state; struct callable; generated token | Continue presence without nesting Options. |
 | [`Option<T>.Filter`](docs/api-reference.md#option-filter) | predicate; caller-state | Retain presence only when a predicate is true. |
@@ -171,12 +184,28 @@ has identical branch semantics.
 | [`Option<T>.ValueOr`](docs/api-reference.md#option-value-or) | eager fallback | Reduce absence to a fallback. |
 | [`Option<T>.ValueOrElse`](docs/api-reference.md#option-value-or-else) | lazy fallback; caller-state | Lazily create a fallback without a closure. |
 | [`Option<T>` implicit conversion](docs/api-reference.md#option-conversion) | nullable `T` | Convert null to `None` and non-null to `Some`. |
+| [`Option.FromNullable`](docs/api-reference.md#option-nullable-bridges) | nullable reference or value | Convert an explicit nullable boundary value. |
+| [`Option<T>.ToNullable`](docs/api-reference.md#option-nullable-bridges) | reference Option | Convert Some/None to a nullable reference. |
+| [`Option<T>.ToNullableValue`](docs/api-reference.md#option-nullable-bridges) | value Option | Convert Some/None to `Nullable<T>`. |
 | [`Option<T>.ToResult`](docs/api-reference.md#option-to-result) | eager error; lazy error | Require presence and attach a typed failure. |
+| [`Option<T>.Traverse`](docs/api-reference.md#option-traverse) | delegate; caller-state; struct callable | Exchange Option and Result while mapping Some. |
 | [`IValueFunction<TIn,TOut>.Invoke`](docs/api-reference.md#ivaluefunction) | value-returning callable | Define generic, devirtualizable callback dispatch. |
 | [`IValueAction<T>.Invoke`](docs/api-reference.md#ivalueaction) | side-effect callable | Define generic, devirtualizable action dispatch. |
 | [`ValueFunction<TIn,TOut,TFunction>.ValueFunction`](docs/api-reference.md#valuefunction) | callable constructor | Wrap a stateful or default struct callable. |
 | [`ValueFunction<TIn,TOut,TFunction>.Invoke`](docs/api-reference.md#valuefunction) | forwarding call | Invoke the wrapped callable. |
 | [`ValueAction<T,TAction>.Invoke`](docs/api-reference.md#valueaction) | forwarding call | Invoke the wrapped action. |
+
+### Collection And LINQ API
+
+| Member | Package | Purpose |
+| --- | --- | --- |
+| [`IReadOnlyList<T>.TraverseToArray`](docs/api-reference.md#traverse-to-array) | `MonadicTypes.NET.Collections` | Fail-fast indexed traversal with one explicit output-array allocation. |
+| [`ReadOnlySpan<Result<T,E>>.SequenceToArray`](docs/api-reference.md#sequence-to-array) | `MonadicTypes.NET.Collections` | Convert ordered Results into one owned array. |
+| [`Result<T,E>.Select`](docs/api-reference.md#linq-select) | `MonadicTypes.NET.Linq` | Opt-in conventional name for Result Map. |
+| [`Result<T,E>.SelectMany`](docs/api-reference.md#linq-select-many) | `MonadicTypes.NET.Linq` | Bind and project Result values. |
+| [`Option<T>.Select`](docs/api-reference.md#linq-select) | `MonadicTypes.NET.Linq` | Opt-in conventional name for Option Map. |
+| [`Option<T>.SelectMany`](docs/api-reference.md#linq-select-many) | `MonadicTypes.NET.Linq` | Bind and project Option values. |
+| [`Option<T>.Where`](docs/api-reference.md#linq-where) | `MonadicTypes.NET.Linq` | Conventional name for Option Filter. |
 
 ### Async And Effect API
 
@@ -226,6 +255,8 @@ has identical branch semantics.
 | [`Error.Custom`](docs/api-reference.md#error-custom) | numeric type/code/message/cause/visibility | Construct an application-defined category. |
 | [`Error.IO`](docs/api-reference.md#error-factories) | message | Construct the general I/O convenience error. |
 | [`Error.System`](docs/api-reference.md#error-factories) | message | Construct the general system convenience error. |
+| [`Error.Equals`](docs/api-reference.md#error-equality) | another error | Compare semantic fields and retained-cause identity. |
+| [`Error.GetHashCode`](docs/api-reference.md#error-equality) | none | Hash the same semantic fields used by equality. |
 | [`Error.ToString`](docs/api-reference.md#error-format) | default; format/provider | Allocate `[CODE] message` text. |
 | [`Error.TryFormat`](docs/api-reference.md#error-format) | destination span | Format without allocating a string. |
 | [`IErrorConvertible<TError>.ToError`](docs/api-reference.md#error-convertible) | conversion method | Convert compact domain error only at a boundary/failure. |
@@ -274,16 +305,34 @@ has identical branch semantics.
 | [`IHttpResultMapper<TError,TResult>.Map`](docs/api-reference.md#http-result-mapper) | error/context | Define an allocation-free caller-owned HTTP failure mapper. |
 | [`DefaultErrorHttpResultMapper.Map`](docs/api-reference.md#default-http-mapper) | error/context | Apply the default Error problem policy. |
 | [`ErrorProblemDetails.Create`](docs/api-reference.md#problem-create) | error/context | Create RFC ProblemDetails without executing it. |
+| [`ErrorProblemDetails.CreateExample`](docs/api-reference.md#problem-example) | error | Create deterministic documentation output without ambient trace data. |
 | [`ErrorProblemDetails.ToHttpResult`](docs/api-reference.md#problem-result) | error/context | Create an executable ProblemHttpResult. |
 | [`ErrorProblemDetails.GetStatusCode`](docs/api-reference.md#problem-status) | `ErrorType` | Read default category-to-status mapping. |
 | [`ValidationErrorProblemDetails.ToHttpResult`](docs/api-reference.md#validation-problem) | errors/context | Create typed validation problem output. |
 | [`ProducesErrors`](docs/api-reference.md#produces-errors) | `ReadOnlySpan<ErrorType>` | Add Minimal API response metadata without reflection. |
+| [`ErrorCatalogEntry.ErrorCatalogEntry`](docs/api-reference.md#error-catalog-entry) | type/code/description | Define one initialized public documentation entry. |
+| [`ErrorCatalogEntry.Type`](docs/api-reference.md#error-catalog-entry) | `ErrorType` | Read the documented response category. |
+| [`ErrorCatalogEntry.Code`](docs/api-reference.md#error-catalog-entry) | `string` | Read the stable documented code. |
+| [`ErrorCatalogEntry.Description`](docs/api-reference.md#error-catalog-entry) | `string` | Read the public documentation text. |
+| [`ErrorCatalogMetadata.ErrorCatalogMetadata`](docs/api-reference.md#error-catalog-metadata) | `ReadOnlySpan<ErrorCatalogEntry>` | Copy and validate endpoint-owned catalog metadata. |
+| [`ErrorCatalogMetadata.Count`](docs/api-reference.md#error-catalog-metadata) | `int` | Read the owned entry count. |
+| [`ErrorCatalogMetadata.AsSpan`](docs/api-reference.md#error-catalog-metadata) | `ReadOnlySpan<ErrorCatalogEntry>` | Read entries without allocation. |
+| [`ProducesErrorCatalog`](docs/api-reference.md#produces-error-catalog) | `ReadOnlySpan<ErrorCatalogEntry>` | Attach a copied catalog and unique status metadata to a Minimal API endpoint. |
 | [`ProducesErrorAttribute.ProducesErrorAttribute`](docs/api-reference.md#produces-error-attribute) | `ErrorType` | Add one controller response category. |
 | [`ProducesErrorAttribute.ErrorType`](docs/api-reference.md#produces-error-attribute) | enum | Read configured category. |
 | [`ProducesErrorAttribute.Type`](docs/api-reference.md#produces-error-attribute) | ProblemDetails type | Expose OpenAPI response body metadata. |
 | [`ProducesErrorAttribute.StatusCode`](docs/api-reference.md#produces-error-attribute) | `int` | Expose mapped status metadata. |
 | [`ProducesErrorAttribute.Description`](docs/api-reference.md#produces-error-attribute) | `null` | Leave description to the OpenAPI pipeline. |
 | [`ProducesErrorAttribute.ContentTypes`](docs/api-reference.md#produces-error-attribute) | problem media types | Expose supported response content types. |
+| [`ProducesErrorCatalogAttribute.ProducesErrorCatalogAttribute`](docs/api-reference.md#produces-error-catalog-attribute) | type/code/description | Attach one catalog entry to a controller or endpoint. |
+| [`ProducesErrorCatalogAttribute.Entry`](docs/api-reference.md#produces-error-catalog-attribute) | `ErrorCatalogEntry` | Read the validated documented entry. |
+| [`ProducesErrorCatalogAttribute.Type`](docs/api-reference.md#produces-error-catalog-attribute) | ProblemDetails type | Expose OpenAPI response body metadata. |
+| [`ProducesErrorCatalogAttribute.StatusCode`](docs/api-reference.md#produces-error-catalog-attribute) | `int` | Expose the category's mapped status. |
+| [`ProducesErrorCatalogAttribute.Description`](docs/api-reference.md#produces-error-catalog-attribute) | `null` | Leave response description to the document pipeline. |
+| [`ProducesErrorCatalogAttribute.ContentTypes`](docs/api-reference.md#produces-error-catalog-attribute) | problem media types | Expose supported response content types. |
+| [`IServiceCollection.AddErrorCatalogOpenApi`](docs/api-reference.md#add-error-catalog-openapi) | service extension | Register the default document transformer and package-owned `ProblemHttpResult` JSON metadata. |
+| [`OpenApiOptions.AddErrorCatalogs`](docs/api-reference.md#add-error-catalogs) | options extension | Register the singleton reflection-free operation transformer. |
+| [`MTAPI001`](docs/api-reference.md#openapi-xml-comment-diagnostic) | informational analyzer | Identify documented handlers that need explicit metadata or intentional XML projection. |
 | [`GenerateValueFunctionAttribute.GenerateValueFunctionAttribute`](docs/api-reference.md#generate-value-function) | default; generated-name constructor | Request a wrapper while retaining the original method. |
 | [`GenerateValueFunctionAttribute.Name`](docs/api-reference.md#generate-value-function) | optional name | Read the requested generated property name. |
 | [`Functions.<Method>` generated property](docs/api-reference.md#generated-functions) | `ValueFunction` or `ValueAction` | Pass an inferred zero-state token to sync or async operators. |
@@ -480,6 +529,14 @@ when conversion should happen only if an inner operation actually fails. Avoid
 repeatedly widening successful Results to rich `Error`; keep the compact domain
 error through the application pipeline and convert at HTTP, telemetry, or other
 integration boundaries.
+
+When a lambda returns one derived case of a closed error hierarchy, specify only
+the desired output error type to prevent C# from narrowing inference:
+
+```csharp
+Result<Order, CheckoutError> order = gateway.Load(orderId)
+    .MapError<CheckoutError>(static error => new CheckoutError.Dependency(error));
+```
 
 ### Preserve Optional Success
 
@@ -722,18 +779,25 @@ Result<Invoice, LoadError> invoice = ResultCombination.Map(
     LoadAccount(id),
     static (user, account) => new Invoice(user, account));
 
+Result<Invoice, LoadError> validated = ResultCombination.Bind(
+    LoadUser(id),
+    LoadAccount(id),
+    static (user, account) => Invoice.Create(user, account));
+
 ReadOnlySpan<Result<Unit, LoadError>> checks = [CheckUser(id), CheckAccount(id)];
 Result<Unit, LoadError> valid = ResultCombination.Combine(checks);
 ```
 
 Combination returns the first failure. It does not accumulate independent
 validation errors; use `ValidationErrors` when accumulation is required.
+`Error` is one structured error, not a composite collection.
 
 More precisely, these methods inspect already-created Results in argument or
 span order and return the first failure. `Zip` returns `Ok((first, second))`;
-two-result `Map` calls its projection only when both are successful; `Combine`
-returns `Ok(Unit.Value)` only when every input is successful. An uninitialized
-input throws when inspected.
+two-through-six-result `Map` calls its projection only when every input succeeds;
+`Bind` accepts the same arities and returns a Result projection without nesting;
+`Combine` returns `Ok(Unit.Value)` only when every input succeeds. An
+uninitialized input throws when inspected.
 
 C# evaluates method arguments before calling the combinator, so this does not
 short-circuit producer execution:
@@ -824,6 +888,25 @@ Result<Customer, LookupError> required = lookup.RequireSome(
 Result. Its eager overload receives an existing error; its lazy overload calls
 the factory only for `None`.
 
+Use explicit nullable bridges at framework, persistence, and serialization
+boundaries. Reference and value nullability remain distinct to avoid ambiguous
+overloads:
+
+```csharp
+Option<Customer> customer = Option.FromNullable(entity.Customer);
+Option<int> retryCount = Option.FromNullable(dto.RetryCount);
+
+Customer? nullableCustomer = customer.ToNullable();
+int? nullableRetryCount = retryCount.ToNullableValue();
+```
+
+`Traverse` is the direct way to combine optional input with a fallible stage.
+The selector runs only for Some; None becomes `Ok(None)` without invocation:
+
+```csharp
+Result<Option<Customer>, LookupError> loaded = optionalId.Traverse(LoadCustomer);
+```
+
 Transpose changes nesting, not meaning:
 
 | Input | Output |
@@ -837,6 +920,64 @@ Transpose changes nesting, not meaning:
 
 `Flatten` applies to `Result<Result<T,E>,E>`: outer failure wins, outer success
 returns the inner Result unchanged, and no callback or allocation is involved.
+
+## Collections And LINQ
+
+These features are separate packages so the core assembly and consumers that
+do not use them remain unchanged.
+
+Install count-known collection traversal only when the application owns an
+indexed input and needs an output array:
+
+```bash
+dotnet add package MonadicTypes.NET.Collections --prerelease
+```
+
+```csharp
+using MonadicTypes.Collections;
+
+Result<Customer[], LookupError> customers = ids.TraverseToArray(LoadCustomer);
+```
+
+`TraverseToArray` is fail-fast and one-pass. Empty input returns the shared empty
+array. Non-empty input allocates exactly one result array, including when a later
+item fails; this avoids hidden iterator, builder, and resize allocations while
+preserving selector side effects and exception stacks. Use the caller-state or
+struct-callable overload when a captured delegate would allocate. Use
+`SequenceToArray` when the inputs are already a span of Results.
+
+LINQ names and query expressions are opt-in:
+
+```bash
+dotnet add package MonadicTypes.NET.Linq --prerelease
+```
+
+```csharp
+using MonadicTypes.Linq;
+
+Result<Invoice, LoadError> invoice = LoadUser(id).SelectMany(
+    static user => LoadAccount(user.AccountId),
+    static (user, account) => new Invoice(user, account));
+
+Option<Customer> active = optionalCustomer
+    .Where(static customer => customer.IsActive)
+    .Select(static customer => customer.Normalize());
+```
+
+The equivalent query expression is supported when it reads better:
+
+```csharp
+Result<Invoice, LoadError> invoice =
+    from user in LoadUser(id)
+    from account in LoadAccount(user.AccountId)
+    select new Invoice(user, account);
+```
+
+Fluent syntax is the default recommendation. In the initial NativeAOT run it
+measured `2.095 ns` versus `2.355 ns` for query `Select`, and `4.509 ns` versus
+`4.952 ns` for query `SelectMany`; every row allocated `0 B`. The LINQ members
+do not catch callbacks, so exceptions propagate unchanged. Convert exceptions
+to typed failures only through an explicit Effects boundary.
 
 ## Async Pipelines
 
@@ -1114,6 +1255,12 @@ to a caller-provided span without creating a string. `ThrowCause` rethrows a
 retained exception through `ExceptionDispatchInfo`; never write `throw
 error.Cause`, which resets the stack trace.
 
+Two errors are equal when their category, numeric category, ordinal code,
+ordinal message, disclosure policy, and retained-cause reference are equal.
+Exception causes intentionally use identity rather than exception message or
+stack comparison. Hashing uses the same fields. This semantic contract does not
+expose or depend on the error's compact internal storage representation.
+
 ```csharp
 Span<char> buffer = stackalloc char[128];
 if (error.TryFormat(buffer, out int written, default, null))
@@ -1157,6 +1304,11 @@ FluentValidation and similar libraries out of the runtime dependency graph.
 `ValidationIssue` contains `Path`, stable `Code`, display `Message`, and
 `ValidationSeverity`. `ValidationErrors` is an immutable read-only collection.
 Construct it from issues directly, from an array, or with `Create`:
+
+`ValidationErrors` retains reference identity; it does not perform an implicit
+sequence comparison or sequence hash. Use `AsSpan` when an application needs an
+explicit issue-by-issue comparison. The same reference-identity rule applies to
+the immutable `ErrorCatalogMetadata` owner used during endpoint registration.
 
 | Construction | Use |
 | --- | --- |
@@ -1283,7 +1435,6 @@ public sealed class GlobalExceptionHandler(
     }
 }
 
-builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 WebApplication app = builder.Build();
@@ -1343,6 +1494,101 @@ public sealed class CustomersController(CustomerService service) : ControllerBas
 
 The controller adapter is application code because MVC result policy varies.
 Minimal APIs can use the supplied strongly typed adapter directly.
+
+### OpenAPI Error Catalogs
+
+`MonadicTypes.NET.AspNetCore` can attach stable public error metadata without an
+OpenAPI runtime dependency. Each `ErrorCatalogEntry` requires an initialized
+defined category, a non-empty machine code, and a non-empty public description.
+Minimal API registration copies the entries, rejects duplicate codes across the
+complete endpoint regardless of HTTP status, and adds one problem response per
+distinct category:
+
+```csharp
+app.MapGet("/customers/{id:int}", GetCustomer)
+    .ProducesErrorCatalog(
+        new ErrorCatalogEntry(
+            ErrorType.NotFound,
+            "CUSTOMER_NOT_FOUND",
+            "The customer does not exist."),
+        new ErrorCatalogEntry(
+            ErrorType.Unavailable,
+            "CUSTOMER_STORE_UNAVAILABLE",
+            "The customer store is unavailable."));
+```
+
+The input may be stack-backed through the `params ReadOnlySpan<T>` contract.
+Registration performs one owned array copy so later caller mutation cannot
+change endpoint metadata. This is a cold startup cost; request execution does
+not construct, transform, or inspect catalogs. Controllers attach repeatable
+entries with attributes:
+
+```csharp
+[HttpGet("{id:int}")]
+[ProducesErrorCatalog(
+    ErrorType.NotFound,
+    "CUSTOMER_NOT_FOUND",
+    "The customer does not exist.")]
+public ActionResult<Customer> Get(int id) => Handle(id);
+```
+
+Install `MonadicTypes.NET.AspNetCore.OpenApi` only when those entries should be
+projected into an ASP.NET Core OpenAPI document:
+
+```csharp
+using MonadicTypes.AspNetCore.OpenApi;
+
+builder.Services.AddErrorCatalogOpenApi();
+app.MapOpenApi();
+```
+
+NativeAOT OpenAPI generation also requires source-generated JSON metadata for
+the application's request, response, and bound parameter types. This includes
+primitive route parameters used in schemas. `AddErrorCatalogOpenApi()` supplies
+package-owned metadata for the `ProblemHttpResult` payload without registering
+problem-details services; the application context supplies application-owned
+types:
+
+```csharp
+using System.Text.Json.Serialization;
+
+builder.Services.ConfigureHttpJsonOptions(static options =>
+    options.SerializerOptions.TypeInfoResolverChain.Insert(
+        0,
+        ApiJsonSerializerContext.Default));
+
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(CustomerResponse))]
+internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;
+```
+
+Missing application metadata fails document generation; the adapter does not
+fall back to reflection. Register all endpoint types for which ASP.NET Core
+must produce a schema.
+
+The transformer reads endpoint metadata by type, groups codes by mapped HTTP
+status, and adds a code enum plus deterministic problem examples. It contains
+no reflection, assembly scanning, service location, or request-path work.
+`ErrorProblemDetails.CreateExample` is available when application-owned
+document transformers need the same trace-free problem shape.
+
+The integration package deliberately removes Microsoft's transitive XML-comment
+generator. `MTAPI001` reports a documented Minimal API handler that has neither
+`.WithSummary(...)`/`.WithDescription(...)` nor an active Microsoft XML
+projection. Use explicit metadata for the reflection-free profile:
+
+```csharp
+app.MapGet("/customers/{id:int}", GetCustomer)
+    .WithSummary("Gets a customer.")
+    .WithDescription("Returns the customer when it exists.");
+```
+
+For Microsoft's complete XML-comment projection, add a direct reference to the
+pinned `Microsoft.AspNetCore.OpenApi` package. The direct reference is the
+intentional opt-in signal: our build target retains Microsoft's generator and
+its reflection-based document transformer. An alternative is to generate the
+document in a separate docs process and serve the static artifact, keeping that
+reflection outside the production executable.
 
 ## Diagnostics
 

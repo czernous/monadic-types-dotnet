@@ -12,10 +12,10 @@ namespace MonadicTypes.AspNetCore;
     Inherited = true)]
 public sealed class ProducesErrorAttribute(ErrorType errorType) : Attribute, IProducesResponseTypeMetadata
 {
-    private static readonly string[] ProblemContentTypes = ["application/problem+json"];
+    internal static readonly string[] ProblemContentTypes = ["application/problem+json"];
 
     /// <summary>Gets the configured error category.</summary>
-    public ErrorType ErrorType { get; } = errorType is ErrorType.Uninitialized
+    public ErrorType ErrorType { get; } = errorType is < ErrorType.Failure or > ErrorType.Custom
         ? throw new ArgumentOutOfRangeException(nameof(errorType))
         : errorType;
 

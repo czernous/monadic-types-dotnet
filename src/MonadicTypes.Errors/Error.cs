@@ -29,7 +29,7 @@ public sealed record Error : ISpanFormattable
         Exception? cause = null)
         : this(type, (int)type, code, message, isMessagePublic, cause)
     {
-        if (type is ErrorType.Uninitialized or ErrorType.Custom)
+        if (type is < ErrorType.Failure or >= ErrorType.Custom)
         {
             throw new ArgumentOutOfRangeException(nameof(type));
         }
@@ -215,6 +215,26 @@ public sealed record Error : ISpanFormattable
     /// <summary>Creates an unexpected system failure with the standard code.</summary>
     public static Error System(string message) =>
         new(ErrorType.Unexpected, "SYSTEM_FAILURE", message);
+
+    /// <summary>Compares semantic fields and retained-cause identity.</summary>
+    public bool Equals(Error? other) =>
+        ReferenceEquals(this, other)
+        || other is not null
+        && Type == other.Type
+        && NumericType == other.NumericType
+        && string.Equals(Code, other.Code, StringComparison.Ordinal)
+        && string.Equals(Message, other.Message, StringComparison.Ordinal)
+        && IsMessagePublic == other.IsMessagePublic
+        && ReferenceEquals(Cause, other.Cause);
+
+    /// <summary>Hashes the same fields used by <see cref="Equals(Error?)"/>.</summary>
+    public override int GetHashCode() => HashCode.Combine(
+        (int)Type,
+        NumericType,
+        StringComparer.Ordinal.GetHashCode(Code),
+        StringComparer.Ordinal.GetHashCode(Message),
+        IsMessagePublic,
+        Cause is null ? 0 : RuntimeHelpers.GetHashCode(Cause));
 
     /// <inheritdoc />
     public override string ToString() => string.Create(

@@ -46,9 +46,17 @@ application-defined numeric categories.
 conversion never serializes it. Compact domain errors can implement
 `IErrorConvertible<Error>` and widen only at an application boundary.
 
+Equality compares category, numeric category, ordinal code, ordinal message,
+disclosure policy, and retained-cause identity. Hashing uses the same fields.
+`ToString` returns `[CODE] message`; `TryFormat` writes that representation to a
+caller-owned span without allocating a string. These contracts do not expose
+the compact internal message/cause representation.
+
 `ValidationErrors.Create` maps third-party validation objects through caller
 supplied functions, so compatibility does not require a runtime dependency on
-the originating validation library.
+the originating validation library. `ValidationErrors` is an immutable owner
+with reference identity; use `AsSpan` for explicit allocation-free sequence
+inspection or comparison.
 
 Successful `Result<T,Error>` paths allocate 0 B. Rich errors allocate only when
 an error is constructed; use compact readonly domain errors on measured failure

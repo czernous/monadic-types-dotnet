@@ -129,6 +129,14 @@
           "MonadicTypes.NET.Errors": "[0.1.0-dev, )"
         }
       },
+      "MonadicTypes.NET.AspNetCore.OpenApi": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.AspNetCore.OpenApi": "[10.0.10, )",
+          "Microsoft.OpenApi": "[2.7.5, )",
+          "MonadicTypes.NET.AspNetCore": "[0.1.0-dev, )"
+        }
+      },
       "MonadicTypes.NET.Errors": {
         "type": "Project",
         "dependencies": {

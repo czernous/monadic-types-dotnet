@@ -89,6 +89,20 @@ if (result.TryGetValue(out User user))
 }
 ```
 
+### Result Deconstruct
+
+`Deconstruct` exposes `(isSuccess, value, error)` for positional patterns. The
+inactive payload is `default`; an uninitialized Result throws rather than being
+misclassified as failure.
+
+```csharp
+string text = result switch
+{
+    (true, User user, _) => user.Name,
+    (false, _, LookupError error) => error.Code
+};
+```
+
 ### Result String
 
 `ToString` returns `Ok(value)`, `Fail(error)`, or `Uninitialized`. It is a
@@ -310,14 +324,28 @@ Result<(User User, Account Account), LoadError> loaded =
 
 ### Combination Map
 
-Two-result `Map` returns the first failure or invokes its projection once with
-both success values.
+`Map` accepts two through six independent Results. It returns the first failure
+in argument order or invokes its projection exactly once with all success
+values. Inputs are already evaluated before `Map` is called.
 
 ```csharp
 Result<Invoice, LoadError> invoice = ResultCombination.Map(
     userResult,
     accountResult,
     static (user, account) => new Invoice(user, account));
+```
+
+### Combination Bind
+
+`Bind` accepts two through six independent Results and flattens a Result-returning
+projection. Input failures short-circuit in argument order; a failure returned
+by the projection is returned unchanged.
+
+```csharp
+Result<Invoice, LoadError> invoice = ResultCombination.Bind(
+    userResult,
+    accountResult,
+    static (user, account) => Invoice.Create(user, account));
 ```
 
 ## Option
@@ -366,6 +394,19 @@ if (option.TryGetValue(out User user))
 {
     Render(user);
 }
+```
+
+### Option Deconstruct
+
+`Deconstruct` exposes `(hasValue, value)` for positional patterns. None returns
+`false` and `default(T)`.
+
+```csharp
+string text = option switch
+{
+    (true, User user) => user.Name,
+    (false, _) => "Missing"
+};
 ```
 
 ### Option Map
@@ -436,6 +477,19 @@ Implicit conversion maps null to None and a non-null value to Some.
 Option<User> option = nullableUser;
 ```
 
+### Option Nullable Bridges
+
+`Option.FromNullable` converts nullable reference and value types at application
+boundaries. `ToNullable` returns a nullable reference; `ToNullableValue` returns
+a nullable value type. No wrapper object is allocated.
+
+```csharp
+Option<User> user = Option.FromNullable(nullableUser);
+Option<int> age = Option.FromNullable(nullableAge);
+User? nullable = user.ToNullable();
+int? nullableValue = age.ToNullableValue();
+```
+
 ### Option To Result
 
 `ToResult` converts Some to success. None becomes failure from an eager error or
@@ -443,6 +497,17 @@ a lazy factory that runs only for None.
 
 ```csharp
 Result<User, LookupError> required = option.ToResult(LookupError.NotFound);
+```
+
+### Option Traverse
+
+`Traverse` runs a Result-returning selector only for Some and exchanges the
+layers into `Result<Option<T>,E>`. None becomes `Ok(None)`. Selector failure and
+exceptions propagate unchanged. Delegate, caller-state, and struct-callable
+overloads are available.
+
+```csharp
+Result<Option<User>, LookupError> loaded = userId.Traverse(LoadUser);
 ```
 
 ## Result And Option Transposition
@@ -473,6 +538,87 @@ factory once. Outer failure propagates and skips the factory.
 ```csharp
 Result<User, LookupError> required = lookup.RequireSome(
     static () => LookupError.NotFound);
+```
+
+## Count-Known Collections
+
+These members require the optional `MonadicTypes.NET.Collections` package and
+`using MonadicTypes.Collections`. They deliberately do not accept
+`IEnumerable<T>`: traversal needs a stable count and indexed one-pass access.
+
+### Traverse To Array
+
+`TraverseToArray` invokes its selector once per item until the first failure and
+returns a newly owned array on success. Empty input reuses `Array.Empty<T>()`.
+Non-empty input allocates exactly one output array, even when a later item fails;
+there are no hidden iterator or wrapper allocations. Selector and indexer
+exceptions propagate unchanged.
+
+```csharp
+Result<User[], LookupError> users = ids.TraverseToArray(LoadUser);
+
+Result<User[], LookupError> usersWithoutCapture = ids.TraverseToArray(
+    repository,
+    static (id, state) => state.Load(id));
+```
+
+### Sequence To Array
+
+`SequenceToArray` converts `ReadOnlySpan<Result<T,E>>` to one Result-owned array,
+preserving order and the first failure. It has the same empty and one-array
+allocation behavior as traversal.
+
+```csharp
+ReadOnlySpan<Result<User, LookupError>> loaded = results;
+Result<User[], LookupError> users = loaded.SequenceToArray();
+```
+
+## Opt-In LINQ
+
+These members require the optional `MonadicTypes.NET.Linq` package and
+`using MonadicTypes.Linq`. They are thin extension members over Result and
+Option and introduce no allocation by themselves.
+
+### LINQ Select
+
+`Select` is `Map` under the conventional LINQ name for both Result and Option.
+Fluent syntax is preferred in measured paths.
+
+```csharp
+Result<UserView, LoadError> view = loaded.Select(ToView);
+```
+
+### LINQ Select Many
+
+`SelectMany` binds and projects two successful/present values. It powers
+multi-`from` query expressions and short-circuits Result failure or Option None.
+
+```csharp
+Result<Invoice, LoadError> invoice = userResult.SelectMany(
+    static user => LoadAccount(user.AccountId),
+    static (user, account) => new Invoice(user, account));
+```
+
+### LINQ Where
+
+Option `Where` delegates to `Filter`; its predicate runs only for Some. Result
+does not define `Where` because predicate failure requires an error value.
+
+```csharp
+Option<User> active = user.Where(static value => value.IsActive);
+```
+
+### LINQ Query Syntax
+
+The same operators support `from`/`where`/`select`. NativeAOT measurements found
+fluent syntax about 10% faster for the tested `SelectMany` path, so query syntax
+is retained for readability rather than presented as the hot-path default.
+
+```csharp
+Result<Invoice, LoadError> invoice =
+    from user in userResult
+    from account in LoadAccount(user.AccountId)
+    select new Invoice(user, account);
 ```
 
 ## Callable Abstractions
@@ -720,10 +866,30 @@ Error error = Error.NotFound("USER_NOT_FOUND", "The user does not exist.");
 Error error = Error.Custom(10_001, "VENDOR_REJECTED", "The vendor rejected the request.");
 ```
 
+### Error Equality
+
+`Equals` compares category, numeric category, ordinal code, ordinal message,
+message-disclosure policy, and retained-cause identity. Two exceptions with the
+same type, message, or stack are not the same cause unless they are the same
+object. `GetHashCode` hashes the same fields. Neither operation exposes or
+depends on the compact internal representation used to retain message and cause.
+
+```csharp
+Exception cause = new IOException("connection closed");
+Error left = Error.Unavailable("STORE_UNAVAILABLE", "Store unavailable.", cause: cause);
+Error right = Error.Unavailable("STORE_UNAVAILABLE", "Store unavailable.", cause: cause);
+
+bool equal = left.Equals(right); // true: semantic fields and cause identity match
+int hash = left.GetHashCode();
+```
+
 ### Error Format
 
-`ToString` allocates `[CODE] message`. `TryFormat` writes the same representation
-to caller-owned memory.
+`ToString` allocates exactly the diagnostic representation `[CODE] message`.
+Cause, category, and disclosure policy are not appended. The default or `G`
+format is accepted; another format throws `FormatException`. `TryFormat` writes
+the same representation to caller-owned memory without creating a string and
+returns `false` with zero characters written when the destination is too small.
 
 ```csharp
 Span<char> buffer = stackalloc char[128];
@@ -780,7 +946,9 @@ ValidationErrors errors = ValidationErrors.Create(failures, MapFailure);
 ### Validation Errors Read
 
 `Count`, the indexer, `AsSpan`, and `GetEnumerator` read immutable issues.
-`AsSpan` is the allocation-free iteration path.
+`AsSpan` is the allocation-free iteration path. `ValidationErrors` retains
+reference identity rather than performing implicit sequence equality or
+hashing; compare the span explicitly when sequence semantics are required.
 
 ```csharp
 foreach (ref readonly ValidationIssue issue in errors.AsSpan())
@@ -892,10 +1060,23 @@ ProblemHttpResult problem = default(DefaultErrorHttpResultMapper).Map(error, con
 ### Problem Create
 
 `ErrorProblemDetails.Create` builds ProblemDetails with status, type URI, stable
-code, optional public detail, and trace ID. Cause is never serialized.
+code, optional public detail, and an optional request trace ID. Its
+`HttpContext?` argument defaults to null. The trace ID comes from the ambient
+`Activity` first and then the supplied context, so omitting the context alone
+does not make output deterministic. Cause is never serialized.
 
 ```csharp
 ProblemDetails details = ErrorProblemDetails.Create(error, context);
+```
+
+### Problem Example
+
+`ErrorProblemDetails.CreateExample` applies the same status, title, type, code,
+and public-detail policy while deliberately omitting ambient activity and
+request trace data. Use it for deterministic tests and documentation examples.
+
+```csharp
+ProblemDetails example = ErrorProblemDetails.CreateExample(error);
 ```
 
 ### Problem Result
@@ -934,6 +1115,57 @@ app.MapGet("/users/{id:int}", GetUser)
     .ProducesErrors(ErrorType.NotFound, ErrorType.Unexpected);
 ```
 
+### Error Catalog Entry
+
+`ErrorCatalogEntry` is an immutable documentation value containing `Type`,
+`Code`, and `Description`. Construction rejects `ErrorType.Uninitialized`,
+undefined enum values, blank codes, and blank descriptions. The description is
+public API text and must not contain retained exception messages or private
+diagnostics.
+
+```csharp
+ErrorCatalogEntry entry = new(
+    ErrorType.NotFound,
+    "USER_NOT_FOUND",
+    "The user does not exist.");
+```
+
+### Error Catalog Metadata
+
+`ErrorCatalogMetadata` requires at least one initialized entry, rejects
+duplicate codes using ordinal comparison, and copies the input span. OpenAPI
+transformation also rejects duplicates across all catalog metadata attached to
+an endpoint, including controller attributes mapped to different statuses.
+`Count` reports the owned length and `AsSpan` provides a zero-allocation readonly
+view. The copy makes endpoint metadata independent of later caller mutation.
+
+```csharp
+ErrorCatalogEntry[] source = [entry];
+ErrorCatalogMetadata metadata = new(source);
+ReadOnlySpan<ErrorCatalogEntry> entries = metadata.AsSpan();
+```
+
+Construction is a route-registration operation. For two entries the accepted
+NativeAOT baseline is 96 B: a 72 B owned array and one 24 B metadata owner.
+Reads and entry-value construction allocate `0 B`.
+
+### Produces Error Catalog
+
+`ProducesErrorCatalog` constructs and attaches `ErrorCatalogMetadata`, then
+adds one `ProducesErrorAttribute` for each distinct category. It accepts inline
+entries through `params ReadOnlySpan<ErrorCatalogEntry>`; spell entry
+construction explicitly because target-typed `new(...)` can bind to the
+expanded params array in package consumers.
+
+```csharp
+app.MapGet("/users/{id:int}", GetUser)
+    .ProducesErrorCatalog(
+        new ErrorCatalogEntry(
+            ErrorType.NotFound,
+            "USER_NOT_FOUND",
+            "The user does not exist."));
+```
+
 ### Produces Error Attribute
 
 `ProducesErrorAttribute` supplies controller or endpoint response type, status,
@@ -943,6 +1175,77 @@ content type, and category metadata through its public properties.
 [ProducesError(ErrorType.NotFound)]
 public ActionResult<User> GetUser(int id) => Handle(id);
 ```
+
+### Produces Error Catalog Attribute
+
+`ProducesErrorCatalogAttribute` is repeatable on controller classes and
+methods. Its constructor validates and stores `Entry`; `Type`, `StatusCode`,
+`Description`, and `ContentTypes` implement ASP.NET Core response metadata.
+`Description` is null because operation/response description policy belongs to
+the selected document pipeline.
+
+```csharp
+[ProducesErrorCatalog(
+    ErrorType.NotFound,
+    "USER_NOT_FOUND",
+    "The user does not exist.")]
+public ActionResult<User> GetUser(int id) => Handle(id);
+```
+
+### Add Error Catalog OpenAPI
+
+`IServiceCollection.AddErrorCatalogOpenApi` is the default setup. It registers
+ASP.NET Core OpenAPI, the error-catalog transformer, and package-owned
+source-generated JSON metadata for the problem payload returned by
+`ProblemHttpResult`. It does not call `AddProblemDetails`, register
+`IProblemDetailsService`, or enable reflection.
+
+```csharp
+using MonadicTypes.AspNetCore.OpenApi;
+
+builder.Services.AddErrorCatalogOpenApi();
+```
+
+### Add Error Catalogs
+
+`OpenApiOptions.AddErrorCatalogs` is provided by
+`MonadicTypes.NET.AspNetCore.OpenApi`. It registers one singleton operation
+transformer instance without DI activation. The transformer reads typed
+endpoint metadata and adds status-scoped code enums and deterministic problem
+examples during document generation; it does not run while handling requests.
+
+```csharp
+builder.Services.AddOpenApi(static options => options.AddErrorCatalogs());
+```
+
+This lower-level overload is for advanced or named-document configuration. The
+caller must register equivalent `ProblemDetails` metadata in an
+application-owned source-generated `JsonSerializerContext`; the default service
+extension handles this package-owned type automatically.
+
+Under NativeAOT, ASP.NET Core's schema exporter also requires the application
+to register request, response, and bound parameter types in a source-generated
+`JsonSerializerContext`. This includes primitive route types such as `int`.
+`AddErrorCatalogOpenApi()` supplies package-owned problem response metadata.
+Missing application metadata fails document generation; this adapter never
+enables a reflection fallback. See the OpenAPI package README for the complete
+setup.
+
+### OpenAPI XML Comment Diagnostic
+
+`MTAPI001` is an informational compile/live-analysis diagnostic bundled with
+the OpenAPI package. Rider and Visual Studio show it for a documented Minimal
+API method-group handler whose route chain has no explicit `WithSummary` or
+`WithDescription` metadata and whose compilation has no Microsoft XML-comment
+projection.
+
+The default fix is explicit standard metadata, which stays reflection-free. A
+direct `Microsoft.AspNetCore.OpenApi` package reference intentionally enables
+Microsoft's complete XML-comment generator and reflection-based document
+transformer; the MonadicTypes build target detects that direct reference and
+does not remove the generator. Generating and serving a static OpenAPI artifact
+is the reflection-free production alternative when automatic XML projection is
+required only during documentation builds.
 
 ## Source Generation
 

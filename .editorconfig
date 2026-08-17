@@ -117,6 +117,11 @@ trim_trailing_whitespace = false
 dotnet_diagnostic.CA1000.severity = none
 dotnet_diagnostic.CA1716.severity = none
 
+# The non-generic Option factory shares its base name with Option<T>.
+[src/MonadicTypes/OptionFactory.cs]
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.MA0048.severity = none
+
 [src/MonadicTypes/Result.cs]
 dotnet_diagnostic.CA1000.severity = none
 dotnet_diagnostic.CA1715.severity = none
@@ -158,6 +163,10 @@ dotnet_diagnostic.MA0011.severity = none
 [benchmarks/MonadicTypes.Composition.Benchmarks/CompositionBenchmarks.cs]
 dotnet_diagnostic.CA2012.severity = none
 dotnet_diagnostic.MA0048.severity = none
+
+# The interface-typed input is intentional: it keeps the manual and public collection paths equivalent.
+[benchmarks/MonadicTypes.Extensions.Benchmarks/ExtensionBenchmarks.cs]
+dotnet_diagnostic.CA1859.severity = none
 
 # BDN owns lifecycle through GlobalCleanup; legacy factories are the control API.
 [benchmarks/MonadicTypes.Benchmarks/PrimitiveBenchmarks.cs]

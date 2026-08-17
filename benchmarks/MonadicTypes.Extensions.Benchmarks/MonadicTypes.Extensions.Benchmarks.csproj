@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>true</PublishAot>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <RestoreLockedMode>false</RestoreLockedMode>
+    <IsAotCompatible>false</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <ProjectReference Include="..\..\src\MonadicTypes.Collections\MonadicTypes.Collections.csproj" />
+    <ProjectReference Include="..\..\src\MonadicTypes.Linq\MonadicTypes.Linq.csproj" />
+  </ItemGroup>
+</Project>

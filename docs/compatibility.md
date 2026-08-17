@@ -11,10 +11,27 @@ core results, structured errors, diagnostics, and typed ASP.NET Core results.
 | .NET and ASP.NET Core | 10.0 | Framework only in `MonadicTypes.AspNetCore` |
 | FluentValidation | 12.1.1 | None; compatibility-test only |
 | OpenAPI endpoint metadata | ASP.NET Core 10.0 | Framework only in `MonadicTypes.AspNetCore` |
+| OpenAPI error-catalog transformation | Microsoft.AspNetCore.OpenApi 10.0.10; Microsoft.OpenApi 2.7.5 | Explicit `MonadicTypes.AspNetCore.OpenApi` package only |
 
-Compatibility tests currently pin `Microsoft.AspNetCore.OpenApi` and
-`Microsoft.AspNetCore.TestHost` 10.0.10 plus patched `Microsoft.OpenApi` 2.7.5.
-These packages are test-only and do not flow into runtime consumers.
+Compatibility tests pin `Microsoft.AspNetCore.TestHost` 10.0.10. The optional
+OpenAPI package pins `Microsoft.AspNetCore.OpenApi` 10.0.10 and patched
+`Microsoft.OpenApi` 2.7.5; those dependencies do not flow into core or the base
+ASP.NET Core package.
+
+The OpenAPI package excludes Microsoft's XML-comment analyzer/build assets in
+its dependency metadata and ships a build target that removes the generator if
+NuGet resolves it transitively. A direct application reference to
+`Microsoft.AspNetCore.OpenApi` is an intentional opt-in; the target detects the
+direct reference and preserves Microsoft's generator. The generator's document
+transformers use reflection. Our runtime transformer and metadata path do not.
+
+NativeAOT applications must satisfy ASP.NET Core's existing JSON schema
+metadata contract by registering every endpoint request, response, and bound
+parameter type in an application-owned source-generated `JsonSerializerContext`.
+`AddErrorCatalogOpenApi()` supplies source-generated metadata for the
+`ProblemHttpResult` payload exposed by this package without registering
+problem-details services. The OpenAPI adapter deliberately fails on missing
+application metadata instead of silently introducing reflection.
 
 Version changes are deliberate maintenance work. They require compatibility
 tests, trim analysis, NativeAOT publication, and benchmark review before the

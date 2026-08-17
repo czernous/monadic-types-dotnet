@@ -559,6 +559,21 @@ public readonly record struct Result<T, E> where E : notnull
     /// <summary>Converts an error into a failed result.</summary>
     public static implicit operator Result<T, E>(E error) => Fail(error);
 
+    /// <summary>Deconstructs the active case for positional pattern matching.</summary>
+    /// <param name="isSuccess">Receives true for success and false for failure.</param>
+    /// <param name="value">Receives the success value, or default for failure.</param>
+    /// <param name="error">Receives the failure value, or default for success.</param>
+    public void Deconstruct(
+        out bool isSuccess,
+        [MaybeNull] out T value,
+        [MaybeNull] out E error)
+    {
+        ThrowIfUninitialized();
+        isSuccess = _state == Success;
+        value = _value;
+        error = _error;
+    }
+
     private void ThrowIfUninitialized()
     {
         if (_state == Uninitialized)

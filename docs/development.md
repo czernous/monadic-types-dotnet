@@ -9,6 +9,7 @@ from whichever newer SDK happens to be installed.
 Restore, compile, and test from the repository root:
 
 ```powershell
+eng\tools\win-x64\mt-verify-locks.exe
 dotnet restore MonadicTypes.slnx
 dotnet build MonadicTypes.slnx -c Release --no-restore
 dotnet test MonadicTypes.slnx -c Release --no-build --no-restore
@@ -17,12 +18,67 @@ dotnet test MonadicTypes.slnx -c Release --no-build --no-restore
 Verify the NativeAOT integration boundary on Windows:
 
 ```powershell
+dotnet restore tests\MonadicTypes.AotSmoke\MonadicTypes.AotSmoke.csproj `
+  -r win-x64 --force-evaluate `
+  -p:RestorePackagesWithLockFile=false `
+  -p:RestoreLockedMode=false `
+  -p:NuGetLockFilePath="$env:TEMP\monadic-types-win-x64.lock.json"
 dotnet publish tests\MonadicTypes.AotSmoke\MonadicTypes.AotSmoke.csproj `
   -c Release -r win-x64 --no-restore
 ```
 
-The same smoke project should be published with the appropriate runtime
-identifier on Linux and macOS once those environments are available.
+Explicit RID restores disable lock-file writing with global MSBuild properties,
+so every project in the restore graph receives the policy and cannot add
+host-specific targets to committed portable locks. The precompiled
+`mt-verify-locks` NativeAOT tool parses every shipping lock before CI and release
+restores. Linux uses the matching executable under `eng/tools/linux-x64`. Use
+the appropriate runtime identifier and temporary path for AOT restores.
+
+Ordinary development and CI execute checked-in NativeAOT tools without SDK
+startup or script compilation. A tooling-source change incrementally rebuilds
+only its affected command on `win-x64` and `linux-x64`; changing
+`eng/NativeTool.props` rebuilds all four commands for both supported tooling
+hosts. NativeAOT requires each binary to be linked on its target operating
+system, so Windows and Docker produce the committed Windows and Linux artifacts.
+The source remains portable, but macOS tooling binaries and CI validation are
+deferred until the project has a macOS maintainer.
+
+NativeAOT output is not byte-reproducible across build hosts. CI therefore does
+not compare locally produced executables byte for byte. It compiles every
+affected command from source for Windows and Linux, runs the tooling unit tests,
+and exercises the committed commands in affected-project, lock, package, and
+package-consumption jobs. Regenerate the committed executable whenever its
+source changes; generated binary changes intentionally trigger the same source
+compilation and behavioral gates.
+
+The four commands have deliberately separate binaries:
+
+- `mt-affected` consumes NUL-delimited Git paths, resolves the reverse project
+  graph, and writes optional CI outputs without materializing changed paths as
+  managed strings.
+- `mt-verify-locks` validates shipping lockfiles discovered from the solution
+  with pooled UTF-8 parsing and a bounded JSON reader.
+- `mt-pack` performs one parallel MSBuild traversal and validates package
+  contents with span-based SemVer and Nuspec parsing.
+- `mt-test-packages` uses one MSBuild host for parallel default NativeAOT and
+  XML-comment opt-in configurations. It requires a unique SemVer that is absent
+  from the NuGet global package cache, preventing stale package validation
+  without mutating shared cache state or discarding third-party dependencies.
+
+Changes to `eng/Pack.proj` or `eng/TestPackages.proj` rerun package validation
+but do not relink an unchanged native executable. See
+[tooling performance](tooling-performance.md) for the accepted measurements and
+comparison limits.
+
+Build one command for the current host with:
+
+```powershell
+dotnet publish eng\MonadicTypes.AffectedProjects.Tool\MonadicTypes.AffectedProjects.Tool.csproj `
+  -c Release -r win-x64 -o eng\tools\win-x64
+```
+
+The same project accepts `linux-x64` when run on Linux. Replace the project path
+to rebuild `mt-pack`, `mt-test-packages`, or `mt-verify-locks`.
 
 ## Formatting
 

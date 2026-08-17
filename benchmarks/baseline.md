@@ -266,3 +266,123 @@ favorable mean would be p-hacking. Neither run replaces the 18.0510 ns
 historical regression baseline. That older absolute result remains the gate
 until a same-run unchanged control separates native layout variance from an
 implementation regression.
+
+## Collections, Combination, And Opt-In LINQ
+
+Recorded on 2026-08-16 in a separate NativeAOT executable. Inputs and delegates
+were created in `GlobalSetup`. Collection rows must allocate exactly the same
+owned output array as the manual loop; every other row must allocate `0 B`.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| ManualTraverse | 43.938 ns | 88 B |
+| DelegateTraverse | 44.829 ns | 88 B |
+| StateTraverse | 44.934 ns | 88 B |
+| CallableTraverse | 38.054 ns | 88 B |
+| DirectMapSix | 8.349 ns | 0 B |
+| CombinationMapSix | 10.153 ns | 0 B |
+| DirectMap | 2.007 ns | 0 B |
+| FluentSelect | 2.095 ns | 0 B |
+| QuerySelect | 2.355 ns | 0 B |
+| FluentSelectMany | 4.509 ns | 0 B |
+| QuerySelectMany | 4.952 ns | 0 B |
+
+Delegate and caller-state traversal are within 2% of the allocation-equivalent
+manual implementation; their confidence intervals overlap. Struct-callable
+traversal is 13% faster. Six-input fail-fast Map adds 1.804 ns to direct unchecked
+value access while retaining initialization and failure checks. Fluent LINQ is
+the default recommendation; query syntax remains allocation-free but measured
+12% slower for Select and 10% slower for SelectMany in this run.
+
+## Positional Patterns
+
+Recorded on 2026-08-16 in a separate NativeAOT executable. Inputs and Match
+delegates were initialized in `GlobalSetup`; every path allocated `0 B`.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| ResultDirectSuccess | 0.9455 ns | 0 B |
+| ResultPatternSuccess | 0.5009 ns | 0 B |
+| ResultMatchSuccess | 0.7496 ns | 0 B |
+| ResultDirectFailure | 1.1559 ns | 0 B |
+| ResultPatternFailure | 0.4917 ns | 0 B |
+| ResultMatchFailure | 0.7332 ns | 0 B |
+| OptionDirectSome | 0.7535 ns | 0 B |
+| OptionPatternSome | 0.2442 ns | 0 B |
+| OptionMatchSome | 0.5009 ns | 0 B |
+| OptionDirectNone | 0.6415 ns | 0 B |
+| OptionPatternNone | 0.2489 ns | 0 B |
+| OptionMatchNone | 0.7335 ns | 0 B |
+
+Positional patterns beat delegate Match in all four active cases. They also beat
+the naïve direct controls in this harness because deconstruction validates and
+loads both fields once, while the controls repeat state/property access. These
+sub-nanosecond values are retained primarily as allocation and code-generation
+evidence; ratios at this scale should not be generalized to application work.
+
+## 2026-08-16 Primitive Recheck
+
+Two exact 28-method primitive runs retained `0 B` for every accepted
+success/composition path. Most established operators matched or improved their
+accepted values, but type-changing delegate Map repeated at `2.8783 ns` and
+`2.8900 ns` versus its `2.7047 ns` accepted best. Same-type Map measured
+`2.6968 ns` and `2.7220 ns`; Bind measured `8.6045 ns` and `8.5893 ns`.
+
+Moving newly added deconstruction methods after established public operators
+preserved prior metadata order but did not clear the type-changing Map signal.
+A direct-constructor switch candidate measured `2.729 ns` in a focused
+diagnostic run, with a `2.704-2.754 ns` confidence interval. It did not beat the
+accepted baseline and was rejected; the established branch/shared-constructor
+implementation remains. Focused layout is not used to replace either full-run
+observation. The timing signal remains open for the subsequent performance
+audit, while the absolute allocation gate passes.
+
+## ASP.NET Core Error Catalogs
+
+Recorded on 2026-08-16 in a separate NativeAOT executable. Entry values and
+metadata reads must remain allocation-free. Registration deliberately owns a
+copy so application arrays cannot mutate endpoint documentation after startup.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| EntryConstruction | 4.2943 ns | 0 B |
+| OwnedArrayCopy | 14.9705 ns | 72 B |
+| MetadataConstruction | 31.1736 ns | 96 B |
+| MetadataRead | 0.6402 ns | 0 B |
+
+The two-entry array accounts for 72 B. `ErrorCatalogMetadata` adds one 24 B
+owner object while validating initialization and duplicate codes. This is a
+cold endpoint-registration cost; request execution does not construct or read
+the catalog.
+
+## Final Type-Changing Map Disposition
+
+The final isolated NativeAOT pair measured same-type `Result.Map` at 2.650 ns
+and type-changing `Result.Map` at 2.737 ns, both at 0 B. The type-changing path
+was 0.087 ns slower than its unchanged same-run control and 0.032 ns above its
+2.7047 ns historical best. A success-first branch candidate measured 2.805 ns
+against a 2.756 ns same-run control and was rejected. The retained implementation
+is identical to the revision that produced the historical best; the earlier
+2.89 ns full-run signal is therefore closed as NativeAOT layout variance rather
+than an actionable implementation regression. The stronger historical value
+remains the regression gate.
+
+## Structured Error Equality And Hashing
+
+Recorded on 2026-08-16 in a separate NativeAOT executable. Errors and exception
+causes were created in `GlobalSetup`; all measured operations must allocate 0 B.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| EqualSameCause | 19.85 ns | 0 B |
+| EqualDistinctTextSameCause | 26.71 ns | 0 B |
+| NotEqualDifferentCause | 19.77 ns | 0 B |
+| HashCode | 44.90 ns | 0 B |
+
+Fixed-arity scalar mixing reduced hashing from an exploratory 58.70 ns to the
+accepted 44.90 ns, a 23.5% improvement. SIMD is not used because this operation
+combines six scalar values; vector setup would not accelerate the runtime's
+already optimized ordinal hashing of the two variable-length strings. Equality
+also measures equal ordinal code/message content held by distinct string
+instances rather than reporting only the interned-string fast path. Equality and
+hashing are failure-object operations and do not affect successful Result propagation.
