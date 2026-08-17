@@ -229,7 +229,7 @@ jobs:
         run: eng/tools/linux-x64/mt-pack 0.1.0-ci.${{ github.run_number }}
       - name: Consume packages under NativeAOT
         run: eng/tools/linux-x64/mt-test-packages 0.1.0-ci.${{ github.run_number }} linux-x64
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: packages-${{ github.sha }}
           path: |
