@@ -74,30 +74,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
-      - name: Publish NativeAOT tools
+      - name: Compile NativeAOT tools from source
         shell: bash
         run: |
           project=eng/${{ matrix.tool }}/${{ matrix.tool }}.csproj
           dotnet restore "$project" -r ${{ matrix.rid }}
           dotnet publish "$project" -c Release -r ${{ matrix.rid }} \
             --no-restore -o artifacts/tooling/${{ matrix.rid }}
-      - uses: actions/upload-artifact@v5
-        with:
-          name: tooling-${{ matrix.rid }}-${{ matrix.tool }}
-          path: artifacts/tooling/${{ matrix.rid }}/
-          if-no-files-found: error
-      - name: Verify checked-in tool matches source
-        shell: bash
-        run: |
-          case "${{ matrix.tool }}" in
-            MonadicTypes.AffectedProjects.Tool) binary=mt-affected ;;
-            MonadicTypes.Pack.Tool) binary=mt-pack ;;
-            MonadicTypes.TestPackages.Tool) binary=mt-test-packages ;;
-            MonadicTypes.VerifyLockfiles.Tool) binary=mt-verify-locks ;;
-            *) echo "unknown tooling project: ${{ matrix.tool }}" >&2; exit 1 ;;
-          esac
-          [[ "${{ matrix.rid }}" == win-* ]] && binary+=.exe
-          cmp "artifacts/tooling/${{ matrix.rid }}/$binary" "eng/tools/${{ matrix.rid }}/$binary"
 
   pull-request:
     name: Pull request validation

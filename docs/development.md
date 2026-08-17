@@ -43,6 +43,14 @@ system, so Windows and Docker produce the committed Windows and Linux artifacts.
 The source remains portable, but macOS tooling binaries and CI validation are
 deferred until the project has a macOS maintainer.
 
+NativeAOT output is not byte-reproducible across build hosts. CI therefore does
+not compare locally produced executables byte for byte. It compiles every
+affected command from source for Windows and Linux, runs the tooling unit tests,
+and exercises the committed commands in affected-project, lock, package, and
+package-consumption jobs. Regenerate the committed executable whenever its
+source changes; generated binary changes intentionally trigger the same source
+compilation and behavioral gates.
+
 The four commands have deliberately separate binaries:
 
 - `mt-affected` consumes NUL-delimited Git paths, resolves the reverse project
