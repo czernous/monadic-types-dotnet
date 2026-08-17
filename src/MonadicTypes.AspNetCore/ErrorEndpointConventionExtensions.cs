@@ -20,5 +20,34 @@ public static class ErrorEndpointConventionExtensions
 
             return builder;
         }
+
+        /// <summary>
+        /// Adds stable error-code metadata and corresponding problem responses to an endpoint.
+        /// </summary>
+        /// <param name="entries">The public errors the endpoint can return.</param>
+        /// <returns>The same endpoint builder for continued convention composition.</returns>
+        public TBuilder ProducesErrorCatalog(params ReadOnlySpan<ErrorCatalogEntry> entries)
+        {
+            ErrorCatalogMetadata catalog = new(entries);
+            builder.WithMetadata(catalog);
+
+            ReadOnlySpan<ErrorCatalogEntry> ownedEntries = catalog.AsSpan();
+            for (int index = 0; index < ownedEntries.Length; index++)
+            {
+                ErrorType type = ownedEntries[index].Type;
+                bool firstCategory = true;
+                for (int previous = 0; previous < index; previous++)
+                {
+                    firstCategory &= ownedEntries[previous].Type != type;
+                }
+
+                if (firstCategory)
+                {
+                    builder.WithMetadata(new ProducesErrorAttribute(type));
+                }
+            }
+
+            return builder;
+        }
     }
 }

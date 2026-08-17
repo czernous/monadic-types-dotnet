@@ -45,14 +45,32 @@ jobs:
         with:
           dotnet-version: 10.0.3xx
       - name: Restore NativeAOT toolchain
-        run: dotnet restore tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -r ${{ matrix.rid }} --force-evaluate
-      - name: Publish NativeAOT smoke executable
-        run: dotnet publish tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -c Release -r ${{ matrix.rid }} --no-restore
+        run: |
+          for project in tests/*AotSmoke/*.csproj; do
+            dotnet restore "$project" -r ${{ matrix.rid }} --force-evaluate \
+              -p:RestorePackagesWithLockFile=false \
+              -p:RestoreLockedMode=false \
+              -p:NuGetLockFilePath="$RUNNER_TEMP/monadic-types-${{ matrix.rid }}.lock.json"
+          done
+      - name: Publish NativeAOT smoke executables
+        run: |
+          for project in tests/*AotSmoke/*.csproj; do
+            name=$(basename "$project" .csproj)
+            output="artifacts/aot/${{ matrix.rid }}/$name"
+            dotnet publish "$project" -c Release -r ${{ matrix.rid }} --no-restore -o "$output"
+            executable="$output/$name"
+            [[ "${{ matrix.rid }}" == win-* ]] && executable+=.exe
+            "$executable"
+          done
 
   release:
     name: Build GitHub release
     needs: validate-aot
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     outputs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
@@ -64,18 +82,28 @@ jobs:
           dotnet-version: 10.0.3xx
           cache: true
           cache-dependency-path: '**/packages.lock.json'
+      - name: Verify portable shipping lock files
+        run: eng/tools/linux-x64/mt-verify-locks
       - name: Validate release tag
         id: version
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           [[ "$GITHUB_REF" == "refs/heads/master" ]] || { echo "releases must run from master" >&2; exit 1; }
           version="$REQUESTED_VERSION"
           tag="v$version"
           if git rev-parse "$tag" >/dev/null 2>&1; then
-            echo "tag already exists: $tag" >&2
-            exit 1
+            [[ "$(git rev-list -n 1 "$tag")" == "$GITHUB_SHA" ]] || {
+              echo "tag already exists on another revision: $tag" >&2
+              exit 1
+            }
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "release already exists: $tag" >&2
+              exit 1
+            fi
+            echo "retrying incomplete release from the same tagged revision: $tag"
           fi
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
             echo "invalid semantic version: $version" >&2
@@ -93,9 +121,9 @@ jobs:
       - name: Test
         run: dotnet test MonadicTypes.slnx -c Release --no-build --no-restore
       - name: Pack and inspect
-        run: ./eng/pack.sh ${{ steps.version.outputs.version }}
+        run: eng/tools/linux-x64/mt-pack ${{ steps.version.outputs.version }}
       - name: Consume packages under NativeAOT
-        run: ./eng/test-packages.sh ${{ steps.version.outputs.version }} linux-x64
+        run: eng/tools/linux-x64/mt-test-packages ${{ steps.version.outputs.version }} linux-x64
       - name: Attest package provenance
         uses: actions/attest-build-provenance@v4
         with:
@@ -109,6 +137,17 @@ jobs:
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
           if-no-files-found: error
+      - name: Create immutable release tag
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          if ! git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git tag -a "$RELEASE_TAG" -m "MonadicTypes.NET ${RELEASE_TAG#v}"
+            git push origin "$RELEASE_TAG"
+          fi
   publish-nuget:
     name: Publish to NuGet.org
     needs: release
@@ -186,12 +225,7 @@ jobs:
         shell: bash
         run: |
           version=${RELEASE_TAG#v}
-          if ! git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
-            git config user.name github-actions
-            git config user.email github-actions@github.com
-            git tag -a "$RELEASE_TAG" -m "MonadicTypes.NET $version"
-            git push origin "$RELEASE_TAG"
-          fi
+          git rev-parse "$RELEASE_TAG" >/dev/null 2>&1 || { echo "missing release tag: $RELEASE_TAG" >&2; exit 1; }
           args=(--verify-tag --generate-notes --title "$RELEASE_TAG")
           [[ "$version" == *-* ]] && args+=(--prerelease)
           gh release create "$RELEASE_TAG" artifacts/packages/*.nupkg artifacts/packages/*.snupkg "${args[@]}"

@@ -13,6 +13,7 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <ProjectReference Include="..\..\src\MonadicTypes.AspNetCore\MonadicTypes.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\MonadicTypes.AspNetCore.OpenApi\MonadicTypes.AspNetCore.OpenApi.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

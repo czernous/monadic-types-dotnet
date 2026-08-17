@@ -27,6 +27,8 @@ jobs:
       has-projects: ${{ steps.affected.outputs.has-projects }}
       aot: ${{ steps.affected.outputs.aot }}
       packages: ${{ steps.affected.outputs.packages }}
+      tooling: ${{ steps.affected.outputs.tooling }}
+      tooling-projects: ${{ steps.affected.outputs.tooling-projects }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -47,14 +49,55 @@ jobs:
             base=$(git rev-parse HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
           fi
 
-          mkdir -p artifacts/ci
-          ./eng/affected-projects.sh "$base" HEAD > artifacts/ci/affected-projects.txt
-          projects=$(paste -sd ';' artifacts/ci/affected-projects.txt)
-          echo "projects=$projects" >> "$GITHUB_OUTPUT"
-          [[ -n "$projects" ]] && echo "has-projects=true" >> "$GITHUB_OUTPUT" || echo "has-projects=false" >> "$GITHUB_OUTPUT"
-          grep -q '^tests/MonadicTypes.AotSmoke/' artifacts/ci/affected-projects.txt && echo "aot=true" >> "$GITHUB_OUTPUT" || echo "aot=false" >> "$GITHUB_OUTPUT"
-          grep -q '^src/' artifacts/ci/affected-projects.txt && echo "packages=true" >> "$GITHUB_OUTPUT" || echo "packages=false" >> "$GITHUB_OUTPUT"
-          cat artifacts/ci/affected-projects.txt
+          chmod +x eng/tools/linux-x64/mt-affected
+          git diff --name-only --diff-filter=ACMRTUXB -z "$base" HEAD | \
+            eng/tools/linux-x64/mt-affected --stdin-z \
+              --ci-output "$GITHUB_OUTPUT"
+
+  tooling:
+    name: Native tooling (${{ matrix.tool }}, ${{ matrix.rid }})
+    needs: changes
+    if: needs.changes.outputs.tooling == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        tool: ${{ fromJSON(needs.changes.outputs.tooling-projects) }}
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.3xx
+      - name: Publish NativeAOT tools
+        shell: bash
+        run: |
+          project=eng/${{ matrix.tool }}/${{ matrix.tool }}.csproj
+          dotnet restore "$project" -r ${{ matrix.rid }}
+          dotnet publish "$project" -c Release -r ${{ matrix.rid }} \
+            --no-restore -o artifacts/tooling/${{ matrix.rid }}
+      - uses: actions/upload-artifact@v5
+        with:
+          name: tooling-${{ matrix.rid }}-${{ matrix.tool }}
+          path: artifacts/tooling/${{ matrix.rid }}/
+          if-no-files-found: error
+      - name: Verify checked-in tool matches source
+        shell: bash
+        run: |
+          case "${{ matrix.tool }}" in
+            MonadicTypes.AffectedProjects.Tool) binary=mt-affected ;;
+            MonadicTypes.Pack.Tool) binary=mt-pack ;;
+            MonadicTypes.TestPackages.Tool) binary=mt-test-packages ;;
+            MonadicTypes.VerifyLockfiles.Tool) binary=mt-verify-locks ;;
+            *) echo "unknown tooling project: ${{ matrix.tool }}" >&2; exit 1 ;;
+          esac
+          [[ "${{ matrix.rid }}" == win-* ]] && binary+=.exe
+          cmp "artifacts/tooling/${{ matrix.rid }}/$binary" "eng/tools/${{ matrix.rid }}/$binary"
 
   pull-request:
     name: Pull request validation
@@ -71,6 +114,8 @@ jobs:
           dotnet-version: 10.0.3xx
           cache: true
           cache-dependency-path: '**/packages.lock.json'
+      - name: Verify portable shipping lock files
+        run: eng/tools/linux-x64/mt-verify-locks
       - name: Restore and audit locked dependencies
         run: dotnet restore MonadicTypes.slnx --locked-mode
       - name: Verify formatting
@@ -94,7 +139,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -106,6 +151,12 @@ jobs:
           dotnet-version: 10.0.3xx
           cache: true
           cache-dependency-path: '**/packages.lock.json'
+      - name: Verify portable shipping lock files
+        run: |
+          case "${{ runner.os }}" in
+            Linux) eng/tools/linux-x64/mt-verify-locks ;;
+            Windows) eng/tools/win-x64/mt-verify-locks.exe ;;
+          esac
       - name: Restore and audit locked dependencies
         run: dotnet restore MonadicTypes.slnx --locked-mode
       - name: Report vulnerable dependencies
@@ -144,8 +195,6 @@ jobs:
             rid: linux-x64
           - os: windows-latest
             rid: win-x64
-          - os: macos-latest
-            rid: osx-arm64
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -156,14 +205,28 @@ jobs:
         with:
           dotnet-version: 10.0.3xx
       - name: Restore audited NativeAOT toolchain
-        run: dotnet restore tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -r ${{ matrix.rid }} --force-evaluate
-      - name: Publish NativeAOT smoke executable
-        run: dotnet publish tests/MonadicTypes.AotSmoke/MonadicTypes.AotSmoke.csproj -c Release -r ${{ matrix.rid }} --no-restore
+        run: |
+          for project in tests/*AotSmoke/*.csproj; do
+            dotnet restore "$project" -r ${{ matrix.rid }} --force-evaluate \
+              -p:RestorePackagesWithLockFile=false \
+              -p:RestoreLockedMode=false \
+              -p:NuGetLockFilePath="$RUNNER_TEMP/monadic-types-${{ matrix.rid }}.lock.json"
+          done
+      - name: Publish NativeAOT smoke executables
+        run: |
+          for project in tests/*AotSmoke/*.csproj; do
+            name=$(basename "$project" .csproj)
+            output="artifacts/aot/${{ matrix.rid }}/$name"
+            dotnet publish "$project" -c Release -r ${{ matrix.rid }} --no-restore -o "$output"
+            executable="$output/$name"
+            [[ "${{ matrix.rid }}" == win-* ]] && executable+=.exe
+            "$executable"
+          done
 
   packages:
     name: Pack and consume NuGet artifacts
-    needs: [changes, master-quality]
-    if: github.event_name != 'pull_request' && needs.changes.outputs.packages == 'true'
+    needs: [changes, pull-request]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.packages == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -175,12 +238,14 @@ jobs:
           dotnet-version: 10.0.3xx
           cache: true
           cache-dependency-path: '**/packages.lock.json'
+      - name: Verify portable shipping lock files
+        run: eng/tools/linux-x64/mt-verify-locks
       - name: Restore locked dependencies
         run: dotnet restore MonadicTypes.slnx --locked-mode
       - name: Build and verify packages
-        run: ./eng/pack.sh 0.1.0-ci.${{ github.run_number }}
+        run: eng/tools/linux-x64/mt-pack 0.1.0-ci.${{ github.run_number }}
       - name: Consume packages under NativeAOT
-        run: ./eng/test-packages.sh 0.1.0-ci.${{ github.run_number }} linux-x64
+        run: eng/tools/linux-x64/mt-test-packages 0.1.0-ci.${{ github.run_number }} linux-x64
       - uses: actions/upload-artifact@v5
         with:
           name: packages-${{ github.sha }}

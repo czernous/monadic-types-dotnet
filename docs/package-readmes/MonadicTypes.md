@@ -47,7 +47,9 @@ int length = name.Map(static value => value.Length).ValueOr(0);
 - `Map` transforms success, `Bind` composes dependent results, and `MapError`
   transforms failure.
 - `Result<Option<T>,E>` represents a fallible lookup where absence is expected.
-- `Combine`, `Zip`, and two-input `Map` compose independent results.
+- `Combine`, `Zip`, and two-through-six-input `Map`/`Bind` compose independent results.
+- `Option.Traverse` exchanges optional input with a fallible stage.
+- Explicit nullable bridges and deconstruction support application boundaries and patterns.
 
 Normal static callbacks and successful pipelines allocate 0 B in the accepted
 benchmarks. Caller-state overloads avoid closures, while struct callables are
@@ -61,6 +63,8 @@ vectorized inner loops where a simpler branch or `Try*` contract is cheaper.
 | `MonadicTypes.NET.Errors` | Structured errors and validation values |
 | `MonadicTypes.NET.Async` | Fluent Task and ValueTask composition |
 | `MonadicTypes.NET.Effects` | Explicit exception boundaries |
+| `MonadicTypes.NET.Collections` | Count-known fail-fast traversal into arrays |
+| `MonadicTypes.NET.Linq` | Opt-in fluent and query-expression operators |
 | `MonadicTypes.NET.AspNetCore` | Typed HTTP and problem results |
 | `MonadicTypes.NET.Diagnostics` | Optional Activity and Meter projection |
 | `MonadicTypes.NET.Generators` | Compile-time struct-callable adapters |

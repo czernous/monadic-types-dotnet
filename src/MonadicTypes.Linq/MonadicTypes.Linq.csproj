@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MonadicTypes.NET.Linq</PackageId>
+    <Title>MonadicTypes.NET LINQ</Title>
+    <Description>Opt-in C# query-expression operators for MonadicTypes.NET.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MonadicTypes\MonadicTypes.csproj" />
+  </ItemGroup>
+</Project>

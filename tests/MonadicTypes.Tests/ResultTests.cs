@@ -37,6 +37,56 @@ public class ResultTests
     }
 
     [Fact]
+    public void Deconstruct_ExposesOnlyTheActiveCase()
+    {
+        Result<int, string>.Ok(42).Deconstruct(
+            out bool isSuccess,
+            out int value,
+            out string? successError);
+        Result<int, string>.Fail("invalid").Deconstruct(
+            out bool isFailureSuccess,
+            out int failureValue,
+            out string? error);
+
+        Assert.True(isSuccess);
+        Assert.Equal(42, value);
+        Assert.Null(successError);
+        Assert.False(isFailureSuccess);
+        Assert.Equal(default, failureValue);
+        Assert.Equal("invalid", error);
+    }
+
+    [Fact]
+    public void Deconstruct_RejectsUninitializedResult()
+    {
+        Result<int, string> result = default;
+
+        Assert.Throws<InvalidOperationException>(() => result.Deconstruct(out _, out _, out _));
+    }
+
+    [Fact]
+    public void PositionalPattern_MatchesSuccessAndErrorProperties()
+    {
+        Result<int, PatternError> success = Result<int, PatternError>.Ok(42);
+        Result<int, PatternError> failure = Result<int, PatternError>.Fail(new PatternError("missing"));
+
+        string successText = success switch
+        {
+            (true, int value, _) => value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            (false, _, PatternError error) => error.Code
+        };
+        string failureText = failure switch
+        {
+            (false, _, { Code: "missing" }) => "matched",
+            (false, _, PatternError error) => error.Code,
+            (true, _, _) => "success"
+        };
+
+        Assert.Equal("42", successText);
+        Assert.Equal("matched", failureText);
+    }
+
+    [Fact]
     public void MapBindEnsure_ComposeWithoutChangingFailureType()
     {
         Result<string, string> result = Result<int, string>.Ok(20)
@@ -225,5 +275,7 @@ public class ResultTests
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Invoke(string value) => value.Length;
     }
+
+    private sealed record PatternError(string Code);
 
 }

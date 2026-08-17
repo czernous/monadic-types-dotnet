@@ -49,6 +49,21 @@ app.MapGet("/customers/{id:int}", GetCustomer)
   domain errors, status policies, or ProblemDetails shapes.
 - `.ProducesErrors(...)` adds Minimal API metadata; `[ProducesError]` provides
   controller metadata without requiring a runtime OpenAPI dependency.
+- `.ProducesErrorCatalog(...)` and `[ProducesErrorCatalog]` attach stable public
+  error codes without taking a dependency on an OpenAPI document engine. Add
+  `MonadicTypes.NET.AspNetCore.OpenApi` only when document transformation is
+  required.
+
+`ErrorCatalogEntry` rejects an uninitialized or undefined category and blank public fields.
+`ErrorCatalogMetadata` requires at least one entry, copies the input, rejects
+duplicate codes ordinally, and exposes the owned data through a zero-allocation
+readonly span. OpenAPI transformation rejects duplicate codes across all
+metadata attached to one endpoint, even when statuses differ. Inline Minimal API entries should use explicit
+`new ErrorCatalogEntry(...)` construction for stable package-consumer inference.
+
+`ErrorProblemDetails.CreateExample(error)` applies the normal response policy
+without reading ambient activity or request trace data. Use it for deterministic
+documentation and tests; `Create(error, context)` retains normal trace behavior.
 
 Minimal API adapters return strongly typed results and are NativeAOT tested.
 Controller applications can use the metadata attribute and own their MVC result
@@ -65,6 +80,7 @@ features into an API.
 | `MonadicTypes.NET.Async` | Task and ValueTask endpoint pipelines |
 | `MonadicTypes.NET.Effects` | Exception-producing dependencies |
 | `MonadicTypes.NET.Diagnostics` | Optional error tracing and metrics |
+| `MonadicTypes.NET.AspNetCore.OpenApi` | Reflection-free error catalog document transformation |
 
 ## Documentation
 

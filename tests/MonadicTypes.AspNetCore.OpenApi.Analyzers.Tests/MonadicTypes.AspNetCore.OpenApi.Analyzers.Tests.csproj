@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsAotCompatible>false</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <Reference Include="Microsoft.CodeAnalysis" HintPath="$(RoslynTargetsPath)\bincore\Microsoft.CodeAnalysis.dll" />
+    <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(RoslynTargetsPath)\bincore\Microsoft.CodeAnalysis.CSharp.dll" />
+    <ProjectReference Include="..\..\src\MonadicTypes.AspNetCore.OpenApi.Analyzers\MonadicTypes.AspNetCore.OpenApi.Analyzers.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

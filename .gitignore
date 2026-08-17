@@ -6,6 +6,8 @@ artifacts/
 .vs/
 *.user
 *.DotSettings.user
+/monadictypes-api-gaps*.md
+/eng/packages.lock.json
 tests/MonadicTypes.AotSmoke/packages.lock.json
 tests/MonadicTypes.PackageSmoke/packages.lock.json
 benchmarks/*/packages.lock.json

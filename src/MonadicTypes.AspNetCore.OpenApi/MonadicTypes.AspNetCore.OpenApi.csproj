@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MonadicTypes.NET.AspNetCore.OpenApi</PackageId>
+    <Title>MonadicTypes.NET ASP.NET Core OpenAPI</Title>
+    <Description>NativeAOT-compatible OpenAPI error-catalog documentation for MonadicTypes.NET ASP.NET Core.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" ExcludeAssets="analyzers;build" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.OpenApi" />
+    <ProjectReference Include="..\MonadicTypes.AspNetCore\MonadicTypes.AspNetCore.csproj" />
+    <ProjectReference
+      Include="..\MonadicTypes.AspNetCore.OpenApi.Analyzers\MonadicTypes.AspNetCore.OpenApi.Analyzers.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false" />
+    <None
+      Include="..\MonadicTypes.AspNetCore.OpenApi.Analyzers\bin\$(Configuration)\netstandard2.0\MonadicTypes.AspNetCore.OpenApi.Analyzers.dll"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false" />
+    <None
+      Include="..\MonadicTypes.AspNetCore.OpenApi.Analyzers\bin\$(Configuration)\netstandard2.0\MonadicTypes.AspNetCore.OpenApi.Analyzers.pdb"
+      Pack="true"
+      PackagePath="analyzers/dotnet/cs"
+      Visible="false" />
+    <None
+      Include="buildTransitive\MonadicTypes.NET.AspNetCore.OpenApi.targets"
+      Pack="true"
+      PackagePath="buildTransitive"
+      Visible="false" />
+  </ItemGroup>
+  <Target Name="DisableCompileTimeOpenApiXmlGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer
+        Remove="@(Analyzer)"
+        Condition="'%(Analyzer.Filename)%(Analyzer.Extension)' == 'Microsoft.AspNetCore.OpenApi.SourceGenerators.dll'" />
+    </ItemGroup>
+  </Target>
+</Project>

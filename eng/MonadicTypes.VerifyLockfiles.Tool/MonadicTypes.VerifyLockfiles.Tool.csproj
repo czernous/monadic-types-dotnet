@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\NativeTool.props" />
+  <PropertyGroup>
+    <AssemblyName>mt-verify-locks</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="..\VerifyLockfiles.cs" Link="VerifyLockfiles.cs" />
+  </ItemGroup>
+</Project>

@@ -23,6 +23,11 @@
     <IsAotCompatible>true</IsAotCompatible>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MonadicTypesBenchmarkRestore)' == 'true'">
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <RestoreLockedMode>false</RestoreLockedMode>
+    <NuGetLockFilePath>$(BaseIntermediateOutputPath)benchmark.packages.lock.json</NuGetLockFilePath>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" Condition="'$(SkipRepositoryAnalyzers)' != 'true'" />
   </ItemGroup>
@@ -39,6 +44,26 @@
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.Switch.Benchmarks'">
     <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\s\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\s\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.Extensions.Benchmarks'">
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\x\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\x\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.Patterns.Benchmarks'">
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\m\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\m\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.AspNetCore.Benchmarks'">
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\a\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\a\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.Errors.Benchmarks'">
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\e\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\e\</BaseIntermediateOutputPath>
     <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

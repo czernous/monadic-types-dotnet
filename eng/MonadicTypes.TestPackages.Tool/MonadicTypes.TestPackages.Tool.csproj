@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\NativeTool.props" />
+  <PropertyGroup>
+    <AssemblyName>mt-test-packages</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="..\SemanticVersion.cs" Link="SemanticVersion.cs" />
+    <Compile Include="..\TestPackages.cs" Link="TestPackages.cs" />
+  </ItemGroup>
+</Project>

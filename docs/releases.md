@@ -72,8 +72,10 @@ The version number is the only required release decision. The workflow first
 publishes NativeAOT smoke applications on Windows, Linux, and macOS. It then
 runs restore auditing, formatting, build, tests, package inspection, and
 package-consumption NativeAOT validation. Only after those gates succeed does
-it publish to NuGet.org and GitHub Packages. The annotated tag and GitHub
-Release are created after both registries accept the packages. Updating
+it create the immutable annotated tag and publish to NuGet.org and GitHub
+Packages. The GitHub Release is created after both registries accept the
+packages. Creating the tag before registry publication prevents a partially
+published version from existing without its source revision. Updating
 `CHANGELOG.md` remains useful for curated notes but is not a mechanical release
 requirement.
 
@@ -91,10 +93,11 @@ within 15 minutes and is not the same as an owner deliberately unlisting a
 published version. Check the package validation message and notification email;
 investigate if indexing fails or remains incomplete for an hour.
 
-If publication fails, inspect the failed job before retrying. Reusing the same
-version is valid only when no registry accepted any package. If any package was
-accepted, fix the issue and choose a new version. Never delete and reuse package
-versions or tags.
+If publication fails without a code or artifact change, rerun the same workflow
+from the same tagged revision and version. Registry pushes are duplicate-safe,
+and the workflow accepts an incomplete tag only when it resolves to the current
+revision and has no GitHub Release. If code or package contents must change,
+choose a new version. Never delete and reuse package versions or tags.
 
 Run the same checks locally when investigating a release or package change:
 
@@ -102,8 +105,8 @@ Run the same checks locally when investigating a release or package change:
 dotnet restore MonadicTypes.slnx
 dotnet build MonadicTypes.slnx -c Release --no-restore
 dotnet test MonadicTypes.slnx -c Release --no-build --no-restore
-./eng/pack.sh 0.1.0-preview.1
-./eng/test-packages.sh 0.1.0-preview.1
+eng/tools/linux-x64/mt-pack 0.1.0-preview.1
+eng/tools/linux-x64/mt-test-packages 0.1.0-preview.1 linux-x64
 ```
 
 The workflow performs formatting, restore auditing, build, tests, package
@@ -162,11 +165,11 @@ Linux. A changed project causes all reverse dependants to build; repository-wide
 compiler, package, analyzer, and engineering files invalidate the full graph.
 PRs also run dependency and license review.
 
-After merge, `master` runs the full Windows, Linux, and macOS graph plus package
-consumption and cross-platform NativeAOT where affected. CodeQL runs on `master`
-and weekly. This avoids paying twice for the same platform matrix while keeping
-PR feedback fast and making the releasable branch the authoritative integration
-boundary.
+Relevant PRs run package creation and consumption before merge. After merge,
+`master` runs the affected Windows and Linux graph plus cross-platform NativeAOT
+where required. CodeQL runs on `master` and weekly. This avoids paying twice for
+the same package validation while keeping PR feedback fast and making the
+releasable branch the authoritative integration boundary.
 
 The `master` ruleset requires a pull request and the PR validation checks.
 Repository administrators have bypass permission for exceptional direct pushes;
@@ -176,7 +179,9 @@ using that bypass still triggers the complete post-push `master` validation.
 
 NuGet dependencies are centrally pinned and lock files are committed. CI restore
 uses locked mode, audits direct and transitive dependencies, and treats moderate
-or higher advisories as build failures. Dependabot checks NuGet and GitHub Action
+or higher advisories as build failures. A file-based C# verifier rejects
+runtime-specific targets in shipping lock files before restore; explicit RID
+restores suppress lock writing for shipping projects. Dependabot checks NuGet and GitHub Action
 versions weekly. Packages that define the explicit FluentValidation and OpenAPI
 compatibility matrix are excluded from bot updates; changing those pins requires
 the compatibility, trimming, AOT, and benchmark review described in the

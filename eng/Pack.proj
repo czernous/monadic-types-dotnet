@@ -1,0 +1,22 @@
+<Project>
+  <ItemGroup>
+    <PackageProject Include="..\src\MonadicTypes\MonadicTypes.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.Errors\MonadicTypes.Errors.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.Async\MonadicTypes.Async.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.Collections\MonadicTypes.Collections.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.Linq\MonadicTypes.Linq.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.Effects\MonadicTypes.Effects.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.Diagnostics\MonadicTypes.Diagnostics.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.AspNetCore\MonadicTypes.AspNetCore.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.AspNetCore.OpenApi\MonadicTypes.AspNetCore.OpenApi.csproj" />
+    <PackageProject Include="..\src\MonadicTypes.Generators\MonadicTypes.Generators.csproj" />
+  </ItemGroup>
+
+  <Target Name="Pack">
+    <MSBuild
+      Projects="@(PackageProject)"
+      Targets="Pack"
+      BuildInParallel="true"
+      Properties="Configuration=$(Configuration);PackageOutputPath=$(PackageOutputPath);Version=$(Version)" />
+  </Target>
+</Project>

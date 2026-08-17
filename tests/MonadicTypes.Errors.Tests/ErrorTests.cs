@@ -5,6 +5,31 @@ namespace MonadicTypes.Tests;
 public class ErrorTests
 {
     [Fact]
+    public void Equality_UsesSemanticFieldsAndCauseIdentity()
+    {
+        InvalidOperationException cause = new("retained cause");
+        Error first = Error.Unavailable(
+            "STORE_UNAVAILABLE",
+            "Public message differs from the cause.",
+            isMessagePublic: true,
+            cause);
+        Error equal = Error.Unavailable(
+            new string("STORE_UNAVAILABLE".AsSpan()),
+            new string("Public message differs from the cause.".AsSpan()),
+            isMessagePublic: true,
+            cause);
+        Error differentCause = Error.Unavailable(
+            "STORE_UNAVAILABLE",
+            "Public message differs from the cause.",
+            isMessagePublic: true,
+            new InvalidOperationException("retained cause"));
+
+        Assert.Equal(first, equal);
+        Assert.Equal(first.GetHashCode(), equal.GetHashCode());
+        Assert.NotEqual(first, differentCause);
+    }
+
+    [Fact]
     public void BindWidened_ConvertsOnlyContinuationFailure()
     {
         Result<int, Error> source = Result<int, Error>.Ok(42);
@@ -26,6 +51,8 @@ public class ErrorTests
     {
         Assert.Throws<ArgumentException>(() => new Error("", "message"));
         Assert.Throws<ArgumentNullException>(() => new Error("CODE", null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Error((ErrorType)byte.MaxValue, "CODE", "message"));
     }
 
     [Fact]

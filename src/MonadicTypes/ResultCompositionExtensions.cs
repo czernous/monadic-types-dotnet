@@ -73,6 +73,76 @@ public static class ResultCompositionExtensions
         }
     }
 
+    extension<TSource>(in Option<TSource> option)
+    {
+        /// <summary>Traverses a present value through a fallible selector and preserves absence.</summary>
+        /// <typeparam name="TResult">Selected success type.</typeparam>
+        /// <typeparam name="TError">Failure type.</typeparam>
+        /// <param name="selector">Selector invoked only for Some.</param>
+        /// <returns>A failed selector result, Some containing its success, or successful None.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<Option<TResult>, TError> Traverse<TResult, TError>(
+            Func<TSource, Result<TResult, TError>> selector)
+            where TError : notnull
+        {
+            if (option.IsNone)
+            {
+                return Result<Option<TResult>, TError>.Ok(Option<TResult>.None);
+            }
+
+            Result<TResult, TError> selected = selector(option.Value);
+            return selected.IsSuccess
+                ? Result<Option<TResult>, TError>.Ok(Option<TResult>.Some(selected.Value))
+                : Result<Option<TResult>, TError>.Fail(selected.Error);
+        }
+
+        /// <summary>Traverses Some with caller-owned state and preserves None.</summary>
+        /// <typeparam name="TState">Caller state type.</typeparam>
+        /// <typeparam name="TResult">Selected success type.</typeparam>
+        /// <typeparam name="TError">Failure type.</typeparam>
+        /// <param name="state">State passed unchanged to the selector.</param>
+        /// <param name="selector">Selector invoked only for Some.</param>
+        /// <returns>A failed selector result, Some containing its success, or successful None.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<Option<TResult>, TError> Traverse<TState, TResult, TError>(
+            TState state,
+            Func<TSource, TState, Result<TResult, TError>> selector)
+            where TError : notnull
+        {
+            if (option.IsNone)
+            {
+                return Result<Option<TResult>, TError>.Ok(Option<TResult>.None);
+            }
+
+            Result<TResult, TError> selected = selector(option.Value, state);
+            return selected.IsSuccess
+                ? Result<Option<TResult>, TError>.Ok(Option<TResult>.Some(selected.Value))
+                : Result<Option<TResult>, TError>.Fail(selected.Error);
+        }
+
+        /// <summary>Traverses Some through an allocation-free callable and preserves None.</summary>
+        /// <typeparam name="TResult">Selected success type.</typeparam>
+        /// <typeparam name="TError">Failure type.</typeparam>
+        /// <typeparam name="TFunction">Value-function type.</typeparam>
+        /// <param name="selector">Selector invoked only for Some.</param>
+        /// <returns>A failed selector result, Some containing its success, or successful None.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<Option<TResult>, TError> Traverse<TResult, TError, TFunction>(TFunction selector)
+            where TError : notnull
+            where TFunction : struct, IValueFunction<TSource, Result<TResult, TError>>
+        {
+            if (option.IsNone)
+            {
+                return Result<Option<TResult>, TError>.Ok(Option<TResult>.None);
+            }
+
+            Result<TResult, TError> selected = selector.Invoke(option.Value);
+            return selected.IsSuccess
+                ? Result<Option<TResult>, TError>.Ok(Option<TResult>.Some(selected.Value))
+                : Result<Option<TResult>, TError>.Fail(selected.Error);
+        }
+    }
+
     extension<T>(in Option<T> option)
     {
         /// <summary>Converts an option to a result using an eagerly supplied absence error.</summary>

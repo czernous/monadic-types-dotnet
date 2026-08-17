@@ -4,6 +4,7 @@
     <PublishAot>true</PublishAot>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
@@ -11,14 +12,32 @@
     <SkipRepositoryAnalyzers>true</SkipRepositoryAnalyzers>
     <PackageVersionToTest Condition="'$(PackageVersionToTest)' == ''">0.1.0-dev</PackageVersionToTest>
     <NoWarn>$(NoWarn);CA2012</NoWarn>
+    <DefaultItemExcludes>
+      $(DefaultItemExcludes);
+      $(MSBuildProjectDirectory)\bin\**;
+      $(MSBuildProjectDirectory)\obj\**;
+      $(MSBuildProjectDirectory)\artifacts\**
+    </DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference
+      Include="Microsoft.AspNetCore.OpenApi"
+      Version="10.0.10"
+      PrivateAssets="all"
+      Condition="'$(EnableMicrosoftOpenApiXmlComments)' == 'true'" />
     <PackageReference Include="MonadicTypes.NET" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Async" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Collections" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Linq" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Effects" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Errors" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Diagnostics" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.AspNetCore" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.AspNetCore.OpenApi" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Generators" Version="$(PackageVersionToTest)" />
   </ItemGroup>
+  <Target
+    Name="VerifyPackageConfiguration"
+    DependsOnTargets="$(PackageSmokeTarget)"
+    Condition="'$(PackageSmokeTarget)' != ''" />
 </Project>

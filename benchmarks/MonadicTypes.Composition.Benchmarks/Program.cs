@@ -1,6 +1,7 @@
 using BenchmarkDotNet.Running;
 using Benchmarks;
 
+Environment.SetEnvironmentVariable("MonadicTypesBenchmarkRestore", "true");
 string[] benchmarkArguments = args.Length is 0 ? ["--filter", "*"] : args;
 var summaries = BenchmarkSwitcher.FromTypes([typeof(CompositionBenchmarks)]).Run(benchmarkArguments).ToArray();
 Environment.ExitCode = summaries.Length is 0 || summaries.Any(static summary =>

@@ -143,4 +143,13 @@ public readonly record struct Option<T>
     /// <summary>Converts a value to <c>Some</c>, or null to <c>None</c>.</summary>
     public static implicit operator Option<T>(T value) =>
         value is null ? None : Some(value);
+
+    /// <summary>Deconstructs presence and value for positional pattern matching.</summary>
+    /// <param name="hasValue">Receives true for Some and false for None.</param>
+    /// <param name="value">Receives the contained value, or default for None.</param>
+    public void Deconstruct(out bool hasValue, [MaybeNull] out T value)
+    {
+        hasValue = HasValue;
+        value = _value;
+    }
 }

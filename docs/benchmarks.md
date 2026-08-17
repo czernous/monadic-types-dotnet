@@ -3,6 +3,9 @@
 - Benchmarks run under NativeAOT with memory diagnostics.
 - Inputs, delegates, meters, errors, and results are created in `GlobalSetup`.
 - Construction is measured only by explicitly named construction benchmarks.
+- Cold endpoint-registration APIs may allocate immutable owned metadata; their
+  allocation-equivalent copy controls and request-path reads are measured
+  separately.
 - The accepted primitive regression job retains its original 100,000,000
   invocations, three warmups, and ten measurements so results remain directly
   comparable. Additive representation jobs target 250 ms and let
@@ -43,6 +46,35 @@ Run terminal `Switch` benchmarks in their isolated executable:
 dotnet run -c Release --project benchmarks\MonadicTypes.Switch.Benchmarks
 ```
 
+Run collection, combination, and opt-in LINQ benchmarks separately:
+
+```powershell
+dotnet run -c Release --project benchmarks\MonadicTypes.Extensions.Benchmarks
+```
+
+Run positional-pattern benchmarks in their own executable:
+
+```powershell
+dotnet run -c Release --project benchmarks\MonadicTypes.Patterns.Benchmarks
+```
+
+Run ASP.NET Core error-catalog registration benchmarks separately:
+
+```powershell
+dotnet run -c Release --project benchmarks\MonadicTypes.AspNetCore.Benchmarks
+```
+
+Run structured-error equality and hashing benchmarks separately:
+
+```powershell
+dotnet run -c Release --project benchmarks\MonadicTypes.Errors.Benchmarks
+```
+
 New benchmark families use separate NativeAOT executables because adding methods
 to an accepted executable can change native code layout and perturb unchanged
 controls. Setup, delegates, and input construction remain in `GlobalSetup`.
+Each BenchmarkDotNet host sets a restore-only MSBuild marker before creating its
+toolchain. Generated and referenced projects then use project-local intermediate
+locks, leaving shipping locks untouched without an additional runner process.
+The marker is established before benchmark construction and is not part of any
+measured operation.

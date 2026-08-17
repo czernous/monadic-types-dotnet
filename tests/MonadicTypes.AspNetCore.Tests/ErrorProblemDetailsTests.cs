@@ -1,10 +1,23 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MonadicTypes.AspNetCore.Tests;
 
 public class ErrorProblemDetailsTests
 {
+    [Fact]
+    public void CreateExample_OmitsAmbientTraceIdentifier()
+    {
+        using System.Diagnostics.Activity activity = new("openapi-example");
+        activity.Start();
+
+        ProblemDetails details = ErrorProblemDetails.CreateExample(
+            Error.NotFound("MISSING", "The value was not found."));
+
+        Assert.False(details.Extensions.ContainsKey("traceId"));
+    }
+
     [Fact]
     public void Create_DoesNotExposePrivateMessageOrCause()
     {

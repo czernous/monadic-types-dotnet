@@ -28,6 +28,53 @@ public class OptionTests
     }
 
     [Fact]
+    public void Deconstruct_ExposesPresenceAndValue()
+    {
+        Option<int>.Some(42).Deconstruct(out bool hasValue, out int value);
+        Option<int>.None.Deconstruct(out bool hasNoValue, out int missingValue);
+
+        Assert.True(hasValue);
+        Assert.Equal(42, value);
+        Assert.False(hasNoValue);
+        Assert.Equal(default, missingValue);
+    }
+
+    [Fact]
+    public void PositionalPattern_MatchesSomeAndNone()
+    {
+        Option<int> some = Option<int>.Some(42);
+        Option<int> none = Option<int>.None;
+
+        int someValue = some switch
+        {
+            (true, int value) => value,
+            (false, _) => -1
+        };
+        int noneValue = none switch
+        {
+            (true, int value) => value,
+            (false, _) => -1
+        };
+
+        Assert.Equal(42, someValue);
+        Assert.Equal(-1, noneValue);
+    }
+
+    [Fact]
+    public void NullableBridges_PreserveReferenceAndValuePresence()
+    {
+        Option<string> reference = Option.FromNullable("value");
+        Option<string> noReference = Option.FromNullable<string>(null);
+        Option<int> value = Option.FromNullable((int?)42);
+        Option<int> noValue = Option.FromNullable((int?)null);
+
+        Assert.Equal("value", reference.ToNullable());
+        Assert.Null(noReference.ToNullable());
+        Assert.Equal(42, value.ToNullableValue());
+        Assert.Null(noValue.ToNullableValue());
+    }
+
+    [Fact]
     public void MapBindFilter_Compose()
     {
         Option<string> option = Option<int>.Some(20)
