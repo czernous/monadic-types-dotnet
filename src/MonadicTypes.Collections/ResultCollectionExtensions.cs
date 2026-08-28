@@ -96,6 +96,88 @@ public static class ResultCollectionExtensions
         }
     }
 
+    extension<TSource>(ReadOnlySpan<TSource> source)
+    {
+        /// <summary>Traverses each span item once and returns a newly allocated array of successful values.</summary>
+        /// <remarks>Empty input reuses <see cref="Array.Empty{T}"/>. Non-empty input allocates exactly one output array, including when a later item fails.</remarks>
+        public Result<TResult[], TError> TraverseToArray<TResult, TError>(
+            Func<TSource, Result<TResult, TError>> selector)
+            where TError : notnull
+        {
+            ArgumentNullException.ThrowIfNull(selector);
+            if (source.IsEmpty)
+            {
+                return Result<TResult[], TError>.Ok([]);
+            }
+
+            TResult[] output = new TResult[source.Length];
+            for (int index = 0; index < source.Length; index++)
+            {
+                Result<TResult, TError> selected = selector(source[index]);
+                if (selected.IsFailure)
+                {
+                    return Result<TResult[], TError>.Fail(selected.Error);
+                }
+
+                output[index] = selected.Value;
+            }
+
+            return Result<TResult[], TError>.Ok(output);
+        }
+
+        /// <summary>Traverses each span item once using caller-owned state and returns a new array.</summary>
+        public Result<TResult[], TError> TraverseToArray<TState, TResult, TError>(
+            TState state,
+            Func<TSource, TState, Result<TResult, TError>> selector)
+            where TError : notnull
+        {
+            ArgumentNullException.ThrowIfNull(selector);
+            if (source.IsEmpty)
+            {
+                return Result<TResult[], TError>.Ok([]);
+            }
+
+            TResult[] output = new TResult[source.Length];
+            for (int index = 0; index < source.Length; index++)
+            {
+                Result<TResult, TError> selected = selector(source[index], state);
+                if (selected.IsFailure)
+                {
+                    return Result<TResult[], TError>.Fail(selected.Error);
+                }
+
+                output[index] = selected.Value;
+            }
+
+            return Result<TResult[], TError>.Ok(output);
+        }
+
+        /// <summary>Traverses each span item once using an allocation-free callable and returns a new array.</summary>
+        public Result<TResult[], TError> TraverseToArray<TResult, TError, TFunction>(TFunction selector)
+            where TError : notnull
+            where TFunction : struct, IValueFunction<TSource, Result<TResult, TError>>
+        {
+            if (source.IsEmpty)
+            {
+                return Result<TResult[], TError>.Ok([]);
+            }
+
+            TResult[] output = new TResult[source.Length];
+            for (int index = 0; index < source.Length; index++)
+            {
+                Result<TResult, TError> selected = selector.Invoke(source[index]);
+                if (selected.IsFailure)
+                {
+                    return Result<TResult[], TError>.Fail(selected.Error);
+                }
+
+                output[index] = selected.Value;
+            }
+
+            return Result<TResult[], TError>.Ok(output);
+        }
+    }
+
     extension<T, TError>(ReadOnlySpan<Result<T, TError>> source) where TError : notnull
     {
         /// <summary>Converts a span of results to one newly allocated array using fail-fast semantics.</summary>

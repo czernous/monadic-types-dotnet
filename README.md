@@ -152,6 +152,10 @@ has identical branch semantics.
 | [`Result<T,E>.ValueOr`](docs/api-reference.md#result-value-or) | eager fallback | Discard failure and return a fallback value. |
 | [`Result<T,E>.ValueOrElse`](docs/api-reference.md#result-value-or-else) | lazy failure callback | Lazily derive a fallback from the error. |
 | [`Result<T,E>.ToString`](docs/api-reference.md#result-string) | diagnostic representation | Format `Ok(...)`, `Fail(...)`, or `Uninitialized`. |
+| [`Result<T,E>.Equals`](docs/api-reference.md#result-equality) | another Result | Compare state and only the active payload. |
+| [`Result<T,E>.GetHashCode`](docs/api-reference.md#result-equality) | none | Hash state and only the active payload. |
+| [`Result<T,E>.Equals`](docs/api-reference.md#result-equality) | another Result | Compare state and only the active payload. |
+| [`Result<T,E>.GetHashCode`](docs/api-reference.md#result-equality) | none | Hash state and only the active payload. |
 | [`Result<T,E>` implicit conversions](docs/api-reference.md#result-conversions) | from `T`; from `E` | Construct a typed Result where target context is unambiguous. |
 | [`Result<T,E>.Flatten`](docs/api-reference.md#result-flatten) | nested Result | Remove one same-error Result layer. |
 | [`Result<Option<T>,E>.Transpose`](docs/api-reference.md#result-option-transpose) | Result to Option | Convert to `Option<Result<T,E>>`. |
@@ -159,8 +163,8 @@ has identical branch semantics.
 | [`Option<Result<T,E>>.Transpose`](docs/api-reference.md#option-result-transpose) | Option to Result | Convert to `Result<Option<T>,E>`. |
 | [`ResultCombination.Combine`](docs/api-reference.md#combine) | two Results; `ReadOnlySpan<Result<Unit,E>>` | Return the first existing failure or `Unit` success. |
 | [`ResultCombination.Zip`](docs/api-reference.md#zip) | two heterogeneous Results | Combine successes into a named tuple. |
-| [`ResultCombination.Map`](docs/api-reference.md#combination-map) | two through six Results plus projection | Combine and project without an intermediate tuple API. |
-| [`ResultCombination.Bind`](docs/api-reference.md#combination-bind) | two through six Results plus Result projection | Combine and flatten a fallible projection. |
+| [`ResultCombination.Map`](docs/api-reference.md#combination-map) | two through six Results; delegate or caller-state projection | Combine and project without an intermediate tuple API or captured state. |
+| [`ResultCombination.Bind`](docs/api-reference.md#combination-bind) | two through six Results; delegate or caller-state Result projection | Combine and flatten a fallible projection. |
 | [`Unit.Value`](docs/api-reference.md#unit) | singleton value | Represent a successful operation with no payload. |
 | [`Unit.ToString`](docs/api-reference.md#unit) | `()` | Produce the conventional unit representation. |
 
@@ -179,7 +183,9 @@ has identical branch semantics.
 | [`Option<T>.Map`](docs/api-reference.md#option-map) | delegate; caller-state; struct callable; generated token | Transform a present value. |
 | [`Option<T>.Bind`](docs/api-reference.md#option-bind) | delegate; caller-state; struct callable; generated token | Continue presence without nesting Options. |
 | [`Option<T>.Filter`](docs/api-reference.md#option-filter) | predicate; caller-state | Retain presence only when a predicate is true. |
-| [`Option<T>.Match`](docs/api-reference.md#option-match) | some/none delegates | Exhaustively reduce presence and absence. |
+| [`Option<T>.Match`](docs/api-reference.md#option-match) | delegates; caller-state; two struct callables | Exhaustively reduce presence and absence. |
+| [`Option<T>.Equals`](docs/api-reference.md#option-equality) | another Option | Compare presence and only the active value. |
+| [`Option<T>.GetHashCode`](docs/api-reference.md#option-equality) | none | Hash presence and only the active value. |
 | [`Option<T>.Switch`](docs/api-reference.md#option-switch) | some/none actions | Execute exactly one terminal action. |
 | [`Option<T>.ValueOr`](docs/api-reference.md#option-value-or) | eager fallback | Reduce absence to a fallback. |
 | [`Option<T>.ValueOrElse`](docs/api-reference.md#option-value-or-else) | lazy fallback; caller-state | Lazily create a fallback without a closure. |
@@ -194,12 +200,14 @@ has identical branch semantics.
 | [`ValueFunction<TIn,TOut,TFunction>.ValueFunction`](docs/api-reference.md#valuefunction) | callable constructor | Wrap a stateful or default struct callable. |
 | [`ValueFunction<TIn,TOut,TFunction>.Invoke`](docs/api-reference.md#valuefunction) | forwarding call | Invoke the wrapped callable. |
 | [`ValueAction<T,TAction>.Invoke`](docs/api-reference.md#valueaction) | forwarding call | Invoke the wrapped action. |
+| [`ValueAction<T,TAction>.ValueAction`](docs/api-reference.md#valueaction) | action value | Wrap a stateful or default struct action. |
 
 ### Collection And LINQ API
 
 | Member | Package | Purpose |
 | --- | --- | --- |
 | [`IReadOnlyList<T>.TraverseToArray`](docs/api-reference.md#traverse-to-array) | `MonadicTypes.NET.Collections` | Fail-fast indexed traversal with one explicit output-array allocation. |
+| [`ReadOnlySpan<T>.TraverseToArray`](docs/api-reference.md#traverse-to-array) | `MonadicTypes.NET.Collections` | Fail-fast contiguous traversal with one explicit output-array allocation. |
 | [`ReadOnlySpan<Result<T,E>>.SequenceToArray`](docs/api-reference.md#sequence-to-array) | `MonadicTypes.NET.Collections` | Convert ordered Results into one owned array. |
 | [`Result<T,E>.Select`](docs/api-reference.md#linq-select) | `MonadicTypes.NET.Linq` | Opt-in conventional name for Result Map. |
 | [`Result<T,E>.SelectMany`](docs/api-reference.md#linq-select-many) | `MonadicTypes.NET.Linq` | Bind and project Result values. |
@@ -253,8 +261,8 @@ has identical branch semantics.
 | [`Error.RateLimited`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct quota/rate failure. |
 | [`Error.Cancelled`](docs/api-reference.md#error-factories) | code/message/cause | Construct cancellation failure. |
 | [`Error.Custom`](docs/api-reference.md#error-custom) | numeric type/code/message/cause/visibility | Construct an application-defined category. |
-| [`Error.IO`](docs/api-reference.md#error-factories) | message | Construct the general I/O convenience error. |
-| [`Error.System`](docs/api-reference.md#error-factories) | message | Construct the general system convenience error. |
+| [`Error.IO`](docs/api-reference.md#error-factories) | message; code/message/cause/visibility | Construct a general I/O convenience error. |
+| [`Error.System`](docs/api-reference.md#error-factories) | message; code/message/cause/visibility | Construct a general system convenience error. |
 | [`Error.Equals`](docs/api-reference.md#error-equality) | another error | Compare semantic fields and retained-cause identity. |
 | [`Error.GetHashCode`](docs/api-reference.md#error-equality) | none | Hash the same semantic fields used by equality. |
 | [`Error.ToString`](docs/api-reference.md#error-format) | default; format/provider | Allocate `[CODE] message` text. |
@@ -1968,7 +1976,8 @@ a generic instantiation to the native binary.
 
 See [benchmark policy](docs/benchmarks.md), [accepted baselines](benchmarks/baseline.md),
 [compatibility](docs/compatibility.md), [development policy](docs/development.md),
-and [dependency policy](docs/dependency-policy.md).
+[dependency policy](docs/dependency-policy.md), and the
+[documentation architecture](docs/documentation-architecture.md).
 
 ## Status And Licensing
 

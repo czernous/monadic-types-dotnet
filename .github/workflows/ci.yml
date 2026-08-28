@@ -30,7 +30,7 @@ jobs:
       tooling: ${{ steps.affected.outputs.tooling }}
       tooling-projects: ${{ steps.affected.outputs.tooling-projects }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: affected
@@ -70,7 +70,7 @@ jobs:
             rid: win-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -91,7 +91,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -128,7 +128,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -183,7 +183,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -215,7 +215,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -229,7 +229,7 @@ jobs:
         run: eng/tools/linux-x64/mt-pack 0.1.0-ci.${{ github.run_number }}
       - name: Consume packages under NativeAOT
         run: eng/tools/linux-x64/mt-test-packages 0.1.0-ci.${{ github.run_number }} linux-x64
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: packages-${{ github.sha }}
           path: |
@@ -242,7 +242,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/dependency-review-action@v5
         with:
           config-file: ./.github/dependency-review-config.yml

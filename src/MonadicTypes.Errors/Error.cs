@@ -212,9 +212,25 @@ public sealed record Error : ISpanFormattable
     public static Error IO(string message) =>
         new(ErrorType.Failure, "IO_FAILURE", message);
 
+    /// <summary>Creates an input/output failure with a caller-defined code, visibility, and optional retained cause.</summary>
+    public static Error IO(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Failure, code, message, isMessagePublic, cause);
+
     /// <summary>Creates an unexpected system failure with the standard code.</summary>
     public static Error System(string message) =>
         new(ErrorType.Unexpected, "SYSTEM_FAILURE", message);
+
+    /// <summary>Creates a system failure with a caller-defined code, visibility, and optional retained cause.</summary>
+    public static Error System(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Unexpected, code, message, isMessagePublic, cause);
 
     /// <summary>Compares semantic fields and retained-cause identity.</summary>
     public bool Equals(Error? other) =>

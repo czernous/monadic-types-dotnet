@@ -113,6 +113,35 @@ public class CompositionTests
     }
 
     [Fact]
+    public void Combination_StateOverloadsAvoidCapturedDelegates()
+    {
+        Result<int, string> one = Result<int, string>.Ok(1);
+        Result<int, string> two = Result<int, string>.Ok(2);
+        Result<int, string> three = Result<int, string>.Ok(3);
+        Result<int, string> four = Result<int, string>.Ok(4);
+        Result<int, string> five = Result<int, string>.Ok(5);
+        Result<int, string> six = Result<int, string>.Ok(6);
+
+        Result<int, string> mapped2 = ResultCombination.Map(
+            one, two, 10, static (a, b, offset) => a + b + offset);
+        Result<int, string> mapped6 = ResultCombination.Map(
+            one, two, three, four, five, six, 10,
+            static (a, b, c, d, e, f, offset) => a + b + c + d + e + f + offset);
+        Result<int, string> bound2 = ResultCombination.Bind(
+            one, two, 10,
+            static (a, b, offset) => Result<int, string>.Ok(a + b + offset));
+        Result<int, string> bound6 = ResultCombination.Bind(
+            one, two, three, four, five, six, 10,
+            static (a, b, c, d, e, f, offset) =>
+                Result<int, string>.Ok(a + b + c + d + e + f + offset));
+
+        Assert.Equal(13, mapped2.Value);
+        Assert.Equal(31, mapped6.Value);
+        Assert.Equal(13, bound2.Value);
+        Assert.Equal(31, bound6.Value);
+    }
+
+    [Fact]
     public void Combination_RejectsUninitializedInputBeforeLaterFailure()
     {
         Result<int, string> uninitialized = default;

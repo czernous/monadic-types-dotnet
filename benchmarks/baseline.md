@@ -294,6 +294,38 @@ value access while retaining initialization and failure checks. Fluent LINQ is
 the default recommendation; query syntax remains allocation-free but measured
 12% slower for Select and 10% slower for SelectMany in this run.
 
+### 2026-08-28 Extension Recheck
+
+The 19-method NativeAOT recheck added span traversal, caller-state six-result
+composition, state-aware equality and hashing, and a stateful callable action.
+All setup remained in `GlobalSetup`. Span traversal owns exactly one output
+array, matching the manual and list-based controls; every scalar and composition
+operation allocated `0 B`.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| ManualTraverse | 46.993 ns | 88 B |
+| DelegateTraverse | 46.606 ns | 88 B |
+| StateTraverse | 51.393 ns | 88 B |
+| CallableTraverse | 37.642 ns | 88 B |
+| SpanDelegateTraverse | 25.159 ns | 88 B |
+| SpanStateTraverse | 26.082 ns | 88 B |
+| SpanCallableTraverse | 19.918 ns | 88 B |
+| DirectMapSix | 8.325 ns | 0 B |
+| CombinationMapSix | 10.132 ns | 0 B |
+| CombinationStateMapSix | 11.266 ns | 0 B |
+| OptionNoneEquality | 0.292 ns | 0 B |
+| ResultFailureEquality | 0.781 ns | 0 B |
+| OptionNoneHashCode | 0.259 ns | 0 B |
+| StatefulValueAction | 0.739 ns | 0 B |
+
+The unchanged six-result controls repeated within 0.3% of their 2026-08-16
+means. Span plus struct-callable traversal reduced wrapper time by 47.1% against
+the same-run list-callable path and by 57.6% against the manual array-producing
+loop. Sub-nanosecond equality, hashing, and action values primarily establish
+the zero-allocation/code-generation gate; their ratios are below reliable timer
+resolution and are not generalized as throughput claims.
+
 ## Positional Patterns
 
 Recorded on 2026-08-16 in a separate NativeAOT executable. Inputs and Match

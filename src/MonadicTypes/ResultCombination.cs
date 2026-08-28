@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 namespace MonadicTypes;
 
 /// <summary>Combines independent results using fail-fast semantics.</summary>
-public static class ResultCombination
+public static partial class ResultCombination
 {
     /// <summary>Combines two unit results and returns the first failure in argument order.</summary>
     /// <typeparam name="TError">Failure type.</typeparam>

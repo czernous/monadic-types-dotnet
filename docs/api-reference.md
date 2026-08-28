@@ -300,6 +300,18 @@ the error to a fallback.
 User user = result.ValueOrElse(static error => User.Missing(error.Code));
 ```
 
+### Result Equality
+
+`Equals`, `==`, and `GetHashCode` compare the Result state and only its active
+payload. Success never reads or hashes inactive error storage; failure never
+reads or hashes inactive success storage. Two uninitialized Results of the same
+closed type compare equal, but remain invalid for operational APIs.
+
+```csharp
+bool equal = Result<UserId, LoadError>.Fail(error)
+    == Result<UserId, LoadError>.Fail(error);
+```
+
 ## Result Combination
 
 ### Combine
@@ -326,26 +338,39 @@ Result<(User User, Account Account), LoadError> loaded =
 
 `Map` accepts two through six independent Results. It returns the first failure
 in argument order or invokes its projection exactly once with all success
-values. Inputs are already evaluated before `Map` is called.
+values. Inputs are already evaluated before `Map` is called. Every arity also
+accepts caller-owned state followed by a static projection to avoid a closure.
 
 ```csharp
 Result<Invoice, LoadError> invoice = ResultCombination.Map(
     userResult,
     accountResult,
     static (user, account) => new Invoice(user, account));
+
+Result<Invoice, LoadError> withoutCapture = ResultCombination.Map(
+    userResult,
+    accountResult,
+    invoiceFactory,
+    static (user, account, factory) => factory.Create(user, account));
 ```
 
 ### Combination Bind
 
 `Bind` accepts two through six independent Results and flattens a Result-returning
 projection. Input failures short-circuit in argument order; a failure returned
-by the projection is returned unchanged.
+by the projection is returned unchanged. Every arity has a caller-state form.
 
 ```csharp
 Result<Invoice, LoadError> invoice = ResultCombination.Bind(
     userResult,
     accountResult,
     static (user, account) => Invoice.Create(user, account));
+
+Result<Invoice, LoadError> withoutCapture = ResultCombination.Bind(
+    userResult,
+    accountResult,
+    invoiceFactory,
+    static (user, account, factory) => factory.TryCreate(user, account));
 ```
 
 ## Option
@@ -439,9 +464,29 @@ Option<User> active = option.Filter(static user => user.IsActive);
 ### Option Match
 
 `Match` invokes exactly one Some/None callback and returns a common type.
+Delegate, caller-state, and two-struct-callable forms are available. The
+struct-callable None branch implements `IValueFunction<Unit,TR>`.
 
 ```csharp
 string name = option.Match(static user => user.Name, static () => "Unknown");
+
+string localized = option.Match(
+    localizer,
+    static (user, state) => state.UserName(user),
+    static state => state.UnknownUser);
+```
+
+### Option Equality
+
+`Equals`, `==`, and `GetHashCode` inspect the contained value only for Some.
+Every None compares equal to every other None of the same closed Option type,
+even when `T` gives its invalid default representation non-reflexive equality
+or throwing hashing semantics. This supports generated value-object structs
+without accessing their inactive default storage.
+
+```csharp
+bool bothAbsent = Option<UserId>.None == Option<UserId>.None;
+int emptyHash = Option<UserId>.None.GetHashCode();
 ```
 
 ### Option Switch
@@ -658,11 +703,15 @@ Result<int, LookupError> id = result.Map(callable);
 
 ### ValueAction
 
-`ValueAction<T,TAction>` forwards to a default stateless action struct. Generated
-action properties expose this token without handwritten wrapper code.
+`ValueAction<T,TAction>` stores and forwards to a struct action. Its primary
+constructor carries state without a delegate allocation; `default` remains the
+zero-state token emitted by the source generator.
 
 ```csharp
 Result<User, Error> observed = result.Tap(Operations.Functions.ObserveUser);
+
+var action = new ValueAction<User, ObserveUser>(new ObserveUser(activity));
+Result<User, Error> observedWithState = result.Tap(action);
 ```
 
 ## Async Result Operators
@@ -852,10 +901,14 @@ if (error.Cause is not null)
 
 Built-in factories construct Failure, Unexpected, Validation, Conflict,
 NotFound, Unauthorized, Forbidden, Unavailable, Timeout, RateLimited,
-Cancelled, IO, and System categories with consistent defaults.
+Cancelled, IO, and System categories with consistent defaults. IO and System
+also accept custom code, disclosure policy, and retained cause while preserving
+their Failure and Unexpected categories respectively.
 
 ```csharp
 Error error = Error.NotFound("USER_NOT_FOUND", "The user does not exist.");
+
+Error io = Error.IO("FILE_READ_FAILED", "Unable to read the file.", cause: exception);
 ```
 
 ### Error Custom

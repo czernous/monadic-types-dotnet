@@ -18,7 +18,7 @@ public static class ErrorTelemetry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Record(
         Activity? activity,
-        in Error? error,
+        Error? error,
         ErrorActivityStatusPolicy statusPolicy = ErrorActivityStatusPolicy.Automatic)
     {
         if (activity is null || !activity.IsAllDataRequested)

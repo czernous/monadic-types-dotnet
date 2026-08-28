@@ -41,6 +41,24 @@ public readonly record struct Result<T, E> where E : notnull
         _ => throw UninitializedResult()
     };
 
+    /// <summary>Compares state and only the payload belonging to the active case.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Equals(Result<T, E> other) => _state == other._state && _state switch
+    {
+        Success => EqualityComparer<T>.Default.Equals(_value!, other._value!),
+        Failure => EqualityComparer<E>.Default.Equals(_error!, other._error!),
+        _ => true
+    };
+
+    /// <summary>Hashes state and only the payload belonging to the active case.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override int GetHashCode() => _state switch
+    {
+        Success => unchecked((397 * Success) ^ EqualityComparer<T>.Default.GetHashCode(_value!)),
+        Failure => unchecked((397 * Failure) ^ EqualityComparer<E>.Default.GetHashCode(_error!)),
+        _ => 0
+    };
+
     private Result(T? value, E? error, int state) =>
         (_value, _error, _state) = (value, error, state);
 

@@ -71,6 +71,46 @@ public class ResultCollectionTests
     }
 
     [Fact]
+    public void SpanTraverseToArray_SupportsEveryAllocationFreeDispatchForm()
+    {
+        int[] source = [1, 2, 3];
+
+        Result<long[], string> delegated = source.AsSpan().TraverseToArray(
+            static value => Result<long, string>.Ok(value + 1L));
+        Result<long[], string> state = source.AsSpan().TraverseToArray(
+            2L,
+            static (value, increment) => Result<long, string>.Ok(value + increment));
+        Result<long[], string> callable = source.AsSpan()
+            .TraverseToArray<int, long, string, Increment>(default);
+
+        Assert.Equal([2L, 3L, 4L], delegated.Value);
+        Assert.Equal([3L, 4L, 5L], state.Value);
+        Assert.Equal([2L, 3L, 4L], callable.Value);
+    }
+
+    [Fact]
+    public void SpanTraverseToArray_IsFailFastAndRejectsUninitializedResults()
+    {
+        int[] source = [1, 2, 3];
+        CallCounter counter = new();
+
+        Result<int[], string> failed = source.AsSpan().TraverseToArray(
+            counter,
+            static (value, state) =>
+            {
+                state.Calls++;
+                return value is 2
+                    ? Result<int, string>.Fail("invalid")
+                    : Result<int, string>.Ok(value);
+            });
+
+        Assert.Equal("invalid", failed.Error);
+        Assert.Equal(2, counter.Calls);
+        Assert.Throws<InvalidOperationException>(() =>
+            source.AsSpan().TraverseToArray(static _ => default(Result<int, string>)));
+    }
+
+    [Fact]
     public void TraverseToArray_PropagatesSelectorExceptionUnchanged()
     {
         IReadOnlyList<int> source = new[] { 1 };

@@ -39,7 +39,7 @@ public readonly struct ErrorMetrics
     /// <param name="error">The initialized error to categorize and count.</param>
     /// <exception cref="ArgumentNullException">The counter is enabled and <paramref name="error"/> is null.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Record(in Error? error)
+    public void Record(Error? error)
     {
         Counter<long>? counter = _counter;
         if (counter is null || !counter.Enabled)

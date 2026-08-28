@@ -5,15 +5,38 @@ Versioning as described in [the release policy](docs/releases.md).
 
 ## Unreleased
 
-No unreleased changes.
+### Added
+
+- Caller-state `ResultCombination.Map` and `Bind` overloads for two through six
+  inputs, avoiding captured projection delegates.
+- Caller-state and struct-callable `Option.Match` overloads.
+- `ReadOnlySpan<T>.TraverseToArray` delegate, caller-state, and struct-callable
+  overloads with the same one-array ownership contract as list traversal.
+- Stateful `ValueAction<T,TAction>` wrappers and custom-code/cause overloads for
+  `Error.IO` and `Error.System`.
+- Test-only compatibility coverage for Vogen-generated value objects.
+
+### Fixed
+
+- `Option<T>` and `Result<T,E>` equality and hashing now inspect only the active
+  case. Empty Options and inactive Result fields no longer invoke generated
+  value-object equality or hashing.
+- OpenAPI error-catalog collision validation now uses direct packed metadata
+  locations instead of repeatedly enumerating preceding entries.
+
+### Changed
+
+- `ValueFunction<TIn,TOut,TFunction>` is deeply readonly.
+- Diagnostics pass nullable `Error` references by value rather than managed
+  by-reference indirection.
+- GitHub workflows use checkout v7, upload-artifact v7, and download-artifact v8.
 
 ## [0.2.0-preview.1] - 2026-08-17
 
 ### Added
 
-- `MonadicTypes.NET.Collections` with first-failure traversal for spans and
-  count-known lists, including delegate, caller-state, and struct-callable
-  selectors.
+- `MonadicTypes.NET.Collections` with count-known list traversal and span
+  sequencing, including delegate, caller-state, and struct-callable selectors.
 - `MonadicTypes.NET.Linq` with opt-in `Select`, `SelectMany`, and Option `Where`
   extension members for fluent and query composition.
 - Result combination and mapping overloads for two through six independent

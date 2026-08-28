@@ -42,6 +42,10 @@ authentication, authorization, not-found, conflict, rate-limit, availability,
 timeout, cancellation, and unexpected failure. `Error.Custom` supports positive
 application-defined numeric categories.
 
+`Error.IO` and `Error.System` provide standard-code convenience forms and
+custom-code overloads that can retain an exception and explicit disclosure
+policy without changing their Failure or Unexpected category.
+
 `Cause` is retained for diagnostics and stack-preserving rethrow; default HTTP
 conversion never serializes it. Compact domain errors can implement
 `IErrorConvertible<Error>` and widen only at an application boundary.
