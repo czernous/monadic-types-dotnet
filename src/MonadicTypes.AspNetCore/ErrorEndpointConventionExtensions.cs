@@ -13,9 +13,15 @@ public static class ErrorEndpointConventionExtensions
         /// <returns>The same endpoint builder for continued convention composition.</returns>
         public TBuilder ProducesErrors(params ReadOnlySpan<ErrorType> errorTypes)
         {
+            uint seenTypes = 0;
             foreach (ErrorType errorType in errorTypes)
             {
-                builder.WithMetadata(new ProducesErrorAttribute(errorType));
+                uint bit = 1u << (int)errorType;
+                if ((seenTypes & bit) is 0)
+                {
+                    seenTypes |= bit;
+                    builder.WithMetadata(new ProducesErrorAttribute(errorType));
+                }
             }
 
             return builder;
@@ -32,17 +38,14 @@ public static class ErrorEndpointConventionExtensions
             builder.WithMetadata(catalog);
 
             ReadOnlySpan<ErrorCatalogEntry> ownedEntries = catalog.AsSpan();
+            uint seenTypes = 0;
             for (int index = 0; index < ownedEntries.Length; index++)
             {
                 ErrorType type = ownedEntries[index].Type;
-                bool firstCategory = true;
-                for (int previous = 0; previous < index; previous++)
+                uint bit = 1u << (int)type;
+                if ((seenTypes & bit) is 0)
                 {
-                    firstCategory &= ownedEntries[previous].Type != type;
-                }
-
-                if (firstCategory)
-                {
+                    seenTypes |= bit;
                     builder.WithMetadata(new ProducesErrorAttribute(type));
                 }
             }

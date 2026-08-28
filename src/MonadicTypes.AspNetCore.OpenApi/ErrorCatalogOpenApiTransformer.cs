@@ -45,7 +45,7 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
         return Task.CompletedTask;
     }
 
-    private static void ValidateUniqueCodes(IList<object> metadata)
+    internal static void ValidateUniqueCodes(IList<object> metadata)
     {
         int entryCount = CountEntries(metadata);
         if (entryCount < 2)

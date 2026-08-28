@@ -23,6 +23,12 @@ Versioning as described in [the release policy](docs/releases.md).
   value-object equality or hashing.
 - OpenAPI error-catalog collision validation now uses direct packed metadata
   locations instead of repeatedly enumerating preceding entries.
+- Larger error catalogs now validate with a bounded stack-backed hash table,
+  retaining linear validation for small and collision-heavy catalogs.
+- Repeated error categories in endpoint metadata are now emitted once, using a
+  bounded bit mask instead of an O(n^2) scan.
+- Repeated error categories in endpoint metadata are now emitted once, using a
+  bounded bit mask instead of an O(n^2) scan.
 
 ### Changed
 

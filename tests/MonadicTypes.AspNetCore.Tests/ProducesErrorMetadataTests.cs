@@ -38,6 +38,28 @@ public class ProducesErrorMetadataTests
     }
 
     [Fact]
+    public void CatalogMetadata_ValidatesLargerCatalogs()
+    {
+        ErrorCatalogEntry[] entries =
+        [
+            new(ErrorType.NotFound, "MISSING_01", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_02", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_03", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_04", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_05", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_06", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_07", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_08", "The value was not found."),
+            new(ErrorType.NotFound, "MISSING_09", "The value was not found.")
+        ];
+
+        ErrorCatalogMetadata metadata = new(entries);
+
+        Assert.Equal(entries.Length, metadata.Count);
+        Assert.Equal("MISSING_09", metadata.AsSpan()[^1].Code);
+    }
+
+    [Fact]
     public void CatalogMetadata_RejectsEmptyAndUninitializedEntries()
     {
         Assert.Throws<ArgumentException>(() => new ErrorCatalogMetadata([]));

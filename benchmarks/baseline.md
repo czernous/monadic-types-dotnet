@@ -387,6 +387,66 @@ owner object while validating initialization and duplicate codes. This is a
 cold endpoint-registration cost; request execution does not construct or read
 the catalog.
 
+### OpenAPI Catalog Validation
+
+Recorded on 2026-08-28 in the same NativeAOT executable. Setup, catalog
+construction, and metadata collection are outside measured operations. Every
+validation path measured 0 B managed allocation.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| LegacySmallCatalog | 171.022 ns | 0 B |
+| CurrentSmallCatalog | 172.694 ns | 0 B |
+| LegacyMediumCatalog | 4,788.1 ns | 0 B |
+| CurrentMediumCatalog | 928.4 ns | 0 B |
+| LegacyLargeCatalog | 48,962.7 ns | 0 B |
+| CurrentLargeCatalog | 3,082.4 ns | 0 B |
+| LegacyCollidingCatalog | 4,779.2 ns | 0 B |
+| CurrentCollidingCatalog | 5,231.4 ns | 0 B |
+| LegacySmallMetadata | 376.6 ns | 0 B |
+| CurrentSmallMetadata | 287.2 ns | 0 B |
+| LegacyLargeMetadata | 21,833.3 ns | 0 B |
+| CurrentLargeMetadata | 4,961.9 ns | 0 B |
+| LegacyCollidingMetadata | 197,684.3 ns | 0 B |
+| CurrentCollidingMetadata | 11,285.3 ns | 0 B |
+
+The current validator uses linear comparison for up to eight entries and a
+bounded open-addressed stack table for larger catalogs. A probe-length guard
+falls back to linear validation for adversarial hash distributions. This makes
+ordinary medium and large catalogs substantially faster while keeping the
+small-catalog path close to the established implementation. The collision
+case is intentionally measured because validation is a startup operation and
+must not trade correctness for an unbounded hash-table path.
+
+A focused rerun on 2026-08-29 confirmed the same allocation result. The
+following values supersede the preceding diagnostic means only for comparing
+future runs made with this benchmark layout; they do not replace the stable
+primitive baselines above.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| LegacySmallCatalog | 171.977 ns | 0 B |
+| CurrentSmallCatalog | 173.211 ns | 0 B |
+| LegacyMediumCatalog | 4,804.6 ns | 0 B |
+| CurrentMediumCatalog | 953.4 ns | 0 B |
+| LegacyLargeCatalog | 49,283.5 ns | 0 B |
+| CurrentLargeCatalog | 3,127.9 ns | 0 B |
+| LegacyCollidingCatalog | 4,790.4 ns | 0 B |
+| CurrentCollidingCatalog | 5,242.8 ns | 0 B |
+| LegacySmallMetadata | 256.1 ns | 0 B |
+| CurrentSmallMetadata | 293.2 ns | 0 B |
+| LegacyLargeMetadata | 22,409.0 ns | 0 B |
+| CurrentLargeMetadata | 4,790.3 ns | 0 B |
+| LegacyCollidingMetadata | 198,405.0 ns | 1 B |
+| CurrentCollidingMetadata | 11,359.6 ns | 0 B |
+
+The 1 B legacy collision reading is a benchmark diagnostic artifact from the
+legacy control and is not present in the current implementation. The current
+small-metadata path is slower than its same-run control by 37.1 ns, but this is
+endpoint-document generation work, not request processing. It remains a
+tracked optimization candidate rather than a reason to complicate the public
+API or sacrifice the substantial large-catalog improvement.
+
 ## Final Type-Changing Map Disposition
 
 The final isolated NativeAOT pair measured same-type `Result.Map` at 2.650 ns
