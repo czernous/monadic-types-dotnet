@@ -1,1284 +1,5522 @@
-# API Behavior Reference
+# API Reference
 
-This is the hand-maintained behavioral contract for the public API. An overload
-family is documented once when its branch semantics are identical. Delegate,
-caller-state, struct-callable, and generated-callable overloads differ only in
-dispatch and state transport unless stated otherwise. Result payload access,
-branch consumers, and composition reject `default(Result<T,E>)` with
-`InvalidOperationException`; state queries and `ToString` can inspect it.
+Generated from public PE metadata and compiler XML documentation.
 
-Compiler names are presented using C# syntax: `op_Implicit` appears as implicit
-conversion and `Item` appears as the indexer. Static extension-container types
-are not separate operations; every callable extension they expose is indexed.
-The build emits XML documentation and treats `CS1591` as an error in every
-shipped runtime and generator project, so this guide can be audited against the
-compiled public-member inventory.
+## Packages
 
-## Result Construction And State
+- [MonadicTypes.NET](#package-monadictypesnet)
+- [MonadicTypes.NET.AspNetCore](#package-monadictypesnetaspnetcore)
+- [MonadicTypes.NET.AspNetCore.OpenApi](#package-monadictypesnetaspnetcoreopenapi)
+- [MonadicTypes.NET.Async](#package-monadictypesnetasync)
+- [MonadicTypes.NET.Collections](#package-monadictypesnetcollections)
+- [MonadicTypes.NET.Diagnostics](#package-monadictypesnetdiagnostics)
+- [MonadicTypes.NET.Effects](#package-monadictypesneteffects)
+- [MonadicTypes.NET.Errors](#package-monadictypesneterrors)
+- [MonadicTypes.NET.Generators](#package-monadictypesnetgenerators)
+- [MonadicTypes.NET.Linq](#package-monadictypesnetlinq)
 
-### Result Ok
+## Package MonadicTypes.NET
 
-`Result<T,E>.Ok` constructs success without creating an error.
+**Types:** [`IValueAction<T>`](#type-ivalueactiont) · [`IValueFunction<TIn, TOut>`](#type-ivaluefunctiontin-tout) · [`Option`](#type-option) · [`Option<T>`](#type-optiont) · [`OptionNullableExtensions`](#type-optionnullableextensions) · [`Result`](#type-result) · [`Result<T, E>`](#type-resultt-e) · [`ResultCombination`](#type-resultcombination) · [`ResultCompositionExtensions`](#type-resultcompositionextensions) · [`Unit`](#type-unit) · [`ValueAction<T, TAction>`](#type-valueactiont-taction) · [`ValueFunction<TIn, TOut, TFunction>`](#type-valuefunctiontin-tout-tfunction)
 
-```csharp
-Result<User, LookupError> result = Result<User, LookupError>.Ok(user);
-```
+### Type: `IValueAction<T>`
 
-### Result Fail
+Defines a value-type side-effect callback that avoids delegate allocation and dispatch.
 
-`Result<T,E>.Fail` constructs failure and rejects a null error.
+| Member | Description |
+| --- | --- |
+| [`Invoke`](#member-ivalueactiontinvoke) | Performs the action for `value`. |
 
-```csharp
-Result<User, LookupError> result = Result<User, LookupError>.Fail(LookupError.NotFound);
-```
+#### Member: `IValueAction<T>.Invoke`
 
-### Unit Result Ok
-
-`Result.Ok<E>()` constructs `Result<Unit,E>` success for an operation with no
-success payload.
+**Example**
 
 ```csharp
-Result<Unit, SaveError> saved = Result.Ok<SaveError>();
-```
-
-### Unit Result Fail
-
-`Result.Fail<E>(error)` constructs a failed `Result<Unit,E>`.
-
-```csharp
-Result<Unit, SaveError> saved = Result.Fail(SaveError.WriteFailed);
-```
-
-### Result State
-
-`IsInitialized`, `IsSuccess`, and `IsFailure` inspect state without reading a
-payload. A default Result is uninitialized, neither success nor failure.
-
-```csharp
-if (result.IsFailure)
+public readonly struct Observe : IValueAction<Error>
 {
-    Record(result.Error);
+    public void Invoke(Error value) => Console.WriteLine(value.Message);
 }
 ```
 
-### Result Value
+| Overload | Description |
+| --- | --- |
+| [`void Invoke(T value)`](#overload-void-invoket-value-on-ivalueactiont) | Performs the action for `value`. |
 
-`Value` returns success and throws for failure or uninitialized state.
+##### Overload: `void Invoke(T value)` on `IValueAction<T>`
+
+Performs the action for `value`.
+
+**Parameters**
+
+- `value`: Input value.
+
+### Type: `IValueFunction<TIn, TOut>`
+
+Defines an allocation-free callable value that can be constrained and inlined by the runtime. Implementations should normally be readonly structs.
+
+| Member | Description |
+| --- | --- |
+| [`Invoke`](#member-ivaluefunctiontin-toutinvoke) | Transforms `value` into an output value. |
+
+#### Member: `IValueFunction<TIn, TOut>.Invoke`
+
+**Example**
 
 ```csharp
-User user = result.Value;
-```
-
-### Result Error
-
-`Error` returns failure and throws for success or uninitialized state.
-
-```csharp
-LookupError error = result.Error;
-```
-
-### Result Try Get
-
-`TryGetValue` and `TryGetError` return `true` only for the matching branch. Both
-reject an uninitialized Result.
-
-```csharp
-if (result.TryGetValue(out User user))
+public readonly struct GetId : IValueFunction<User, int>
 {
-    Render(user);
+    public int Invoke(User value) => value.Id;
 }
 ```
 
-### Result Deconstruct
+| Overload | Description |
+| --- | --- |
+| [`TOut Invoke(TIn value)`](#overload-tout-invoketin-value-on-ivaluefunctiontin-tout) | Transforms `value` into an output value. |
 
-`Deconstruct` exposes `(isSuccess, value, error)` for positional patterns. The
-inactive payload is `default`; an uninitialized Result throws rather than being
-misclassified as failure.
+##### Overload: `TOut Invoke(TIn value)` on `IValueFunction<TIn, TOut>`
 
-```csharp
-string text = result switch
-{
-    (true, User user, _) => user.Name,
-    (false, _, LookupError error) => error.Code
-};
-```
+Transforms `value` into an output value.
 
-### Result String
+**Parameters**
 
-`ToString` returns `Ok(value)`, `Fail(error)`, or `Uninitialized`. It is a
-diagnostic representation, not a transport format.
+- `value`: Input value.
 
-```csharp
-logger.LogDebug("Lookup result: {Result}", result.ToString());
-```
+**Returns:** The transformed output.
 
-### Result Conversions
+### Type: `Option`
 
-Implicit conversion from `T` creates success; conversion from `E` creates
-failure. Use it only when the target type makes the branch unambiguous.
+Creates options from nullable application-boundary values.
+
+| Member | Description |
+| --- | --- |
+| [`FromNullable`](#member-optionfromnullable) | Converts a nullable value type to Some, or null to None. |
+
+#### Member: `Option.FromNullable`
+
+**Example**
 
 ```csharp
-Result<User, LookupError> success = user;
-Result<User, LookupError> failure = LookupError.NotFound;
+Option<User> user = Option.FromNullable(nullableUser);
 ```
 
-### Unit
+| Overload | Description |
+| --- | --- |
+| [`Option<T> FromNullable<T>(Nullable<T> value)`](#overload-optiont-fromnullabletnullablet-value-on-option) | Converts a nullable value type to Some, or null to None. |
+| [`Option<T> FromNullable<T>(T? value)`](#overload-optiont-fromnullablett-value-on-option) | Converts a nullable reference to Some, or null to None. |
 
-`Unit.Value` represents successful completion without data. `ToString` returns
-`()`. The value itself requires no heap allocation.
+##### Overload: `Option<T> FromNullable<T>(Nullable<T> value)` on `Option`
+
+Converts a nullable value type to Some, or null to None.
+
+**Type parameters**
+
+- `T`: Non-null value type.
+
+**Parameters**
+
+- `value`: Nullable value to convert.
+
+**Returns:** Some for a present value; otherwise None.
+
+##### Overload: `Option<T> FromNullable<T>(T? value)` on `Option`
+
+Converts a nullable reference to Some, or null to None.
+
+**Type parameters**
+
+- `T`: Non-null reference value type.
+
+**Parameters**
+
+- `value`: Nullable value to convert.
+
+**Returns:** Some for a non-null value; otherwise None.
+
+### Type: `Option<T>`
+
+Represents either one non-null value or no value without heap allocation.
+
+**Example**
 
 ```csharp
-Unit completed = Unit.Value;
-Console.WriteLine(completed);
+Option<User> user = Option<User>.Some(value);
 ```
 
-## Result Railway Operators
-
-### Result Map
-
-`Map` calls its mapper only for success and wraps its output. Failure propagates
-unchanged. Caller-state and callable overloads change dispatch, not semantics.
-
-```csharp
-Result<int, LookupError> id = result.Map(static user => user.Id);
-```
-
-### Result Bind
-
-`Bind` calls a Result-returning continuation only for success and returns it
-without nesting. Outer failure skips the callback.
-
-```csharp
-Result<Account, LookupError> account = result.Bind(LoadAccount);
-```
-
-### Result Ensure
-
-`Ensure` preserves failure. For success it keeps the value when the predicate is
-true; otherwise it calls the error factory.
-
-```csharp
-Result<Order, CheckoutError> valid = order.Ensure(
-    static value => value.Lines.Count > 0,
-    static _ => CheckoutError.EmptyOrder);
-```
-
-### Result Recover
-
-`Recover` preserves success and invokes recovery only for failure.
-
-```csharp
-Result<Settings, ReadError> settings = primary.Recover(ReadFallback);
-```
-
-### Result Flatten
-
-`Flatten` removes one layer from `Result<Result<T,E>,E>`. Outer failure wins;
-outer success returns the inner Result unchanged.
-
-```csharp
-Result<User, LookupError> flat = nestedResult.Flatten();
-```
-
-## Result Error Operators
-
-### Result Map Error
-
-`MapError` preserves success under the new error type and maps only failure.
-
-```csharp
-Result<User, ApiError> apiResult = result.MapError(ApiError.FromLookup);
-```
-
-### Result Bind Error
-
-`BindError` preserves success and invokes a Result-returning continuation only
-for failure.
-
-```csharp
-Result<User, FinalError> recovered = result.BindError(RetryLookup);
-```
-
-### Result BiMap
-
-`BiMap` changes both branch types while invoking exactly one mapper.
-
-```csharp
-Result<UserDto, ProblemCode> projected = result.BiMap(UserDto.From, ProblemCode.From);
-```
-
-### Result Bind Widened
-
-`BindWidened` converts a compact continuation error only when that continuation
-fails. Existing wide failure propagates without invoking the continuation.
-
-```csharp
-Result<Receipt, Error> charged = loadedOrder.BindWidened(ChargeWithPaymentError);
-```
-
-## Result Observation And Consumption
-
-### Result Tap
-
-`Tap` runs only for success and returns the original Result. Callback exceptions
-propagate normally.
-
-```csharp
-Result<Order, CheckoutError> observed = order.Tap(AuditOrder);
-```
-
-### Result Tap Async
-
-`TapAsync` awaits a ValueTask action only for success and returns the original
-Result.
-
-```csharp
-Result<Order, CheckoutError> observed = await order.TapAsync(AuditOrderAsync);
-```
-
-### Result Tap Error
-
-`TapError` runs only for failure and returns the original Result.
-
-```csharp
-Result<Order, CheckoutError> observed = order.TapError(RecordFailure);
-```
-
-### Result Finally
-
-`Finally` runs one caller-state action for either initialized branch, then
-returns the original Result. It does not receive the active payload.
-
-```csharp
-Result<Order, CheckoutError> completed = order.Finally(timer, static value => value.Stop());
-```
-
-### Result Finally Async
-
-`FinallyAsync` awaits one caller-state action for either initialized branch and
-returns the original Result.
-
-```csharp
-Result<Order, CheckoutError> completed = await order.FinallyAsync(
-    scope,
-    static value => value.DisposeAsync());
-```
-
-### Result Match
-
-`Match` invokes exactly one branch callback and returns its common output type.
-
-```csharp
-IResult response = result.Match<IResult>(
-    static user => TypedResults.Ok(user),
-    static error => TypedResults.NotFound(error.Code));
-```
-
-### Result Switch
-
-`Switch` invokes exactly one branch action and returns `void`. It is terminal,
-not composable. Uninitialized Result throws before either action.
-
-```csharp
-result.Switch(RenderUser, RenderLookupError);
-```
-
-### Result Value Or
-
-`ValueOr` returns success or an eagerly supplied fallback.
-
-```csharp
-User user = result.ValueOr(User.Anonymous);
-```
-
-### Result Value Or Else
-
-`ValueOrElse` returns success without invoking its callback; failure lazily maps
-the error to a fallback.
-
-```csharp
-User user = result.ValueOrElse(static error => User.Missing(error.Code));
-```
-
-## Result Combination
-
-### Combine
-
-`Combine` inspects two or a span of `Result<Unit,E>` values in order and returns
-the first failure or unit success.
-
-```csharp
-ReadOnlySpan<Result<Unit, ValidationError>> checks = [CheckName(), CheckEmail()];
-Result<Unit, ValidationError> valid = ResultCombination.Combine(checks);
-```
-
-### Zip
-
-`Zip` returns the first failure in argument order or a named tuple of both
-successes. Producer calls supplied as arguments have already executed.
-
-```csharp
-Result<(User User, Account Account), LoadError> loaded =
-    ResultCombination.Zip(userResult, accountResult);
-```
-
-### Combination Map
-
-`Map` accepts two through six independent Results. It returns the first failure
-in argument order or invokes its projection exactly once with all success
-values. Inputs are already evaluated before `Map` is called.
-
-```csharp
-Result<Invoice, LoadError> invoice = ResultCombination.Map(
-    userResult,
-    accountResult,
-    static (user, account) => new Invoice(user, account));
-```
-
-### Combination Bind
-
-`Bind` accepts two through six independent Results and flattens a Result-returning
-projection. Input failures short-circuit in argument order; a failure returned
-by the projection is returned unchanged.
-
-```csharp
-Result<Invoice, LoadError> invoice = ResultCombination.Bind(
-    userResult,
-    accountResult,
-    static (user, account) => Invoice.Create(user, account));
-```
-
-## Option
-
-### Option Some
-
-`Some` constructs presence and rejects null.
-
-```csharp
-Option<User> option = Option<User>.Some(user);
-```
-
-### Option None
-
-`None` represents absence and is equivalent to `default(Option<T>)`.
-
-```csharp
-Option<User> option = Option<User>.None;
-```
-
-### Option State
-
-`HasValue`, `IsSome`, and `IsNone` query presence without reading the payload.
-
-```csharp
-if (option.IsNone)
-{
-    RenderMissingUser();
-}
-```
-
-### Option Value
-
-`Value` returns the present value and throws for None.
-
-```csharp
-User user = option.Value;
-```
-
-### Option Try Get
-
-`TryGetValue` assigns and returns `true` for Some; it returns `false` for None.
-
-```csharp
-if (option.TryGetValue(out User user))
-{
-    Render(user);
-}
-```
-
-### Option Deconstruct
-
-`Deconstruct` exposes `(hasValue, value)` for positional patterns. None returns
-`false` and `default(T)`.
-
-```csharp
-string text = option switch
-{
-    (true, User user) => user.Name,
-    (false, _) => "Missing"
-};
-```
-
-### Option Map
-
-`Map` invokes its mapper only for Some and requires a non-null output. None
-propagates without invoking the mapper.
-
-```csharp
-Option<int> id = option.Map(static user => user.Id);
-```
-
-### Option Bind
-
-`Bind` invokes an Option-returning continuation only for Some and avoids a
-nested Option. None propagates.
+| Member | Description |
+| --- | --- |
+| [`Bind`](#member-optiontbind) | Composes a present value with another optional operation and propagates `None`. |
+| [`Deconstruct`](#member-optiontdeconstruct) | Deconstructs presence and value for positional pattern matching. |
+| [`Equals`](#member-optiontequals) | Compares presence and, only when present, the contained value. |
+| [`Filter`](#member-optiontfilter) | Retains a present value only when `predicate` returns true. |
+| [`GetHashCode`](#member-optiontgethashcode) | Hashes presence and, only when present, the contained value. |
+| [`HasValue`](#member-optionthasvalue) | Gets whether this option contains a value. |
+| [`IsNone`](#member-optiontisnone) | Gets whether this option is the `None` case. |
+| [`IsSome`](#member-optiontissome) | Gets whether this option is the `Some` case. |
+| [`Map`](#member-optiontmap) | Maps a present value and propagates `None`. |
+| [`Match`](#member-optiontmatch) | Folds the active case into one output value. |
+| [`None`](#member-optiontnone) | Gets the empty option. |
+| [`Some`](#member-optiontsome) | Creates an option containing a non-null value. |
+| [`Switch`](#member-optiontswitch) | Executes exactly one action for the active case. |
+| [`TryGetValue`](#member-optionttrygetvalue) | Attempts to retrieve the contained value. |
+| [`Value`](#member-optiontvalue) | Gets the contained value. |
+| [`ValueOr`](#member-optiontvalueor) | Returns the present value or an eagerly supplied fallback. |
+| [`ValueOrElse`](#member-optiontvalueorelse) | Returns the present value or lazily creates a fallback. |
+| [`implicit operator`](#member-optiontimplicit-operator) | Converts a value to `Some`, or null to `None`. |
+
+#### Member: `Option<T>.Bind`
+
+**Example**
 
 ```csharp
 Option<Address> address = option.Bind(static user => user.PrimaryAddress);
 ```
 
-### Option Filter
+| Overload | Description |
+| --- | --- |
+| [`Option<TR> Bind<TR>(Func<T, Option<TR>> bind)`](#overload-optiontr-bindtrfunct-optiontr-bind-on-optiont) | Composes a present value with another optional operation and propagates `None`. |
+| [`Option<TR> Bind<TR, TFunction>(ValueFunction<T, Option<TR>, TFunction> bind)`](#overload-optiontr-bindtr-tfunctionvaluefunctiont-optiontr-tfunction-bind-on-optiont) | Composes through a generated callable wrapper and propagates `None`. |
+| [`Option<TR> Bind<TState, TR>(TState state, Func<T, TState, Option<TR>> bind)`](#overload-optiontr-bindtstate-trtstate-state-funct-tstate-optiontr-bind-on-optiont) | Composes while passing caller-owned state to a non-capturing continuation. |
+| [`Option<TR> Bind<TR, TFunction>(TFunction bind)`](#overload-optiontr-bindtr-tfunctiontfunction-bind-on-optiont) | Composes through an allocation-free callable and propagates `None`. |
 
-`Filter` keeps Some when its predicate returns true; otherwise it returns None.
-The predicate is not called for None.
+##### Overload: `Option<TR> Bind<TR>(Func<T, Option<TR>> bind)` on `Option<T>`
+
+Composes a present value with another optional operation and propagates `None`.
+
+##### Overload: `Option<TR> Bind<TR, TFunction>(ValueFunction<T, Option<TR>, TFunction> bind)` on `Option<T>`
+
+Composes through a generated callable wrapper and propagates `None`.
+
+##### Overload: `Option<TR> Bind<TState, TR>(TState state, Func<T, TState, Option<TR>> bind)` on `Option<T>`
+
+Composes while passing caller-owned state to a non-capturing continuation.
+
+##### Overload: `Option<TR> Bind<TR, TFunction>(TFunction bind)` on `Option<T>`
+
+Composes through an allocation-free callable and propagates `None`.
+
+#### Member: `Option<T>.Deconstruct`
+
+**Example**
+
+```csharp
+string text = option switch { (true, User user) => user.Name, _ => "Missing" };
+```
+
+| Overload | Description |
+| --- | --- |
+| [`void Deconstruct(out bool hasValue, out T value)`](#overload-void-deconstructout-bool-hasvalue-out-t-value-on-optiont) | Deconstructs presence and value for positional pattern matching. |
+
+##### Overload: `void Deconstruct(out bool hasValue, out T value)` on `Option<T>`
+
+Deconstructs presence and value for positional pattern matching.
+
+**Parameters**
+
+- `hasValue`: Receives true for Some and false for None.
+- `value`: Receives the contained value, or default for None.
+
+#### Member: `Option<T>.Equals`
+
+**Example**
+
+```csharp
+bool equal = left.Equals(right);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool Equals(Option<T> other)`](#overload-bool-equalsoptiont-other-on-optiont) | Compares presence and, only when present, the contained value. |
+
+##### Overload: `bool Equals(Option<T> other)` on `Option<T>`
+
+Compares presence and, only when present, the contained value.
+
+#### Member: `Option<T>.Filter`
+
+**Example**
 
 ```csharp
 Option<User> active = option.Filter(static user => user.IsActive);
 ```
 
-### Option Match
+| Overload | Description |
+| --- | --- |
+| [`Option<T> Filter(Func<T, bool> predicate)`](#overload-optiont-filterfunct-bool-predicate-on-optiont) | Retains a present value only when `predicate` returns true. |
+| [`Option<T> Filter<TState>(TState state, Func<T, TState, bool> predicate)`](#overload-optiont-filtertstatetstate-state-funct-tstate-bool-predicate-on-optiont) | Filters a present value while passing caller-owned state to the predicate. |
 
-`Match` invokes exactly one Some/None callback and returns a common type.
+##### Overload: `Option<T> Filter(Func<T, bool> predicate)` on `Option<T>`
+
+Retains a present value only when `predicate` returns true.
+
+##### Overload: `Option<T> Filter<TState>(TState state, Func<T, TState, bool> predicate)` on `Option<T>`
+
+Filters a present value while passing caller-owned state to the predicate.
+
+#### Member: `Option<T>.GetHashCode`
+
+**Example**
+
+```csharp
+int hash = option.GetHashCode();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`int GetHashCode()`](#overload-int-gethashcode-on-optiont) | Hashes presence and, only when present, the contained value. |
+
+##### Overload: `int GetHashCode()` on `Option<T>`
+
+Hashes presence and, only when present, the contained value.
+
+#### Member: `Option<T>.HasValue`
+
+**Example**
+
+```csharp
+bool present = option.HasValue;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool HasValue`](#overload-bool-hasvalue-on-optiont) | Gets whether this option contains a value. |
+
+##### Overload: `bool HasValue` on `Option<T>`
+
+Gets whether this option contains a value.
+
+#### Member: `Option<T>.IsNone`
+
+**Example**
+
+```csharp
+if (option.IsNone) HandleAbsence();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool IsNone`](#overload-bool-isnone-on-optiont) | Gets whether this option is the `None` case. |
+
+##### Overload: `bool IsNone` on `Option<T>`
+
+Gets whether this option is the `None` case.
+
+#### Member: `Option<T>.IsSome`
+
+**Example**
+
+```csharp
+if (option.IsSome) Consume(option.Value);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool IsSome`](#overload-bool-issome-on-optiont) | Gets whether this option is the `Some` case. |
+
+##### Overload: `bool IsSome` on `Option<T>`
+
+Gets whether this option is the `Some` case.
+
+#### Member: `Option<T>.Map`
+
+**Example**
+
+```csharp
+Option<int> id = option.Map(static user => user.Id);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<TR> Map<TR>(Func<T, TR> map)`](#overload-optiontr-maptrfunct-tr-map-on-optiont) | Maps a present value and propagates `None`. |
+| [`Option<TR> Map<TR, TFunction>(ValueFunction<T, TR, TFunction> map)`](#overload-optiontr-maptr-tfunctionvaluefunctiont-tr-tfunction-map-on-optiont) | Maps a present value through a generated callable wrapper and propagates `None`. |
+| [`Option<TR> Map<TState, TR>(TState state, Func<T, TState, TR> map)`](#overload-optiontr-maptstate-trtstate-state-funct-tstate-tr-map-on-optiont) | Maps a present value while passing caller-owned state to a non-capturing function. |
+| [`Option<TR> Map<TR, TFunction>(TFunction map)`](#overload-optiontr-maptr-tfunctiontfunction-map-on-optiont) | Maps a present value through an allocation-free callable and propagates `None`. |
+
+##### Overload: `Option<TR> Map<TR>(Func<T, TR> map)` on `Option<T>`
+
+Maps a present value and propagates `None`.
+
+##### Overload: `Option<TR> Map<TR, TFunction>(ValueFunction<T, TR, TFunction> map)` on `Option<T>`
+
+Maps a present value through a generated callable wrapper and propagates `None`.
+
+##### Overload: `Option<TR> Map<TState, TR>(TState state, Func<T, TState, TR> map)` on `Option<T>`
+
+Maps a present value while passing caller-owned state to a non-capturing function.
+
+##### Overload: `Option<TR> Map<TR, TFunction>(TFunction map)` on `Option<T>`
+
+Maps a present value through an allocation-free callable and propagates `None`.
+
+#### Member: `Option<T>.Match`
+
+**Example**
 
 ```csharp
 string name = option.Match(static user => user.Name, static () => "Unknown");
 ```
 
-### Option Switch
+| Overload | Description |
+| --- | --- |
+| [`TR Match<TR>(Func<T, TR> some, Func<TR> none)`](#overload-tr-matchtrfunct-tr-some-functr-none-on-optiont) | Folds the active case into one output value. |
+| [`TR Match<TState, TR>(TState state, Func<T, TState, TR> some, Func<TState, TR> none)`](#overload-tr-matchtstate-trtstate-state-funct-tstate-tr-some-functstate-tr-none-on-optiont) | Folds the active case while passing caller-owned state to non-capturing functions. |
+| [`TR Match<TR, TSome, TNone>(TSome some, TNone none)`](#overload-tr-matchtr-tsome-tnonetsome-some-tnone-none-on-optiont) | Folds the active case through allocation-free callable values. |
 
-`Switch` invokes exactly one Some/None action and returns `void`.
+##### Overload: `TR Match<TR>(Func<T, TR> some, Func<TR> none)` on `Option<T>`
+
+Folds the active case into one output value.
+
+**Type parameters**
+
+- `TR`: Output type.
+
+**Parameters**
+
+- `some`: Function invoked for a populated option.
+- `none`: Function invoked for an empty option.
+
+**Returns:** The selected function's output.
+
+##### Overload: `TR Match<TState, TR>(TState state, Func<T, TState, TR> some, Func<TState, TR> none)` on `Option<T>`
+
+Folds the active case while passing caller-owned state to non-capturing functions.
+
+**Type parameters**
+
+- `TState`: Caller state type.
+- `TR`: Output type.
+
+**Parameters**
+
+- `state`: State passed unchanged to the selected branch.
+- `some`: Function invoked for a populated option.
+- `none`: Function invoked for an empty option.
+
+**Returns:** The selected function's output.
+
+##### Overload: `TR Match<TR, TSome, TNone>(TSome some, TNone none)` on `Option<T>`
+
+Folds the active case through allocation-free callable values.
+
+**Type parameters**
+
+- `TR`: Output type.
+- `TSome`: Populated-case callable type.
+- `TNone`: Empty-case callable type accepting `Unit`.
+
+**Parameters**
+
+- `some`: Callable invoked for a populated option.
+- `none`: Callable invoked for an empty option.
+
+**Returns:** The selected callable's output.
+
+#### Member: `Option<T>.None`
+
+**Example**
+
+```csharp
+Option<User> option = Option<User>.None;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<T> None`](#overload-optiont-none-on-optiont) | Gets the empty option. |
+
+##### Overload: `Option<T> None` on `Option<T>`
+
+Gets the empty option.
+
+#### Member: `Option<T>.Some`
+
+**Example**
+
+```csharp
+Option<User> option = Option<User>.Some(user);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<T> Some(T value)`](#overload-optiont-somet-value-on-optiont) | Creates an option containing a non-null value. |
+
+##### Overload: `Option<T> Some(T value)` on `Option<T>`
+
+Creates an option containing a non-null value.
+
+**Parameters**
+
+- `value`: Value to contain.
+
+**Returns:** A populated option.
+
+**Throws**
+
+- `ArgumentNullException`: `value` is null.
+
+#### Member: `Option<T>.Switch`
+
+**Example**
 
 ```csharp
 option.Switch(RenderUser, RenderMissingUser);
 ```
 
-### Option Value Or
+| Overload | Description |
+| --- | --- |
+| [`void Switch(Action<T> some, Action none)`](#overload-void-switchactiont-some-action-none-on-optiont) | Executes exactly one action for the active case. |
 
-`ValueOr` returns Some or an eagerly supplied fallback.
+##### Overload: `void Switch(Action<T> some, Action none)` on `Option<T>`
+
+Executes exactly one action for the active case.
+
+**Parameters**
+
+- `some`: Action invoked for a populated option.
+- `none`: Action invoked for an empty option.
+
+#### Member: `Option<T>.TryGetValue`
+
+**Example**
+
+```csharp
+if (option.TryGetValue(out User user)) Consume(user);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool TryGetValue(out T value)`](#overload-bool-trygetvalueout-t-value-on-optiont) | Attempts to retrieve the contained value. |
+
+##### Overload: `bool TryGetValue(out T value)` on `Option<T>`
+
+Attempts to retrieve the contained value.
+
+**Parameters**
+
+- `value`: Receives the value when present.
+
+**Returns:** `true` when populated; otherwise `false`.
+
+#### Member: `Option<T>.Value`
+
+**Example**
+
+```csharp
+User user = option.Value;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`T Value`](#overload-t-value-on-optiont) | Gets the contained value. |
+
+##### Overload: `T Value` on `Option<T>`
+
+Gets the contained value.
+
+**Throws**
+
+- `InvalidOperationException`: The option is `None`.
+
+#### Member: `Option<T>.ValueOr`
+
+**Example**
 
 ```csharp
 User user = option.ValueOr(User.Anonymous);
 ```
 
-### Option Value Or Else
+| Overload | Description |
+| --- | --- |
+| [`T ValueOr(T fallback)`](#overload-t-valueort-fallback-on-optiont) | Returns the present value or an eagerly supplied fallback. |
 
-`ValueOrElse` skips its factory for Some and invokes it only for None. The
-caller-state overload avoids a closure.
+##### Overload: `T ValueOr(T fallback)` on `Option<T>`
+
+Returns the present value or an eagerly supplied fallback.
+
+#### Member: `Option<T>.ValueOrElse`
+
+**Example**
 
 ```csharp
 User user = option.ValueOrElse(CreateAnonymousUser);
 ```
 
-### Option Conversion
+| Overload | Description |
+| --- | --- |
+| [`T ValueOrElse(Func<T> fallback)`](#overload-t-valueorelsefunct-fallback-on-optiont) | Returns the present value or lazily creates a fallback. |
+| [`T ValueOrElse<TState>(TState state, Func<TState, T> fallback)`](#overload-t-valueorelsetstatetstate-state-functstate-t-fallback-on-optiont) | Returns the present value or lazily creates a fallback with caller-owned state. |
 
-Implicit conversion maps null to None and a non-null value to Some.
+##### Overload: `T ValueOrElse(Func<T> fallback)` on `Option<T>`
+
+Returns the present value or lazily creates a fallback.
+
+##### Overload: `T ValueOrElse<TState>(TState state, Func<TState, T> fallback)` on `Option<T>`
+
+Returns the present value or lazily creates a fallback with caller-owned state.
+
+#### Member: `Option<T>.implicit operator`
+
+**Example**
 
 ```csharp
 Option<User> option = nullableUser;
 ```
 
-### Option Nullable Bridges
+| Overload | Description |
+| --- | --- |
+| [`implicit operator Option<T>(T value)`](#overload-implicit-operator-optiontt-value-on-optiont) | Converts a value to `Some`, or null to `None`. |
 
-`Option.FromNullable` converts nullable reference and value types at application
-boundaries. `ToNullable` returns a nullable reference; `ToNullableValue` returns
-a nullable value type. No wrapper object is allocated.
+##### Overload: `implicit operator Option<T>(T value)` on `Option<T>`
+
+Converts a value to `Some`, or null to `None`.
+
+### Type: `OptionNullableExtensions`
+
+Converts options to nullable application-boundary values.
+
+| Member | Description |
+| --- | --- |
+| [`ToNullable`](#member-optionnullableextensionstonullable) | Returns the contained reference, or null for None. |
+| [`ToNullableValue`](#member-optionnullableextensionstonullablevalue) | Returns the contained nullable value, or null for None. |
+
+#### Member: `OptionNullableExtensions.ToNullable`
+
+**Example**
 
 ```csharp
 Option<User> user = Option.FromNullable(nullableUser);
-Option<int> age = Option.FromNullable(nullableAge);
-User? nullable = user.ToNullable();
-int? nullableValue = age.ToNullableValue();
+User? value = user.ToNullable();
 ```
 
-### Option To Result
+| Overload | Description |
+| --- | --- |
+| [`T? ToNullable<T>(in Option<T> option)`](#overload-t-tonullabletin-optiont-option-on-optionnullableextensions) | Returns the contained reference, or null for None. |
 
-`ToResult` converts Some to success. None becomes failure from an eager error or
-a lazy factory that runs only for None.
+##### Overload: `T? ToNullable<T>(in Option<T> option)` on `OptionNullableExtensions`
+
+Returns the contained reference, or null for None.
+
+#### Member: `OptionNullableExtensions.ToNullableValue`
+
+**Example**
+
+```csharp
+Option<int> age = Option<int>.Some(42);
+int? value = age.ToNullableValue();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Nullable<T> ToNullableValue<T>(in Option<T> option)`](#overload-nullablet-tonullablevaluetin-optiont-option-on-optionnullableextensions) | Returns the contained nullable value, or null for None. |
+
+##### Overload: `Nullable<T> ToNullableValue<T>(in Option<T> option)` on `OptionNullableExtensions`
+
+Returns the contained nullable value, or null for None.
+
+### Type: `Result`
+
+Factories for results whose success case carries no data.
+
+| Member | Description |
+| --- | --- |
+| [`Fail`](#member-resultfail) | Creates a failed unit result containing `error`. |
+| [`Ok`](#member-resultok) | Creates a successful unit result. |
+
+#### Member: `Result.Fail`
+
+**Example**
+
+```csharp
+Result<Unit, SaveError> saved = Result.Fail(SaveError.WriteFailed);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<Unit, E> Fail<E>(E error)`](#overload-resultunit-e-failee-error-on-result) | Creates a failed unit result containing `error`. |
+
+##### Overload: `Result<Unit, E> Fail<E>(E error)` on `Result`
+
+Creates a failed unit result containing `error`.
+
+#### Member: `Result.Ok`
+
+**Example**
+
+```csharp
+Result<Unit, SaveError> saved = Result.Ok<SaveError>();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<Unit, E> Ok<E>()`](#overload-resultunit-e-oke-on-result) | Creates a successful unit result. |
+
+##### Overload: `Result<Unit, E> Ok<E>()` on `Result`
+
+Creates a successful unit result.
+
+### Type: `Result<T, E>`
+
+Represents either a successful value or a non-null error as a readonly value type.
+
+**Example**
+
+```csharp
+Result<User, LookupError> user = Result<User, LookupError>.Ok(value);
+```
+
+| Member | Description |
+| --- | --- |
+| [`BiMap`](#member-resultt-ebimap) | Transforms both cases without invoking the inactive branch. |
+| [`Bind`](#member-resultt-ebind) | Composes a success with another same-shaped result and propagates failures. |
+| [`BindError`](#member-resultt-ebinderror) | Composes the failure case while preserving a successful value. |
+| [`Deconstruct`](#member-resultt-edeconstruct) | Deconstructs the active case for positional pattern matching. |
+| [`Ensure`](#member-resultt-eensure) | Converts a success to failure when `predicate` is false. |
+| [`Equals`](#member-resultt-eequals) | Compares state and only the payload belonging to the active case. |
+| [`Error`](#member-resultt-eerror) | Gets the failure error. |
+| [`Fail`](#member-resultt-efail) | Creates a failed result containing a non-null `error`. |
+| [`Finally`](#member-resultt-efinally) | Invokes a synchronous finalizer for either initialized case and returns this result. |
+| [`FinallyAsync`](#member-resultt-efinallyasync) | Invokes an asynchronous finalizer for either initialized case and returns this result. |
+| [`GetHashCode`](#member-resultt-egethashcode) | Hashes state and only the payload belonging to the active case. |
+| [`IsFailure`](#member-resultt-eisfailure) | Gets whether this result contains an error. |
+| [`IsInitialized`](#member-resultt-eisinitialized) | Gets whether this value was constructed through `Ok` or `Fail`. |
+| [`IsSuccess`](#member-resultt-eissuccess) | Gets whether this result contains a successful value. |
+| [`Map`](#member-resultt-emap) | Maps a successful value without changing its type and propagates failures unchanged. |
+| [`MapError`](#member-resultt-emaperror) | Maps the active error to another non-null type and preserves successes. |
+| [`Match`](#member-resultt-ematch) | Folds the active case through exactly one branch function. |
+| [`Ok`](#member-resultt-eok) | Creates a successful result containing `value`. |
+| [`Recover`](#member-resultt-erecover) | Recovers a failure through `recover` and preserves successes. |
+| [`Switch`](#member-resultt-eswitch) | Executes exactly one action for the active case. |
+| [`Tap`](#member-resultt-etap) | Invokes `action` only for success and returns this result. |
+| [`TapAsync`](#member-resultt-etapasync) | Asynchronously invokes `action` only for success. |
+| [`TapError`](#member-resultt-etaperror) | Invokes `action` only for failure and returns this result. |
+| [`ToString`](#member-resultt-etostring) | Returns `Ok(value)`, `Fail(error)`, or `Uninitialized`. |
+| [`TryGetError`](#member-resultt-etrygeterror) | Attempts to retrieve the failure error and rejects an uninitialized result. |
+| [`TryGetValue`](#member-resultt-etrygetvalue) | Attempts to retrieve the successful value and rejects an uninitialized result. |
+| [`Value`](#member-resultt-evalue) | Gets the successful value. |
+| [`ValueOr`](#member-resultt-evalueor) | Returns the success value or an eagerly supplied fallback. |
+| [`ValueOrElse`](#member-resultt-evalueorelse) | Returns the success value or lazily maps the active error to a fallback. |
+| [`implicit operator`](#member-resultt-eimplicit-operator) | Converts a success value into a successful result. |
+
+#### Member: `Result<T, E>.BiMap`
+
+**Example**
+
+```csharp
+Result<UserDto, ProblemCode> mapped = result.BiMap(UserDto.From, ProblemCode.From);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<TResult, TNextError> BiMap<TResult, TNextError>(Func<T, TResult> mapValue, Func<E, TNextError> mapError)`](#overload-resulttresult-tnexterror-bimaptresult-tnexterrorfunct-tresult-mapvalue-funce-tnexterror-maperror-on-resultt-e) | Transforms both cases without invoking the inactive branch. |
+
+##### Overload: `Result<TResult, TNextError> BiMap<TResult, TNextError>(Func<T, TResult> mapValue, Func<E, TNextError> mapError)` on `Result<T, E>`
+
+Transforms both cases without invoking the inactive branch.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+- `TNextError`: Mapped error type.
+
+**Parameters**
+
+- `mapValue`: Success mapping function.
+- `mapError`: Failure mapping function.
+
+**Returns:** A result containing the mapped active case.
+
+#### Member: `Result<T, E>.Bind`
+
+**Example**
+
+```csharp
+Result<User, LookupError> active = result.Bind(RequireActiveUser);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Bind(Func<T, Result<T, E>> next)`](#overload-resultt-e-bindfunct-resultt-e-next-on-resultt-e) | Composes a success with another same-shaped result and propagates failures. |
+| [`Result<TR, E> Bind<TR>(Func<T, Result<TR, E>> next)`](#overload-resulttr-e-bindtrfunct-resulttr-e-next-on-resultt-e) | Composes a success with another result and propagates failures. |
+| [`Result<T, E> Bind<TFunction>(TFunction next)`](#overload-resultt-e-bindtfunctiontfunction-next-on-resultt-e) | Composes a success through an allocation-free same-shaped continuation. |
+| [`Result<TR, E> Bind<TR, TFunction>(ValueFunction<T, Result<TR, E>, TFunction> next)`](#overload-resulttr-e-bindtr-tfunctionvaluefunctiont-resulttr-e-tfunction-next-on-resultt-e) | Composes a success through a generated callable wrapper and propagates failures. |
+| [`Result<TR, E> Bind<TR, TNextError>(Func<T, Result<TR, TNextError>> next, Func<TNextError, E> mapNextError)`](#overload-resulttr-e-bindtr-tnexterrorfunct-resulttr-tnexterror-next-functnexterror-e-mapnexterror-on-resultt-e) | Composes a success and maps the continuation's error into this result's error type. |
+| [`Result<TR, E> Bind<TState, TR>(TState state, Func<T, TState, Result<TR, E>> next)`](#overload-resulttr-e-bindtstate-trtstate-state-funct-tstate-resulttr-e-next-on-resultt-e) | Composes a success with caller-owned state and propagates failures. |
+| [`Result<TR, E> Bind<TR, TFunction>(TFunction next)`](#overload-resulttr-e-bindtr-tfunctiontfunction-next-on-resultt-e) | Composes a success through an allocation-free callable and propagates failures. |
+| [`Result<TR, E> Bind<TState, TR, TNextError>(TState state, Func<T, TState, Result<TR, TNextError>> next, Func<TNextError, E> mapNextError)`](#overload-resulttr-e-bindtstate-tr-tnexterrortstate-state-funct-tstate-resulttr-tnexterror-next-functnexterror-e-mapnexterror-on-resultt-e) | Composes with caller-owned state and maps the continuation's error type. |
+
+##### Overload: `Result<T, E> Bind(Func<T, Result<T, E>> next)` on `Result<T, E>`
+
+Composes a success with another same-shaped result and propagates failures.
+
+##### Overload: `Result<TR, E> Bind<TR>(Func<T, Result<TR, E>> next)` on `Result<T, E>`
+
+Composes a success with another result and propagates failures.
+
+##### Overload: `Result<T, E> Bind<TFunction>(TFunction next)` on `Result<T, E>`
+
+Composes a success through an allocation-free same-shaped continuation.
+
+##### Overload: `Result<TR, E> Bind<TR, TFunction>(ValueFunction<T, Result<TR, E>, TFunction> next)` on `Result<T, E>`
+
+Composes a success through a generated callable wrapper and propagates failures.
+
+##### Overload: `Result<TR, E> Bind<TR, TNextError>(Func<T, Result<TR, TNextError>> next, Func<TNextError, E> mapNextError)` on `Result<T, E>`
+
+Composes a success and maps the continuation's error into this result's error type.
+
+##### Overload: `Result<TR, E> Bind<TState, TR>(TState state, Func<T, TState, Result<TR, E>> next)` on `Result<T, E>`
+
+Composes a success with caller-owned state and propagates failures.
+
+##### Overload: `Result<TR, E> Bind<TR, TFunction>(TFunction next)` on `Result<T, E>`
+
+Composes a success through an allocation-free callable and propagates failures.
+
+##### Overload: `Result<TR, E> Bind<TState, TR, TNextError>(TState state, Func<T, TState, Result<TR, TNextError>> next, Func<TNextError, E> mapNextError)` on `Result<T, E>`
+
+Composes with caller-owned state and maps the continuation's error type.
+
+#### Member: `Result<T, E>.BindError`
+
+**Example**
+
+```csharp
+Result<User, FinalError> recovered = result.BindError(RetryLookup);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TNextError> BindError<TNextError>(Func<E, Result<T, TNextError>> next)`](#overload-resultt-tnexterror-binderrortnexterrorfunce-resultt-tnexterror-next-on-resultt-e) | Composes the failure case while preserving a successful value. |
+| [`Result<T, TNextError> BindError<TState, TNextError>(TState state, Func<E, TState, Result<T, TNextError>> next)`](#overload-resultt-tnexterror-binderrortstate-tnexterrortstate-state-funce-tstate-resultt-tnexterror-next-on-resultt-e) | Composes the failure case with caller-owned state. |
+| [`Result<T, TNextError> BindError<TNextError, TFunction>(TFunction next)`](#overload-resultt-tnexterror-binderrortnexterror-tfunctiontfunction-next-on-resultt-e) | Composes the failure case through an allocation-free callable value. |
+
+##### Overload: `Result<T, TNextError> BindError<TNextError>(Func<E, Result<T, TNextError>> next)` on `Result<T, E>`
+
+Composes the failure case while preserving a successful value.
+
+**Type parameters**
+
+- `TNextError`: Error type returned by the failure continuation.
+
+**Parameters**
+
+- `next`: Continuation invoked only when this result is a failure.
+
+**Returns:** The unchanged success or the result returned by `next`.
+
+##### Overload: `Result<T, TNextError> BindError<TState, TNextError>(TState state, Func<E, TState, Result<T, TNextError>> next)` on `Result<T, E>`
+
+Composes the failure case with caller-owned state.
+
+**Type parameters**
+
+- `TState`: Caller state passed to the continuation.
+- `TNextError`: Error type returned by the failure continuation.
+
+**Parameters**
+
+- `state`: State passed unchanged to `next`.
+- `next`: Continuation invoked only when this result is a failure.
+
+**Returns:** The unchanged success or the result returned by `next`.
+
+##### Overload: `Result<T, TNextError> BindError<TNextError, TFunction>(TFunction next)` on `Result<T, E>`
+
+Composes the failure case through an allocation-free callable value.
+
+**Type parameters**
+
+- `TNextError`: Error type returned by the failure continuation.
+- `TFunction`: Callable value type.
+
+**Parameters**
+
+- `next`: Continuation invoked only when this result is a failure.
+
+**Returns:** The unchanged success or the result returned by `next`.
+
+#### Member: `Result<T, E>.Deconstruct`
+
+**Example**
+
+```csharp
+string text = result switch { (true, User user, _) => user.Name, (false, _, LookupError error) => error.Code };
+```
+
+| Overload | Description |
+| --- | --- |
+| [`void Deconstruct(out bool isSuccess, out T value, out E error)`](#overload-void-deconstructout-bool-issuccess-out-t-value-out-e-error-on-resultt-e) | Deconstructs the active case for positional pattern matching. |
+
+##### Overload: `void Deconstruct(out bool isSuccess, out T value, out E error)` on `Result<T, E>`
+
+Deconstructs the active case for positional pattern matching.
+
+**Parameters**
+
+- `isSuccess`: Receives true for success and false for failure.
+- `value`: Receives the success value, or default for failure.
+- `error`: Receives the failure value, or default for success.
+
+#### Member: `Result<T, E>.Ensure`
+
+**Example**
+
+```csharp
+Result<Order, CheckoutError> valid = order.Ensure(static value => value.Lines.Count > 0, static _ => CheckoutError.EmptyOrder);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Ensure(Func<T, bool> predicate, Func<T, E> onFailure)`](#overload-resultt-e-ensurefunct-bool-predicate-funct-e-onfailure-on-resultt-e) | Converts a success to failure when `predicate` is false. |
+| [`Result<T, E> Ensure<TState>(TState state, Func<T, TState, bool> predicate, Func<T, TState, E> onFailure)`](#overload-resultt-e-ensuretstatetstate-state-funct-tstate-bool-predicate-funct-tstate-e-onfailure-on-resultt-e) | Validates a success while passing caller-owned state to both callbacks. |
+
+##### Overload: `Result<T, E> Ensure(Func<T, bool> predicate, Func<T, E> onFailure)` on `Result<T, E>`
+
+Converts a success to failure when `predicate` is false.
+
+##### Overload: `Result<T, E> Ensure<TState>(TState state, Func<T, TState, bool> predicate, Func<T, TState, E> onFailure)` on `Result<T, E>`
+
+Validates a success while passing caller-owned state to both callbacks.
+
+#### Member: `Result<T, E>.Equals`
+
+**Example**
+
+```csharp
+bool equal = left.Equals(right);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool Equals(Result<T, E> other)`](#overload-bool-equalsresultt-e-other-on-resultt-e) | Compares state and only the payload belonging to the active case. |
+
+##### Overload: `bool Equals(Result<T, E> other)` on `Result<T, E>`
+
+Compares state and only the payload belonging to the active case.
+
+#### Member: `Result<T, E>.Error`
+
+**Example**
+
+```csharp
+LookupError error = result.Error;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`E Error`](#overload-e-error-on-resultt-e) | Gets the failure error. |
+
+##### Overload: `E Error` on `Result<T, E>`
+
+Gets the failure error.
+
+**Throws**
+
+- `InvalidOperationException`: The result is successful or uninitialized.
+
+#### Member: `Result<T, E>.Fail`
+
+**Example**
+
+```csharp
+Result<User, LookupError> result = Result<User, LookupError>.Fail(error);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Fail(E error)`](#overload-resultt-e-faile-error-on-resultt-e) | Creates a failed result containing a non-null `error`. |
+
+##### Overload: `Result<T, E> Fail(E error)` on `Result<T, E>`
+
+Creates a failed result containing a non-null `error`.
+
+**Throws**
+
+- `ArgumentNullException`: `error` is null.
+
+#### Member: `Result<T, E>.Finally`
+
+**Example**
+
+```csharp
+Result<Order, CheckoutError> completed = order.Finally(timer, static value => value.Stop());
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Finally<TState>(TState state, Action<TState> action)`](#overload-resultt-e-finallytstatetstate-state-actiontstate-action-on-resultt-e) | Invokes a synchronous finalizer for either initialized case and returns this result. |
+
+##### Overload: `Result<T, E> Finally<TState>(TState state, Action<TState> action)` on `Result<T, E>`
+
+Invokes a synchronous finalizer for either initialized case and returns this result.
+
+#### Member: `Result<T, E>.FinallyAsync`
+
+**Example**
+
+```csharp
+Result<Order, CheckoutError> completed = await order.FinallyAsync(scope, static value => value.DisposeAsync());
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, E>> FinallyAsync<TState>(TState state, Func<TState, ValueTask> action)`](#overload-valuetaskresultt-e-finallyasynctstatetstate-state-functstate-valuetask-action-on-resultt-e) | Invokes an asynchronous finalizer for either initialized case and returns this result. |
+
+##### Overload: `ValueTask<Result<T, E>> FinallyAsync<TState>(TState state, Func<TState, ValueTask> action)` on `Result<T, E>`
+
+Invokes an asynchronous finalizer for either initialized case and returns this result.
+
+#### Member: `Result<T, E>.GetHashCode`
+
+**Example**
+
+```csharp
+int hash = result.GetHashCode();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`int GetHashCode()`](#overload-int-gethashcode-on-resultt-e) | Hashes state and only the payload belonging to the active case. |
+
+##### Overload: `int GetHashCode()` on `Result<T, E>`
+
+Hashes state and only the payload belonging to the active case.
+
+#### Member: `Result<T, E>.IsFailure`
+
+**Example**
+
+```csharp
+if (result.IsFailure) Record(result.Error);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool IsFailure`](#overload-bool-isfailure-on-resultt-e) | Gets whether this result contains an error. |
+
+##### Overload: `bool IsFailure` on `Result<T, E>`
+
+Gets whether this result contains an error.
+
+#### Member: `Result<T, E>.IsInitialized`
+
+**Example**
+
+```csharp
+if (!result.IsInitialized) HandleInvalidState();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool IsInitialized`](#overload-bool-isinitialized-on-resultt-e) | Gets whether this value was constructed through `Ok` or `Fail`. |
+
+##### Overload: `bool IsInitialized` on `Result<T, E>`
+
+Gets whether this value was constructed through `Ok` or `Fail`.
+
+#### Member: `Result<T, E>.IsSuccess`
+
+**Example**
+
+```csharp
+if (result.IsSuccess) Consume(result.Value);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool IsSuccess`](#overload-bool-issuccess-on-resultt-e) | Gets whether this result contains a successful value. |
+
+##### Overload: `bool IsSuccess` on `Result<T, E>`
+
+Gets whether this result contains a successful value.
+
+#### Member: `Result<T, E>.Map`
+
+**Example**
+
+```csharp
+Result<User, LookupError> normalized = result.Map(static user => user.Normalize());
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Map(Func<T, T> map)`](#overload-resultt-e-mapfunct-t-map-on-resultt-e) | Maps a successful value without changing its type and propagates failures unchanged. |
+| [`Result<TR, E> Map<TR>(Func<T, TR> map)`](#overload-resulttr-e-maptrfunct-tr-map-on-resultt-e) | Maps a successful value to another type and propagates failures. |
+| [`Result<T, E> Map<TFunction>(TFunction map)`](#overload-resultt-e-maptfunctiontfunction-map-on-resultt-e) | Maps a successful value through an allocation-free callable and propagates failures. |
+| [`Result<TR, E> Map<TR, TFunction>(ValueFunction<T, TR, TFunction> map)`](#overload-resulttr-e-maptr-tfunctionvaluefunctiont-tr-tfunction-map-on-resultt-e) | Maps a successful value through a generated callable wrapper and propagates failures. |
+| [`Result<TR, E> Map<TState, TR>(TState state, Func<T, TState, TR> map)`](#overload-resulttr-e-maptstate-trtstate-state-funct-tstate-tr-map-on-resultt-e) | Maps a successful value with caller-owned state and propagates failures. |
+| [`Result<TR, E> Map<TR, TFunction>(TFunction map)`](#overload-resulttr-e-maptr-tfunctiontfunction-map-on-resultt-e) | Maps a successful value to another type through an allocation-free callable. |
+
+##### Overload: `Result<T, E> Map(Func<T, T> map)` on `Result<T, E>`
+
+Maps a successful value without changing its type and propagates failures unchanged.
+
+##### Overload: `Result<TR, E> Map<TR>(Func<T, TR> map)` on `Result<T, E>`
+
+Maps a successful value to another type and propagates failures.
+
+##### Overload: `Result<T, E> Map<TFunction>(TFunction map)` on `Result<T, E>`
+
+Maps a successful value through an allocation-free callable and propagates failures.
+
+##### Overload: `Result<TR, E> Map<TR, TFunction>(ValueFunction<T, TR, TFunction> map)` on `Result<T, E>`
+
+Maps a successful value through a generated callable wrapper and propagates failures.
+
+##### Overload: `Result<TR, E> Map<TState, TR>(TState state, Func<T, TState, TR> map)` on `Result<T, E>`
+
+Maps a successful value with caller-owned state and propagates failures.
+
+##### Overload: `Result<TR, E> Map<TR, TFunction>(TFunction map)` on `Result<T, E>`
+
+Maps a successful value to another type through an allocation-free callable.
+
+#### Member: `Result<T, E>.MapError`
+
+**Example**
+
+```csharp
+Result<User, ApiError> mapped = result.MapError(ApiError.FromLookup);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TE> MapError<TE>(Func<E, TE> map)`](#overload-resultt-te-maperrortefunce-te-map-on-resultt-e) | Maps the active error to another non-null type and preserves successes. |
+| [`Result<T, TE> MapError<TState, TE>(TState state, Func<E, TState, TE> map)`](#overload-resultt-te-maperrortstate-tetstate-state-funce-tstate-te-map-on-resultt-e) | Maps the active error with caller-owned state and preserves successes. |
+
+##### Overload: `Result<T, TE> MapError<TE>(Func<E, TE> map)` on `Result<T, E>`
+
+Maps the active error to another non-null type and preserves successes.
+
+##### Overload: `Result<T, TE> MapError<TState, TE>(TState state, Func<E, TState, TE> map)` on `Result<T, E>`
+
+Maps the active error with caller-owned state and preserves successes.
+
+#### Member: `Result<T, E>.Match`
+
+**Example**
+
+```csharp
+string text = result.Match(static user => user.Name, static error => error.Code);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`TR Match<TR>(Func<T, TR> ok, Func<E, TR> error)`](#overload-tr-matchtrfunct-tr-ok-funce-tr-error-on-resultt-e) | Folds the active case through exactly one branch function. |
+| [`TR Match<TState, TR>(TState state, Func<T, TState, TR> ok, Func<E, TState, TR> error)`](#overload-tr-matchtstate-trtstate-state-funct-tstate-tr-ok-funce-tstate-tr-error-on-resultt-e) | Folds the active case while passing caller-owned state to non-capturing branch functions. |
+| [`TR Match<TR, TOk, TError>(TOk ok, TError error)`](#overload-tr-matchtr-tok-terrortok-ok-terror-error-on-resultt-e) | Folds the active case through allocation-free callable values. |
+
+##### Overload: `TR Match<TR>(Func<T, TR> ok, Func<E, TR> error)` on `Result<T, E>`
+
+Folds the active case through exactly one branch function.
+
+##### Overload: `TR Match<TState, TR>(TState state, Func<T, TState, TR> ok, Func<E, TState, TR> error)` on `Result<T, E>`
+
+Folds the active case while passing caller-owned state to non-capturing branch functions.
+
+**Type parameters**
+
+- `TState`: Caller state type.
+- `TR`: Folded result type.
+
+**Parameters**
+
+- `state`: State passed unchanged to the selected branch.
+- `ok`: Success branch.
+- `error`: Failure branch.
+
+**Returns:** The value returned by the selected branch.
+
+##### Overload: `TR Match<TR, TOk, TError>(TOk ok, TError error)` on `Result<T, E>`
+
+Folds the active case through allocation-free callable values.
+
+#### Member: `Result<T, E>.Ok`
+
+**Example**
+
+```csharp
+Result<User, LookupError> result = Result<User, LookupError>.Ok(user);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Ok(T value)`](#overload-resultt-e-okt-value-on-resultt-e) | Creates a successful result containing `value`. |
+
+##### Overload: `Result<T, E> Ok(T value)` on `Result<T, E>`
+
+Creates a successful result containing `value`.
+
+#### Member: `Result<T, E>.Recover`
+
+**Example**
+
+```csharp
+Result<Settings, ReadError> settings = primary.Recover(ReadFallback);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Recover(Func<E, Result<T, E>> recover)`](#overload-resultt-e-recoverfunce-resultt-e-recover-on-resultt-e) | Recovers a failure through `recover` and preserves successes. |
+
+##### Overload: `Result<T, E> Recover(Func<E, Result<T, E>> recover)` on `Result<T, E>`
+
+Recovers a failure through `recover` and preserves successes.
+
+#### Member: `Result<T, E>.Switch`
+
+**Example**
+
+```csharp
+result.Switch(RenderUser, RenderLookupError);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`void Switch(Action<T> ok, Action<E> error)`](#overload-void-switchactiont-ok-actione-error-on-resultt-e) | Executes exactly one action for the active case. |
+
+##### Overload: `void Switch(Action<T> ok, Action<E> error)` on `Result<T, E>`
+
+Executes exactly one action for the active case.
+
+#### Member: `Result<T, E>.Tap`
+
+**Example**
+
+```csharp
+Result<Order, CheckoutError> observed = order.Tap(AuditOrder);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> Tap(Action<T> action)`](#overload-resultt-e-tapactiont-action-on-resultt-e) | Invokes `action` only for success and returns this result. |
+| [`Result<T, E> Tap<TAction>(ValueAction<T, TAction> action)`](#overload-resultt-e-taptactionvalueactiont-taction-action-on-resultt-e) | Invokes a generated callable action only for success and returns this result. |
+| [`Result<T, E> Tap<TAction>(TAction action)`](#overload-resultt-e-taptactiontaction-action-on-resultt-e) | Invokes an allocation-free action only for success and returns this result. |
+| [`Result<T, E> Tap<TState>(TState state, Action<T, TState> action)`](#overload-resultt-e-taptstatetstate-state-actiont-tstate-action-on-resultt-e) | Invokes a success action with caller-owned state and returns this result. |
+
+##### Overload: `Result<T, E> Tap(Action<T> action)` on `Result<T, E>`
+
+Invokes `action` only for success and returns this result.
+
+##### Overload: `Result<T, E> Tap<TAction>(ValueAction<T, TAction> action)` on `Result<T, E>`
+
+Invokes a generated callable action only for success and returns this result.
+
+##### Overload: `Result<T, E> Tap<TAction>(TAction action)` on `Result<T, E>`
+
+Invokes an allocation-free action only for success and returns this result.
+
+##### Overload: `Result<T, E> Tap<TState>(TState state, Action<T, TState> action)` on `Result<T, E>`
+
+Invokes a success action with caller-owned state and returns this result.
+
+#### Member: `Result<T, E>.TapAsync`
+
+**Example**
+
+```csharp
+Result<Order, CheckoutError> observed = await order.TapAsync(AuditOrderAsync);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, E>> TapAsync(Func<T, ValueTask> action)`](#overload-valuetaskresultt-e-tapasyncfunct-valuetask-action-on-resultt-e) | Asynchronously invokes `action` only for success. |
+
+##### Overload: `ValueTask<Result<T, E>> TapAsync(Func<T, ValueTask> action)` on `Result<T, E>`
+
+Asynchronously invokes `action` only for success.
+
+#### Member: `Result<T, E>.TapError`
+
+**Example**
+
+```csharp
+Result<Order, CheckoutError> observed = order.TapError(RecordFailure);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, E> TapError(Action<E> action)`](#overload-resultt-e-taperroractione-action-on-resultt-e) | Invokes `action` only for failure and returns this result. |
+| [`Result<T, E> TapError<TAction>(ValueAction<E, TAction> action)`](#overload-resultt-e-taperrortactionvalueactione-taction-action-on-resultt-e) | Invokes a generated callable action only for failure and returns this result. |
+| [`Result<T, E> TapError<TAction>(TAction action)`](#overload-resultt-e-taperrortactiontaction-action-on-resultt-e) | Invokes an allocation-free action only for failure and returns this result. |
+| [`Result<T, E> TapError<TState>(TState state, Action<E, TState> action)`](#overload-resultt-e-taperrortstatetstate-state-actione-tstate-action-on-resultt-e) | Invokes a failure action with caller-owned state and returns this result. |
+
+##### Overload: `Result<T, E> TapError(Action<E> action)` on `Result<T, E>`
+
+Invokes `action` only for failure and returns this result.
+
+##### Overload: `Result<T, E> TapError<TAction>(ValueAction<E, TAction> action)` on `Result<T, E>`
+
+Invokes a generated callable action only for failure and returns this result.
+
+##### Overload: `Result<T, E> TapError<TAction>(TAction action)` on `Result<T, E>`
+
+Invokes an allocation-free action only for failure and returns this result.
+
+##### Overload: `Result<T, E> TapError<TState>(TState state, Action<E, TState> action)` on `Result<T, E>`
+
+Invokes a failure action with caller-owned state and returns this result.
+
+#### Member: `Result<T, E>.ToString`
+
+**Example**
+
+```csharp
+logger.LogDebug("Lookup result: {Result}", result.ToString());
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string ToString()`](#overload-string-tostring-on-resultt-e) | Returns `Ok(value)`, `Fail(error)`, or `Uninitialized`. |
+
+##### Overload: `string ToString()` on `Result<T, E>`
+
+Returns `Ok(value)`, `Fail(error)`, or `Uninitialized`.
+
+#### Member: `Result<T, E>.TryGetError`
+
+**Example**
+
+```csharp
+if (result.TryGetError(out LookupError error)) Record(error);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool TryGetError(out E error)`](#overload-bool-trygeterrorout-e-error-on-resultt-e) | Attempts to retrieve the failure error and rejects an uninitialized result. |
+
+##### Overload: `bool TryGetError(out E error)` on `Result<T, E>`
+
+Attempts to retrieve the failure error and rejects an uninitialized result.
+
+#### Member: `Result<T, E>.TryGetValue`
+
+**Example**
+
+```csharp
+if (result.TryGetValue(out User user)) Consume(user);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool TryGetValue(out T value)`](#overload-bool-trygetvalueout-t-value-on-resultt-e) | Attempts to retrieve the successful value and rejects an uninitialized result. |
+
+##### Overload: `bool TryGetValue(out T value)` on `Result<T, E>`
+
+Attempts to retrieve the successful value and rejects an uninitialized result.
+
+#### Member: `Result<T, E>.Value`
+
+**Example**
+
+```csharp
+User user = result.Value;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`T Value`](#overload-t-value-on-resultt-e) | Gets the successful value. |
+
+##### Overload: `T Value` on `Result<T, E>`
+
+Gets the successful value.
+
+**Throws**
+
+- `InvalidOperationException`: The result is failed or uninitialized.
+
+#### Member: `Result<T, E>.ValueOr`
+
+**Example**
+
+```csharp
+User user = result.ValueOr(User.Anonymous);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`T ValueOr(T fallback)`](#overload-t-valueort-fallback-on-resultt-e) | Returns the success value or an eagerly supplied fallback. |
+
+##### Overload: `T ValueOr(T fallback)` on `Result<T, E>`
+
+Returns the success value or an eagerly supplied fallback.
+
+**Parameters**
+
+- `fallback`: Value returned for a failure.
+
+**Returns:** The success value or `fallback`.
+
+#### Member: `Result<T, E>.ValueOrElse`
+
+**Example**
+
+```csharp
+User user = result.ValueOrElse(static error => User.Missing(error.Code));
+```
+
+| Overload | Description |
+| --- | --- |
+| [`T ValueOrElse(Func<E, T> fallback)`](#overload-t-valueorelsefunce-t-fallback-on-resultt-e) | Returns the success value or lazily maps the active error to a fallback. |
+
+##### Overload: `T ValueOrElse(Func<E, T> fallback)` on `Result<T, E>`
+
+Returns the success value or lazily maps the active error to a fallback.
+
+**Parameters**
+
+- `fallback`: Function invoked only for a failure.
+
+**Returns:** The success value or the fallback value.
+
+#### Member: `Result<T, E>.implicit operator`
+
+**Example**
+
+```csharp
+Result<User, LookupError> result = user;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`implicit operator Result<T, E>(T value)`](#overload-implicit-operator-resultt-et-value-on-resultt-e) | Converts a success value into a successful result. |
+| [`implicit operator Result<T, E>(E error)`](#overload-implicit-operator-resultt-ee-error-on-resultt-e) | Converts an error into a failed result. |
+
+##### Overload: `implicit operator Result<T, E>(T value)` on `Result<T, E>`
+
+Converts a success value into a successful result.
+
+##### Overload: `implicit operator Result<T, E>(E error)` on `Result<T, E>`
+
+Converts an error into a failed result.
+
+### Type: `ResultCombination`
+
+Combines independent results using fail-fast semantics.
+
+| Member | Description |
+| --- | --- |
+| [`Bind`](#member-resultcombinationbind) | Binds two independent success values and returns the first failure. |
+| [`Combine`](#member-resultcombinationcombine) | Combines two unit results and returns the first failure in argument order. |
+| [`Map`](#member-resultcombinationmap) | Projects two success values directly and returns the first failure. |
+| [`Zip`](#member-resultcombinationzip) | Combines two success values into a value tuple and returns the first failure. |
+
+#### Member: `ResultCombination.Bind`
+
+**Example**
+
+```csharp
+Result<Invoice, LoadError> invoice = ResultCombination.Bind(userResult, accountResult, Invoice.Create);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<TResult, TError> Bind<TFirst, TSecond, TResult, TError>(in Result<TFirst, TError> first, in Result<TSecond, TError> second, Func<TFirst, TSecond, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindtfirst-tsecond-tresult-terrorin-resulttfirst-terror-first-in-resulttsecond-terror-second-functfirst-tsecond-resulttresult-terror-bind-on-resultcombination) | Binds two independent success values and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, Func<T1, T2, T3, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-funct1-t2-t3-resulttresult-terror-bind-on-resultcombination) | Binds three independent success values and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, TState state, Func<T1, T2, TState, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-tstate-state-funct1-t2-tstate-resulttresult-terror-bind-on-resultcombination) | Binds 2 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, T4, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, Func<T1, T2, T3, T4, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-t4-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-funct1-t2-t3-t4-resulttresult-terror-bind-on-resultcombination) | Binds four independent success values and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, TState state, Func<T1, T2, T3, TState, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-tstate-state-funct1-t2-t3-tstate-resulttresult-terror-bind-on-resultcombination) | Binds 3 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, T4, T5, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, Func<T1, T2, T3, T4, T5, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-t4-t5-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-funct1-t2-t3-t4-t5-resulttresult-terror-bind-on-resultcombination) | Binds five independent success values and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, T4, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, TState state, Func<T1, T2, T3, T4, TState, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-t4-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-tstate-state-funct1-t2-t3-t4-tstate-resulttresult-terror-bind-on-resultcombination) | Binds 4 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, T4, T5, T6, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, Func<T1, T2, T3, T4, T5, T6, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-t4-t5-t6-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-in-resultt6-terror-sixth-funct1-t2-t3-t4-t5-t6-resulttresult-terror-bind-on-resultcombination) | Binds six independent success values and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, T4, T5, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, TState state, Func<T1, T2, T3, T4, T5, TState, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-t4-t5-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-tstate-state-funct1-t2-t3-t4-t5-tstate-resulttresult-terror-bind-on-resultcombination) | Binds 5 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Bind<T1, T2, T3, T4, T5, T6, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, TState state, Func<T1, T2, T3, T4, T5, T6, TState, Result<TResult, TError>> bind)`](#overload-resulttresult-terror-bindt1-t2-t3-t4-t5-t6-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-in-resultt6-terror-sixth-tstate-state-funct1-t2-t3-t4-t5-t6-tstate-resulttresult-terror-bind-on-resultcombination) | Binds 6 independent success values with caller-owned state and returns the first failure. |
+
+##### Overload: `Result<TResult, TError> Bind<TFirst, TSecond, TResult, TError>(in Result<TFirst, TError> first, in Result<TSecond, TError> second, Func<TFirst, TSecond, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds two independent success values and returns the first failure.
+
+**Type parameters**
+
+- `TFirst`: First success type.
+- `TSecond`: Second success type.
+- `TResult`: Bound success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: First result.
+- `second`: Second result.
+- `bind`: Binding function invoked only when both inputs succeed.
+
+**Returns:** The bound result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, Func<T1, T2, T3, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds three independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, TState state, Func<T1, T2, TState, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds 2 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `TState`: Caller state type.
+- `TResult`: Bound success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `state`: State passed unchanged to the bind function.
+- `bind`: Function invoked only when every input succeeds.
+
+**Returns:** The bound result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, T4, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, Func<T1, T2, T3, T4, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds four independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, TState state, Func<T1, T2, T3, TState, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds 3 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `TState`: Caller state type.
+- `TResult`: Bound success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `state`: State passed unchanged to the bind function.
+- `bind`: Function invoked only when every input succeeds.
+
+**Returns:** The bound result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, T4, T5, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, Func<T1, T2, T3, T4, T5, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds five independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, T4, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, TState state, Func<T1, T2, T3, T4, TState, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds 4 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `T4`: Input 4 success type.
+- `TState`: Caller state type.
+- `TResult`: Bound success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `fourth`: Input 4 result.
+- `state`: State passed unchanged to the bind function.
+- `bind`: Function invoked only when every input succeeds.
+
+**Returns:** The bound result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, T4, T5, T6, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, Func<T1, T2, T3, T4, T5, T6, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds six independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, T4, T5, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, TState state, Func<T1, T2, T3, T4, T5, TState, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds 5 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `T4`: Input 4 success type.
+- `T5`: Input 5 success type.
+- `TState`: Caller state type.
+- `TResult`: Bound success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `fourth`: Input 4 result.
+- `fifth`: Input 5 result.
+- `state`: State passed unchanged to the bind function.
+- `bind`: Function invoked only when every input succeeds.
+
+**Returns:** The bound result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Bind<T1, T2, T3, T4, T5, T6, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, TState state, Func<T1, T2, T3, T4, T5, T6, TState, Result<TResult, TError>> bind)` on `ResultCombination`
+
+Binds 6 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `T4`: Input 4 success type.
+- `T5`: Input 5 success type.
+- `T6`: Input 6 success type.
+- `TState`: Caller state type.
+- `TResult`: Bound success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `fourth`: Input 4 result.
+- `fifth`: Input 5 result.
+- `sixth`: Input 6 result.
+- `state`: State passed unchanged to the bind function.
+- `bind`: Function invoked only when every input succeeds.
+
+**Returns:** The bound result or the first input failure in argument order.
+
+#### Member: `ResultCombination.Combine`
+
+**Example**
+
+```csharp
+Result<Unit, ValidationError> valid = ResultCombination.Combine(nameCheck, emailCheck);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<Unit, TError> Combine<TError>(in Result<Unit, TError> first, in Result<Unit, TError> second)`](#overload-resultunit-terror-combineterrorin-resultunit-terror-first-in-resultunit-terror-second-on-resultcombination) | Combines two unit results and returns the first failure in argument order. |
+| [`Result<Unit, TError> Combine<TError>(ReadOnlySpan<Result<Unit, TError>> results)`](#overload-resultunit-terror-combineterrorreadonlyspanresultunit-terror-results-on-resultcombination) | Combines a span of unit results and returns the first failure in span order. |
+
+##### Overload: `Result<Unit, TError> Combine<TError>(in Result<Unit, TError> first, in Result<Unit, TError> second)` on `ResultCombination`
+
+Combines two unit results and returns the first failure in argument order.
+
+**Type parameters**
+
+- `TError`: Failure type.
+
+**Parameters**
+
+- `first`: First result.
+- `second`: Second result.
+
+**Returns:** Success when both inputs succeed; otherwise the first failure.
+
+##### Overload: `Result<Unit, TError> Combine<TError>(ReadOnlySpan<Result<Unit, TError>> results)` on `ResultCombination`
+
+Combines a span of unit results and returns the first failure in span order.
+
+**Type parameters**
+
+- `TError`: Failure type.
+
+**Parameters**
+
+- `results`: Results to inspect exactly once.
+
+**Returns:** Success when every input succeeds; otherwise the first failure.
+
+#### Member: `ResultCombination.Map`
+
+**Example**
+
+```csharp
+Result<Invoice, LoadError> invoice = ResultCombination.Map(userResult, accountResult, static (user, account) => new Invoice(user, account));
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<TResult, TError> Map<TFirst, TSecond, TResult, TError>(in Result<TFirst, TError> first, in Result<TSecond, TError> second, Func<TFirst, TSecond, TResult> map)`](#overload-resulttresult-terror-maptfirst-tsecond-tresult-terrorin-resulttfirst-terror-first-in-resulttsecond-terror-second-functfirst-tsecond-tresult-map-on-resultcombination) | Projects two success values directly and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, Func<T1, T2, T3, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-funct1-t2-t3-tresult-map-on-resultcombination) | Projects three independent success values and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, TState state, Func<T1, T2, TState, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-tstate-state-funct1-t2-tstate-tresult-map-on-resultcombination) | Projects 2 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, T4, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, Func<T1, T2, T3, T4, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-t4-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-funct1-t2-t3-t4-tresult-map-on-resultcombination) | Projects four independent success values and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, TState state, Func<T1, T2, T3, TState, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-tstate-state-funct1-t2-t3-tstate-tresult-map-on-resultcombination) | Projects 3 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, T4, T5, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, Func<T1, T2, T3, T4, T5, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-t4-t5-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-funct1-t2-t3-t4-t5-tresult-map-on-resultcombination) | Projects five independent success values and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, T4, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, TState state, Func<T1, T2, T3, T4, TState, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-t4-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-tstate-state-funct1-t2-t3-t4-tstate-tresult-map-on-resultcombination) | Projects 4 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, T4, T5, T6, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, Func<T1, T2, T3, T4, T5, T6, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-t4-t5-t6-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-in-resultt6-terror-sixth-funct1-t2-t3-t4-t5-t6-tresult-map-on-resultcombination) | Projects six independent success values and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, T4, T5, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, TState state, Func<T1, T2, T3, T4, T5, TState, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-t4-t5-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-tstate-state-funct1-t2-t3-t4-t5-tstate-tresult-map-on-resultcombination) | Projects 5 independent success values with caller-owned state and returns the first failure. |
+| [`Result<TResult, TError> Map<T1, T2, T3, T4, T5, T6, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, TState state, Func<T1, T2, T3, T4, T5, T6, TState, TResult> map)`](#overload-resulttresult-terror-mapt1-t2-t3-t4-t5-t6-tstate-tresult-terrorin-resultt1-terror-first-in-resultt2-terror-second-in-resultt3-terror-third-in-resultt4-terror-fourth-in-resultt5-terror-fifth-in-resultt6-terror-sixth-tstate-state-funct1-t2-t3-t4-t5-t6-tstate-tresult-map-on-resultcombination) | Projects 6 independent success values with caller-owned state and returns the first failure. |
+
+##### Overload: `Result<TResult, TError> Map<TFirst, TSecond, TResult, TError>(in Result<TFirst, TError> first, in Result<TSecond, TError> second, Func<TFirst, TSecond, TResult> map)` on `ResultCombination`
+
+Projects two success values directly and returns the first failure.
+
+**Type parameters**
+
+- `TFirst`: First success type.
+- `TSecond`: Second success type.
+- `TResult`: Projected success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: First result.
+- `second`: Second result.
+- `map`: Projection invoked only when both inputs succeed.
+
+**Returns:** The projected success or the first failure in argument order.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, Func<T1, T2, T3, TResult> map)` on `ResultCombination`
+
+Projects three independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, TState state, Func<T1, T2, TState, TResult> map)` on `ResultCombination`
+
+Projects 2 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `TState`: Caller state type.
+- `TResult`: Projected success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `state`: State passed unchanged to the map function.
+- `map`: Function invoked only when every input succeeds.
+
+**Returns:** The projected result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, T4, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, Func<T1, T2, T3, T4, TResult> map)` on `ResultCombination`
+
+Projects four independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, TState state, Func<T1, T2, T3, TState, TResult> map)` on `ResultCombination`
+
+Projects 3 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `TState`: Caller state type.
+- `TResult`: Projected success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `state`: State passed unchanged to the map function.
+- `map`: Function invoked only when every input succeeds.
+
+**Returns:** The projected result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, T4, T5, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, Func<T1, T2, T3, T4, T5, TResult> map)` on `ResultCombination`
+
+Projects five independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, T4, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, TState state, Func<T1, T2, T3, T4, TState, TResult> map)` on `ResultCombination`
+
+Projects 4 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `T4`: Input 4 success type.
+- `TState`: Caller state type.
+- `TResult`: Projected success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `fourth`: Input 4 result.
+- `state`: State passed unchanged to the map function.
+- `map`: Function invoked only when every input succeeds.
+
+**Returns:** The projected result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, T4, T5, T6, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, Func<T1, T2, T3, T4, T5, T6, TResult> map)` on `ResultCombination`
+
+Projects six independent success values and returns the first failure.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, T4, T5, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, TState state, Func<T1, T2, T3, T4, T5, TState, TResult> map)` on `ResultCombination`
+
+Projects 5 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `T4`: Input 4 success type.
+- `T5`: Input 5 success type.
+- `TState`: Caller state type.
+- `TResult`: Projected success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `fourth`: Input 4 result.
+- `fifth`: Input 5 result.
+- `state`: State passed unchanged to the map function.
+- `map`: Function invoked only when every input succeeds.
+
+**Returns:** The projected result or the first input failure in argument order.
+
+##### Overload: `Result<TResult, TError> Map<T1, T2, T3, T4, T5, T6, TState, TResult, TError>(in Result<T1, TError> first, in Result<T2, TError> second, in Result<T3, TError> third, in Result<T4, TError> fourth, in Result<T5, TError> fifth, in Result<T6, TError> sixth, TState state, Func<T1, T2, T3, T4, T5, T6, TState, TResult> map)` on `ResultCombination`
+
+Projects 6 independent success values with caller-owned state and returns the first failure.
+
+**Type parameters**
+
+- `T1`: Input 1 success type.
+- `T2`: Input 2 success type.
+- `T3`: Input 3 success type.
+- `T4`: Input 4 success type.
+- `T5`: Input 5 success type.
+- `T6`: Input 6 success type.
+- `TState`: Caller state type.
+- `TResult`: Projected success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: Input 1 result.
+- `second`: Input 2 result.
+- `third`: Input 3 result.
+- `fourth`: Input 4 result.
+- `fifth`: Input 5 result.
+- `sixth`: Input 6 result.
+- `state`: State passed unchanged to the map function.
+- `map`: Function invoked only when every input succeeds.
+
+**Returns:** The projected result or the first input failure in argument order.
+
+#### Member: `ResultCombination.Zip`
+
+**Example**
+
+```csharp
+Result<(User First, Account Second), LoadError> loaded = ResultCombination.Zip(userResult, accountResult);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<ValueTuple<TFirst, TSecond>, TError> Zip<TFirst, TSecond, TError>(in Result<TFirst, TError> first, in Result<TSecond, TError> second)`](#overload-resultvaluetupletfirst-tsecond-terror-ziptfirst-tsecond-terrorin-resulttfirst-terror-first-in-resulttsecond-terror-second-on-resultcombination) | Combines two success values into a value tuple and returns the first failure. |
+
+##### Overload: `Result<ValueTuple<TFirst, TSecond>, TError> Zip<TFirst, TSecond, TError>(in Result<TFirst, TError> first, in Result<TSecond, TError> second)` on `ResultCombination`
+
+Combines two success values into a value tuple and returns the first failure.
+
+**Type parameters**
+
+- `TFirst`: First success type.
+- `TSecond`: Second success type.
+- `TError`: Shared failure type.
+
+**Parameters**
+
+- `first`: First result.
+- `second`: Second result.
+
+**Returns:** A tuple of both values or the first failure in argument order.
+
+### Type: `ResultCompositionExtensions`
+
+Provides composition between nested `Result` and `Option` values.
+
+| Member | Description |
+| --- | --- |
+| [`Flatten`](#member-resultcompositionextensionsflatten) | Removes one result layer while preserving the first failure encountered. |
+| [`RequireSome`](#member-resultcompositionextensionsrequiresome) | Requires a successful option to contain a value. |
+| [`ToResult`](#member-resultcompositionextensionstoresult) | Converts an option to a result using a lazy absence error factory. |
+| [`Transpose`](#member-resultcompositionextensionstranspose) | Exchanges the option and result layers while treating absence as a successful absence. |
+| [`Traverse`](#member-resultcompositionextensionstraverse) | Traverses a present value through a fallible selector and preserves absence. |
+
+#### Member: `ResultCompositionExtensions.Flatten`
+
+**Example**
+
+```csharp
+Result<User, LookupError> flat = nestedResult.Flatten();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TError> Flatten<T, TError>(in Result<Result<T, TError>, TError> result)`](#overload-resultt-terror-flattent-terrorin-resultresultt-terror-terror-result-on-resultcompositionextensions) | Removes one result layer while preserving the first failure encountered. |
+
+##### Overload: `Result<T, TError> Flatten<T, TError>(in Result<Result<T, TError>, TError> result)` on `ResultCompositionExtensions`
+
+Removes one result layer while preserving the first failure encountered.
+
+**Returns:** The nested success result or the outer failure.
+
+#### Member: `ResultCompositionExtensions.RequireSome`
+
+**Example**
+
+```csharp
+Result<User, LookupError> required = result.RequireSome(static () => LookupError.NotFound);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TError> RequireSome<T, TError>(in Result<Option<T>, TError> result, Func<TError> whenNone)`](#overload-resultt-terror-requiresomet-terrorin-resultoptiont-terror-result-functerror-whennone-on-resultcompositionextensions) | Requires a successful option to contain a value. |
+
+##### Overload: `Result<T, TError> RequireSome<T, TError>(in Result<Option<T>, TError> result, Func<TError> whenNone)` on `ResultCompositionExtensions`
+
+Requires a successful option to contain a value.
+
+**Parameters**
+
+- `whenNone`: Error factory invoked only for a successful absent option.
+
+**Returns:** The contained value, the original failure, or the generated absence failure.
+
+#### Member: `ResultCompositionExtensions.ToResult`
+
+**Example**
 
 ```csharp
 Result<User, LookupError> required = option.ToResult(LookupError.NotFound);
 ```
 
-### Option Traverse
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TError> ToResult<T, TError>(in Option<T> option, Func<TError> whenNone)`](#overload-resultt-terror-toresultt-terrorin-optiont-option-functerror-whennone-on-resultcompositionextensions) | Converts an option to a result using a lazy absence error factory. |
+| [`Result<T, TError> ToResult<T, TError>(in Option<T> option, TError whenNone)`](#overload-resultt-terror-toresultt-terrorin-optiont-option-terror-whennone-on-resultcompositionextensions) | Converts an option to a result using an eagerly supplied absence error. |
 
-`Traverse` runs a Result-returning selector only for Some and exchanges the
-layers into `Result<Option<T>,E>`. None becomes `Ok(None)`. Selector failure and
-exceptions propagate unchanged. Delegate, caller-state, and struct-callable
-overloads are available.
+##### Overload: `Result<T, TError> ToResult<T, TError>(in Option<T> option, Func<TError> whenNone)` on `ResultCompositionExtensions`
 
-```csharp
-Result<Option<User>, LookupError> loaded = userId.Traverse(LoadUser);
-```
+Converts an option to a result using a lazy absence error factory.
 
-## Result And Option Transposition
+**Type parameters**
 
-### Result Option Transpose
+- `TError`: Failure type.
 
-`Result<Option<T>,E>.Transpose` maps `Ok(Some(x))` to `Some(Ok(x))`, `Ok(None)`
-to None, and `Fail(e)` to `Some(Fail(e))`.
+**Parameters**
 
-```csharp
-Option<Result<User, LookupError>> transposed = optionalResult.Transpose();
-```
+- `whenNone`: Factory invoked only for None.
 
-### Option Result Transpose
+**Returns:** Success containing the present value or the generated failure.
 
-`Option<Result<T,E>>.Transpose` maps `Some(Ok(x))` to `Ok(Some(x))`,
-`Some(Fail(e))` to failure, and None to `Ok(None)`.
+##### Overload: `Result<T, TError> ToResult<T, TError>(in Option<T> option, TError whenNone)` on `ResultCompositionExtensions`
 
-```csharp
-Result<Option<User>, LookupError> transposed = optionalOperation.Transpose();
-```
+Converts an option to a result using an eagerly supplied absence error.
 
-### Require Some
+**Type parameters**
 
-`RequireSome` maps `Ok(Some(x))` to `Ok(x)`. For `Ok(None)` it invokes the error
-factory once. Outer failure propagates and skips the factory.
+- `TError`: Failure type.
 
-```csharp
-Result<User, LookupError> required = lookup.RequireSome(
-    static () => LookupError.NotFound);
-```
+**Parameters**
 
-## Count-Known Collections
+- `whenNone`: Failure returned for None.
 
-These members require the optional `MonadicTypes.NET.Collections` package and
-`using MonadicTypes.Collections`. They deliberately do not accept
-`IEnumerable<T>`: traversal needs a stable count and indexed one-pass access.
+**Returns:** Success containing the present value or the supplied failure.
 
-### Traverse To Array
+#### Member: `ResultCompositionExtensions.Transpose`
 
-`TraverseToArray` invokes its selector once per item until the first failure and
-returns a newly owned array on success. Empty input reuses `Array.Empty<T>()`.
-Non-empty input allocates exactly one output array, even when a later item fails;
-there are no hidden iterator or wrapper allocations. Selector and indexer
-exceptions propagate unchanged.
+**Example**
 
 ```csharp
-Result<User[], LookupError> users = ids.TraverseToArray(LoadUser);
-
-Result<User[], LookupError> usersWithoutCapture = ids.TraverseToArray(
-    repository,
-    static (id, state) => state.Load(id));
+Result<Option<User>, LookupError> transposed = option.Transpose();
 ```
 
-### Sequence To Array
+| Overload | Description |
+| --- | --- |
+| [`Result<Option<T>, TError> Transpose<T, TError>(in Option<Result<T, TError>> option)`](#overload-resultoptiont-terror-transposet-terrorin-optionresultt-terror-option-on-resultcompositionextensions) | Exchanges the option and result layers while treating absence as a successful absence. |
+| [`Option<Result<T, TError>> Transpose<T, TError>(in Result<Option<T>, TError> result)`](#overload-optionresultt-terror-transposet-terrorin-resultoptiont-terror-result-on-resultcompositionextensions) | Exchanges the result and option layers without losing a failure. |
 
-`SequenceToArray` converts `ReadOnlySpan<Result<T,E>>` to one Result-owned array,
-preserving order and the first failure. It has the same empty and one-array
-allocation behavior as traversal.
+##### Overload: `Result<Option<T>, TError> Transpose<T, TError>(in Option<Result<T, TError>> option)` on `ResultCompositionExtensions`
+
+Exchanges the option and result layers while treating absence as a successful absence.
+
+**Returns:** The contained result with its success wrapped in an option, or a successful None.
+
+##### Overload: `Option<Result<T, TError>> Transpose<T, TError>(in Result<Option<T>, TError> result)` on `ResultCompositionExtensions`
+
+Exchanges the result and option layers without losing a failure.
+
+**Returns:** None for a successful absent value, Some containing success for a present value, or Some containing the original failure.
+
+#### Member: `ResultCompositionExtensions.Traverse`
+
+**Example**
 
 ```csharp
-ReadOnlySpan<Result<User, LookupError>> loaded = results;
-Result<User[], LookupError> users = loaded.SequenceToArray();
+Result<Option<Address>, LookupError> address = option.Traverse(LoadAddress);
 ```
 
-## Opt-In LINQ
+| Overload | Description |
+| --- | --- |
+| [`Result<Option<TResult>, TError> Traverse<TSource, TResult, TError>(in Option<TSource> option, Func<TSource, Result<TResult, TError>> selector)`](#overload-resultoptiontresult-terror-traversetsource-tresult-terrorin-optiontsource-option-functsource-resulttresult-terror-selector-on-resultcompositionextensions) | Traverses a present value through a fallible selector and preserves absence. |
+| [`Result<Option<TResult>, TError> Traverse<TSource, TState, TResult, TError>(in Option<TSource> option, TState state, Func<TSource, TState, Result<TResult, TError>> selector)`](#overload-resultoptiontresult-terror-traversetsource-tstate-tresult-terrorin-optiontsource-option-tstate-state-functsource-tstate-resulttresult-terror-selector-on-resultcompositionextensions) | Traverses Some with caller-owned state and preserves None. |
+| [`Result<Option<TResult>, TError> Traverse<TSource, TResult, TError, TFunction>(in Option<TSource> option, TFunction selector)`](#overload-resultoptiontresult-terror-traversetsource-tresult-terror-tfunctionin-optiontsource-option-tfunction-selector-on-resultcompositionextensions) | Traverses Some through an allocation-free callable and preserves None. |
 
-These members require the optional `MonadicTypes.NET.Linq` package and
-`using MonadicTypes.Linq`. They are thin extension members over Result and
-Option and introduce no allocation by themselves.
+##### Overload: `Result<Option<TResult>, TError> Traverse<TSource, TResult, TError>(in Option<TSource> option, Func<TSource, Result<TResult, TError>> selector)` on `ResultCompositionExtensions`
 
-### LINQ Select
+Traverses a present value through a fallible selector and preserves absence.
 
-`Select` is `Map` under the conventional LINQ name for both Result and Option.
-Fluent syntax is preferred in measured paths.
+**Type parameters**
+
+- `TResult`: Selected success type.
+- `TError`: Failure type.
+
+**Parameters**
+
+- `selector`: Selector invoked only for Some.
+
+**Returns:** A failed selector result, Some containing its success, or successful None.
+
+##### Overload: `Result<Option<TResult>, TError> Traverse<TSource, TState, TResult, TError>(in Option<TSource> option, TState state, Func<TSource, TState, Result<TResult, TError>> selector)` on `ResultCompositionExtensions`
+
+Traverses Some with caller-owned state and preserves None.
+
+**Type parameters**
+
+- `TState`: Caller state type.
+- `TResult`: Selected success type.
+- `TError`: Failure type.
+
+**Parameters**
+
+- `state`: State passed unchanged to the selector.
+- `selector`: Selector invoked only for Some.
+
+**Returns:** A failed selector result, Some containing its success, or successful None.
+
+##### Overload: `Result<Option<TResult>, TError> Traverse<TSource, TResult, TError, TFunction>(in Option<TSource> option, TFunction selector)` on `ResultCompositionExtensions`
+
+Traverses Some through an allocation-free callable and preserves None.
+
+**Type parameters**
+
+- `TResult`: Selected success type.
+- `TError`: Failure type.
+- `TFunction`: Value-function type.
+
+**Parameters**
+
+- `selector`: Selector invoked only for Some.
+
+**Returns:** A failed selector result, Some containing its success, or successful None.
+
+### Type: `Unit`
+
+Represents the single possible value of a successful operation that does not return data. It is the C# equivalent of Rust's unit value, `()`.
+
+| Member | Description |
+| --- | --- |
+| [`ToString`](#member-unittostring) | Returns the canonical unit representation. |
+| [`Value`](#member-unitvalue) | Gets the sole unit value. |
+
+#### Member: `Unit.ToString`
+
+**Example**
 
 ```csharp
-Result<UserView, LoadError> view = loaded.Select(ToView);
+string text = Unit.Value.ToString();
 ```
 
-### LINQ Select Many
+| Overload | Description |
+| --- | --- |
+| [`string ToString()`](#overload-string-tostring-on-unit) | Returns the canonical unit representation. |
 
-`SelectMany` binds and projects two successful/present values. It powers
-multi-`from` query expressions and short-circuits Result failure or Option None.
+##### Overload: `string ToString()` on `Unit`
+
+Returns the canonical unit representation.
+
+#### Member: `Unit.Value`
+
+**Example**
 
 ```csharp
-Result<Invoice, LoadError> invoice = userResult.SelectMany(
-    static user => LoadAccount(user.AccountId),
-    static (user, account) => new Invoice(user, account));
+Unit completed = Unit.Value;
 ```
 
-### LINQ Where
+| Overload | Description |
+| --- | --- |
+| [`Unit Value`](#overload-unit-value-on-unit) | Gets the sole unit value. |
 
-Option `Where` delegates to `Filter`; its predicate runs only for Some. Result
-does not define `Where` because predicate failure requires an error value.
+##### Overload: `Unit Value` on `Unit`
+
+Gets the sole unit value.
+
+### Type: `ValueAction<T, TAction>`
+
+Carries an action's input type so generated call sites remain inferable.
+
+**Example**
 
 ```csharp
-Option<User> active = user.Where(static value => value.IsActive);
+ValueAction<Error, Observe> action = new(default);
 ```
 
-### LINQ Query Syntax
+| Member | Description |
+| --- | --- |
+| [`ValueAction`](#member-valueactiont-tactionvalueaction) | Carries an action's input type so generated call sites remain inferable. |
+| [`Invoke`](#member-valueactiont-tactioninvoke) | Forwards `value` to the wrapped value action. |
 
-The same operators support `from`/`where`/`select`. NativeAOT measurements found
-fluent syntax about 10% faster for the tested `SelectMany` path, so query syntax
-is retained for readability rather than presented as the hot-path default.
+#### Member: `ValueAction<T, TAction>.ValueAction`
+
+**Example**
 
 ```csharp
-Result<Invoice, LoadError> invoice =
-    from user in userResult
-    from account in LoadAccount(user.AccountId)
-    select new Invoice(user, account);
+ValueAction<Error, Observe> action = new(default);
 ```
 
-## Callable Abstractions
+| Overload | Description |
+| --- | --- |
+| [`ValueAction<T, TAction>(TAction action)`](#overload-valueactiont-tactiontaction-action-on-valueactiont-taction) | Carries an action's input type so generated call sites remain inferable. |
 
-### IValueFunction
+##### Overload: `ValueAction<T, TAction>(TAction action)` on `ValueAction<T, TAction>`
 
-`IValueFunction<TIn,TOut>.Invoke` defines generic struct callback dispatch that
-NativeAOT can devirtualize.
+Carries an action's input type so generated call sites remain inferable.
+
+**Parameters**
+
+- `action`: Callable action value to wrap.
+
+#### Member: `ValueAction<T, TAction>.Invoke`
+
+**Example**
 
 ```csharp
-public readonly struct GetId : IValueFunction<User, int>
-{
-    public int Invoke(User user) => user.Id;
-}
+Operations.Functions.Observe.Invoke(error);
 ```
 
-### IValueAction
+| Overload | Description |
+| --- | --- |
+| [`void Invoke(T value)`](#overload-void-invoket-value-on-valueactiont-taction) | Forwards `value` to the wrapped value action. |
 
-`IValueAction<T>.Invoke` defines a generic struct side-effect callback.
+##### Overload: `void Invoke(T value)` on `ValueAction<T, TAction>`
+
+Forwards `value` to the wrapped value action.
+
+**Parameters**
+
+- `value`: Input value.
+
+### Type: `ValueFunction<TIn, TOut, TFunction>`
+
+Carries the complete input, output, and implementation types of an allocation-free callable so generic consumers can infer every type.
+
+**Example**
 
 ```csharp
-public readonly struct ObserveError : IValueAction<Error>
-{
-    public void Invoke(Error error) => ErrorTelemetry.Record(Activity.Current, error);
-}
+ValueFunction<User, int, GetId> function = new(default);
 ```
 
-### ValueFunction
+| Member | Description |
+| --- | --- |
+| [`ValueFunction`](#member-valuefunctiontin-tout-tfunctionvaluefunction) | Carries the complete input, output, and implementation types of an allocation-free callable so generic consumers can infer every type. |
+| [`Invoke`](#member-valuefunctiontin-tout-tfunctioninvoke) | Forwards `value` to the wrapped value function. |
 
-`ValueFunction<TIn,TOut,TFunction>` stores a callable struct when state is
-required and forwards `Invoke`.
+#### Member: `ValueFunction<TIn, TOut, TFunction>.ValueFunction`
+
+**Example**
 
 ```csharp
-var callable = new ValueFunction<User, int, StatefulGetId>(new StatefulGetId(offset));
-Result<int, LookupError> id = result.Map(callable);
+ValueFunction<User, int, GetId> function = new(default);
 ```
 
-### ValueAction
+| Overload | Description |
+| --- | --- |
+| [`ValueFunction<TIn, TOut, TFunction>(TFunction function)`](#overload-valuefunctiontin-tout-tfunctiontfunction-function-on-valuefunctiontin-tout-tfunction) | Carries the complete input, output, and implementation types of an allocation-free callable so generic consumers can infer every type. |
 
-`ValueAction<T,TAction>` forwards to a default stateless action struct. Generated
-action properties expose this token without handwritten wrapper code.
+##### Overload: `ValueFunction<TIn, TOut, TFunction>(TFunction function)` on `ValueFunction<TIn, TOut, TFunction>`
+
+Carries the complete input, output, and implementation types of an allocation-free callable so generic consumers can infer every type.
+
+**Parameters**
+
+- `function`: Callable value to wrap.
+
+#### Member: `ValueFunction<TIn, TOut, TFunction>.Invoke`
+
+**Example**
 
 ```csharp
-Result<User, Error> observed = result.Tap(Operations.Functions.ObserveUser);
+int id = Operations.Functions.GetId.Invoke(user);
 ```
 
-## Async Result Operators
+| Overload | Description |
+| --- | --- |
+| [`TOut Invoke(TIn value)`](#overload-tout-invoketin-value-on-valuefunctiontin-tout-tfunction) | Forwards `value` to the wrapped value function. |
 
-Every async family supports `Result<T,E>`, `ValueTask<Result<T,E>>`, and
-`Task<Result<T,E>>` receivers. Pending receivers are awaited once with
-`ConfigureAwait(false)`. Synchronous continuations on awaitable receivers use
-`Map`, `Bind`, and `BindError` under the same names.
+##### Overload: `TOut Invoke(TIn value)` on `ValueFunction<TIn, TOut, TFunction>`
 
-### Map Async
+Forwards `value` to the wrapped value function.
 
-`MapAsync` awaits a `ValueTask<T>` mapper only for success and wraps its output.
-Failure propagates. Result, ValueTask, and Task receiver overloads are available.
+**Parameters**
+
+- `value`: Input value.
+
+**Returns:** The transformed output.
+
+
+## Package MonadicTypes.NET.AspNetCore
+
+**Types:** [`DefaultErrorHttpResultMapper`](#type-defaulterrorhttpresultmapper) · [`ErrorCatalogEntry`](#type-errorcatalogentry) · [`ErrorCatalogMetadata`](#type-errorcatalogmetadata) · [`ErrorEndpointConventionExtensions`](#type-errorendpointconventionextensions) · [`ErrorProblemDetails`](#type-errorproblemdetails) · [`IHttpResultMapper<TError, TResult>`](#type-ihttpresultmapperterror-tresult) · [`ProducesErrorAttribute`](#type-produceserrorattribute) · [`ProducesErrorCatalogAttribute`](#type-produceserrorcatalogattribute) · [`ResultHttpExtensions`](#type-resulthttpextensions) · [`ValidationErrorProblemDetails`](#type-validationerrorproblemdetails)
+
+### Type: `DefaultErrorHttpResultMapper`
+
+Maps structured errors to the library's default RFC 9457 HTTP result.
+
+**Example**
 
 ```csharp
-Result<UserDto, LookupError> dto = await result.MapAsync(MapUserAsync);
+ProblemHttpResult response = default(DefaultErrorHttpResultMapper).Map(error, httpContext);
 ```
 
-### Map Task Async
+| Member | Description |
+| --- | --- |
+| [`Map`](#member-defaulterrorhttpresultmappermap) | Maps `failure` to a strongly typed problem result. |
 
-`MapTaskAsync` provides the same behavior for a naturally Task-returning mapper.
+#### Member: `DefaultErrorHttpResultMapper.Map`
+
+**Example**
 
 ```csharp
-Result<UserDto, LookupError> dto = await result.MapTaskAsync(MapUserTaskAsync);
+ProblemHttpResult response = mapper.Map(error, httpContext);
 ```
 
-### Bind Async
+| Overload | Description |
+| --- | --- |
+| [`ProblemHttpResult Map(in Error failure, HttpContext? httpContext)`](#overload-problemhttpresult-mapin-error-failure-httpcontext-httpcontext-on-defaulterrorhttpresultmapper) | Maps `failure` to a strongly typed problem result. |
 
-`BindAsync` awaits a ValueTask Result continuation only for success. Failure
-propagates without invoking it.
+##### Overload: `ProblemHttpResult Map(in Error failure, HttpContext? httpContext)` on `DefaultErrorHttpResultMapper`
+
+Maps `failure` to a strongly typed problem result.
+
+**Parameters**
+
+- `failure`: Error to map.
+- `httpContext`: Optional request context included in the problem payload.
+
+**Returns:** The mapped problem result.
+
+### Type: `ErrorCatalogEntry`
+
+Describes one stable, publicly documented error returned by an endpoint. This value is metadata only and is never created while handling a request.
+
+**Example**
 
 ```csharp
-Result<Account, LookupError> account = await result.BindAsync(LoadAccountAsync);
+ErrorCatalogEntry entry = new(ErrorType.NotFound, "USER_NOT_FOUND", "User not found.");
 ```
 
-### Bind Task Async
+| Member | Description |
+| --- | --- |
+| [`ErrorCatalogEntry`](#member-errorcatalogentryerrorcatalogentry) | Creates one documented error entry. |
+| [`Code`](#member-errorcatalogentrycode) | Gets the stable machine-readable error code. |
+| [`Description`](#member-errorcatalogentrydescription) | Gets the public description emitted into API documentation. |
+| [`Type`](#member-errorcatalogentrytype) | Gets the category that determines the documented HTTP status. |
 
-`BindTaskAsync` provides the same bind behavior for a Task Result continuation.
+#### Member: `ErrorCatalogEntry.ErrorCatalogEntry`
+
+**Example**
 
 ```csharp
-Result<Account, LookupError> account = await result.BindTaskAsync(LoadAccountTaskAsync);
+ErrorCatalogEntry entry = new(ErrorType.Conflict, "VERSION_CONFLICT", "Resource changed.");
 ```
 
-### Bind Error Async
+| Overload | Description |
+| --- | --- |
+| [`ErrorCatalogEntry(ErrorType type, string code, string description)`](#overload-errorcatalogentryerrortype-type-string-code-string-description-on-errorcatalogentry) | Creates one documented error entry. |
 
-`BindErrorAsync` preserves success under the next error type and awaits a
-ValueTask recovery continuation only for failure.
+##### Overload: `ErrorCatalogEntry(ErrorType type, string code, string description)` on `ErrorCatalogEntry`
+
+Creates one documented error entry.
+
+**Parameters**
+
+- `type`: The initialized category that determines the HTTP status.
+- `code`: The stable machine-readable error code.
+- `description`: The public description exposed in API documentation.
+
+#### Member: `ErrorCatalogEntry.Code`
+
+**Example**
 
 ```csharp
-Result<User, FinalError> recovered = await result.BindErrorAsync(RetryLookupAsync);
+string code = entry.Code;
 ```
 
-### Bind Error Task Async
+| Overload | Description |
+| --- | --- |
+| [`string Code`](#overload-string-code-on-errorcatalogentry) | Gets the stable machine-readable error code. |
 
-`BindErrorTaskAsync` provides the same failure bind for a Task continuation.
+##### Overload: `string Code` on `ErrorCatalogEntry`
+
+Gets the stable machine-readable error code.
+
+#### Member: `ErrorCatalogEntry.Description`
+
+**Example**
 
 ```csharp
-Result<User, FinalError> recovered = await result.BindErrorTaskAsync(RetryLookupTaskAsync);
+string description = entry.Description;
 ```
 
-### Awaitable Sync
+| Overload | Description |
+| --- | --- |
+| [`string Description`](#overload-string-description-on-errorcatalogentry) | Gets the public description emitted into API documentation. |
 
-`Map`, `Bind`, and `BindError` on Task or ValueTask receivers await the receiver,
-then apply the matching synchronous core operator.
+##### Overload: `string Description` on `ErrorCatalogEntry`
+
+Gets the public description emitted into API documentation.
+
+#### Member: `ErrorCatalogEntry.Type`
+
+**Example**
 
 ```csharp
-Result<int, LookupError> id = await pendingResult.Map(static user => user.Id);
+ErrorType type = entry.Type;
 ```
 
-## Exception Effects
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Type`](#overload-errortype-type-on-errorcatalogentry) | Gets the category that determines the documented HTTP status. |
 
-Broad overloads catch recoverable `Exception` values while allowing process-
-critical exceptions and cancellation to propagate. Typed overloads catch only
-the selected exception type. Exception mappers run only after a matching throw.
+##### Overload: `ErrorType Type` on `ErrorCatalogEntry`
 
-### Effect Try
+Gets the category that determines the documented HTTP status.
 
-`Effect.Try` executes synchronous code and returns success. Broad overloads map
-recoverable exceptions; typed overloads map only the selected exception type.
+### Type: `ErrorCatalogMetadata`
+
+Owns the immutable error catalog attached to one endpoint.
+
+**Example**
 
 ```csharp
-Result<Document, ImportError> imported = Effect.Try(
-    parser.Parse,
-    static exception => ImportError.From(exception));
+ErrorCatalogMetadata metadata = new([new(ErrorType.NotFound, "USER_NOT_FOUND", "User not found.")]);
 ```
 
-### Effect Try Async
+| Member | Description |
+| --- | --- |
+| [`ErrorCatalogMetadata`](#member-errorcatalogmetadataerrorcatalogmetadata) | Copies and validates a non-empty endpoint error catalog. |
+| [`AsSpan`](#member-errorcatalogmetadataasspan) | Returns a zero-allocation view over the owned entries. |
+| [`Count`](#member-errorcatalogmetadatacount) | Gets the number of catalog entries. |
 
-`Effect.TryAsync` applies the same boundary to a ValueTask operation.
+#### Member: `ErrorCatalogMetadata.ErrorCatalogMetadata`
+
+**Example**
 
 ```csharp
-Result<Document, ImportError> imported = await Effect.TryAsync(
-    parser.ParseAsync,
-    static exception => ImportError.From(exception));
+ErrorCatalogMetadata metadata = new(entries);
 ```
 
-### Effect Try Task Async
+| Overload | Description |
+| --- | --- |
+| [`ErrorCatalogMetadata(ReadOnlySpan<ErrorCatalogEntry> entries)`](#overload-errorcatalogmetadatareadonlyspanerrorcatalogentry-entries-on-errorcatalogmetadata) | Copies and validates a non-empty endpoint error catalog. |
 
-`Effect.TryTaskAsync` applies the boundary directly to Task APIs. Caller-state
-forms avoid a capturing lambda around an existing dependency or Task.
+##### Overload: `ErrorCatalogMetadata(ReadOnlySpan<ErrorCatalogEntry> entries)` on `ErrorCatalogMetadata`
+
+Copies and validates a non-empty endpoint error catalog.
+
+**Parameters**
+
+- `entries`: The public errors the endpoint can return.
+
+#### Member: `ErrorCatalogMetadata.AsSpan`
+
+**Example**
 
 ```csharp
-Result<Response, ApiError> response = await Effect.TryTaskAsync(
-    client,
-    static value => value.SendAsync(request),
-    static exception => ApiError.From(exception));
+ReadOnlySpan<ErrorCatalogEntry> entries = metadata.AsSpan();
 ```
 
-### Try Map
+| Overload | Description |
+| --- | --- |
+| [`ReadOnlySpan<ErrorCatalogEntry> AsSpan()`](#overload-readonlyspanerrorcatalogentry-asspan-on-errorcatalogmetadata) | Returns a zero-allocation view over the owned entries. |
 
-`TryMap` maps only success through throwing synchronous code. Existing failure
-bypasses the call; a recoverable thrown exception is mapped to failure.
+##### Overload: `ReadOnlySpan<ErrorCatalogEntry> AsSpan()` on `ErrorCatalogMetadata`
+
+Returns a zero-allocation view over the owned entries.
+
+#### Member: `ErrorCatalogMetadata.Count`
+
+**Example**
 
 ```csharp
-Result<Dto, ImportError> mapped = imported.TryMap(MapDocument, ImportError.From);
+int count = metadata.Count;
 ```
 
-### Try Bind
+| Overload | Description |
+| --- | --- |
+| [`int Count`](#overload-int-count-on-errorcatalogmetadata) | Gets the number of catalog entries. |
 
-`TryBind` binds only success through a throwing Result-returning operation.
+##### Overload: `int Count` on `ErrorCatalogMetadata`
+
+Gets the number of catalog entries.
+
+### Type: `ErrorEndpointConventionExtensions`
+
+Provides reflection-free error response metadata for Minimal API endpoints.
+
+| Member | Description |
+| --- | --- |
+| [`ProducesErrorCatalog`](#member-errorendpointconventionextensionsproduceserrorcatalog) | Adds stable error-code metadata and corresponding problem responses to an endpoint. |
+| [`ProducesErrors`](#member-errorendpointconventionextensionsproduceserrors) | Adds one problem response metadata entry for each error category. |
+
+#### Member: `ErrorEndpointConventionExtensions.ProducesErrorCatalog`
+
+**Example**
 
 ```csharp
-Result<Record, ImportError> stored = imported.TryBind(StoreDocument, ImportError.From);
+app.MapGet("/users/{id}", GetUser).ProducesErrorCatalog(new(ErrorType.NotFound, "USER_NOT_FOUND", "User not found."));
 ```
 
-### Try Tap
+| Overload | Description |
+| --- | --- |
+| [`TBuilder ProducesErrorCatalog<TBuilder>(TBuilder builder, ReadOnlySpan<ErrorCatalogEntry> entries)`](#overload-tbuilder-produceserrorcatalogtbuildertbuilder-builder-readonlyspanerrorcatalogentry-entries-on-errorendpointconventionextensions) | Adds stable error-code metadata and corresponding problem responses to an endpoint. |
 
-`TryTap` observes success and returns the original Result unless the action
-throws, in which case the exception becomes failure.
+##### Overload: `TBuilder ProducesErrorCatalog<TBuilder>(TBuilder builder, ReadOnlySpan<ErrorCatalogEntry> entries)` on `ErrorEndpointConventionExtensions`
+
+Adds stable error-code metadata and corresponding problem responses to an endpoint.
+
+**Parameters**
+
+- `entries`: The public errors the endpoint can return.
+
+**Returns:** The same endpoint builder for continued convention composition.
+
+#### Member: `ErrorEndpointConventionExtensions.ProducesErrors`
+
+**Example**
 
 ```csharp
-Result<Document, ImportError> audited = imported.TryTap(AuditDocument, ImportError.From);
+app.MapGet("/users/{id}", GetUser).ProducesErrors(ErrorType.NotFound, ErrorType.Unavailable);
 ```
 
-### Try Map Async
+| Overload | Description |
+| --- | --- |
+| [`TBuilder ProducesErrors<TBuilder>(TBuilder builder, ReadOnlySpan<ErrorType> errorTypes)`](#overload-tbuilder-produceserrorstbuildertbuilder-builder-readonlyspanerrortype-errortypes-on-errorendpointconventionextensions) | Adds one problem response metadata entry for each error category. |
 
-`TryMapAsync` awaits a throwing ValueTask mapper only for success.
+##### Overload: `TBuilder ProducesErrors<TBuilder>(TBuilder builder, ReadOnlySpan<ErrorType> errorTypes)` on `ErrorEndpointConventionExtensions`
+
+Adds one problem response metadata entry for each error category.
+
+**Parameters**
+
+- `errorTypes`: The categories the endpoint can return.
+
+**Returns:** The same endpoint builder for continued convention composition.
+
+### Type: `ErrorProblemDetails`
+
+Converts structured errors to default RFC 9457 problem details.
+
+| Member | Description |
+| --- | --- |
+| [`Create`](#member-errorproblemdetailscreate) | Creates problem details using the built-in category, visibility, and trace policy. |
+| [`CreateExample`](#member-errorproblemdetailscreateexample) | Creates deterministic problem details for documentation without request or activity data. |
+| [`GetStatusCode`](#member-errorproblemdetailsgetstatuscode) | Gets the default HTTP status code for an error category. |
+| [`ToHttpResult`](#member-errorproblemdetailstohttpresult) | Creates a strongly typed problem HTTP result for an error. |
+
+#### Member: `ErrorProblemDetails.Create`
+
+**Example**
 
 ```csharp
-Result<Dto, ImportError> mapped = await imported.TryMapAsync(MapDocumentAsync, ImportError.From);
+ProblemDetails problem = ErrorProblemDetails.Create(error, httpContext);
 ```
 
-### Try Tap Async
+| Overload | Description |
+| --- | --- |
+| [`ProblemDetails Create(in Error error, HttpContext? httpContext)`](#overload-problemdetails-createin-error-error-httpcontext-httpcontext-on-errorproblemdetails) | Creates problem details using the built-in category, visibility, and trace policy. |
 
-`TryTapAsync` awaits a throwing ValueTask observation only for success.
+##### Overload: `ProblemDetails Create(in Error error, HttpContext? httpContext)` on `ErrorProblemDetails`
 
-```csharp
-Result<Document, ImportError> audited = await imported.TryTapAsync(AuditAsync, ImportError.From);
-```
+Creates problem details using the built-in category, visibility, and trace policy.
 
-## Structured Errors
+**Parameters**
 
-### Error Construction
+- `error`: The initialized error to convert.
+- `httpContext`: An optional context supplying a fallback trace identifier.
 
-The Error constructors validate category, code, and message and create a deeply
-immutable, reference-backed error.
+**Returns:** A populated problem-details value.
 
-```csharp
-Error error = new(
-    ErrorType.NotFound,
-    "USER_NOT_FOUND",
-    "The user does not exist.");
-```
+#### Member: `ErrorProblemDetails.CreateExample`
 
-### Error Properties
-
-`Type`, `NumericType`, `Code`, `Message`, `IsMessagePublic`, and `Cause` expose
-immutable category, identity, disclosure, and retained exception data.
-
-```csharp
-logger.LogWarning(error.Cause, "{Code}: {Message}", error.Code, error.Message);
-```
-
-### Error Throw Cause
-
-`ThrowCause` rethrows the retained exception through `ExceptionDispatchInfo`,
-preserving its stack. It throws when no cause exists.
-
-```csharp
-if (error.Cause is not null)
-{
-    error.ThrowCause();
-}
-```
-
-### Error Factories
-
-Built-in factories construct Failure, Unexpected, Validation, Conflict,
-NotFound, Unauthorized, Forbidden, Unavailable, Timeout, RateLimited,
-Cancelled, IO, and System categories with consistent defaults.
-
-```csharp
-Error error = Error.NotFound("USER_NOT_FOUND", "The user does not exist.");
-```
-
-### Error Custom
-
-`Error.Custom` constructs a positive application-defined numeric category.
-
-```csharp
-Error error = Error.Custom(10_001, "VENDOR_REJECTED", "The vendor rejected the request.");
-```
-
-### Error Equality
-
-`Equals` compares category, numeric category, ordinal code, ordinal message,
-message-disclosure policy, and retained-cause identity. Two exceptions with the
-same type, message, or stack are not the same cause unless they are the same
-object. `GetHashCode` hashes the same fields. Neither operation exposes or
-depends on the compact internal representation used to retain message and cause.
-
-```csharp
-Exception cause = new IOException("connection closed");
-Error left = Error.Unavailable("STORE_UNAVAILABLE", "Store unavailable.", cause: cause);
-Error right = Error.Unavailable("STORE_UNAVAILABLE", "Store unavailable.", cause: cause);
-
-bool equal = left.Equals(right); // true: semantic fields and cause identity match
-int hash = left.GetHashCode();
-```
-
-### Error Format
-
-`ToString` allocates exactly the diagnostic representation `[CODE] message`.
-Cause, category, and disclosure policy are not appended. The default or `G`
-format is accepted; another format throws `FormatException`. `TryFormat` writes
-the same representation to caller-owned memory without creating a string and
-returns `false` with zero characters written when the destination is too small.
-
-```csharp
-Span<char> buffer = stackalloc char[128];
-bool formatted = error.TryFormat(buffer, out int written, default, null);
-```
-
-### Error Convertible
-
-`IErrorConvertible<TError>.ToError` defines explicit boundary conversion from a
-compact domain error.
-
-```csharp
-public Error ToError() => Error.Failure("PAYMENT_FAILED", "Payment failed.");
-```
-
-### Error Type
-
-`ErrorType` provides bounded transport and observability categories.
-`Uninitialized` is invalid for a constructed Error.
-
-```csharp
-ErrorType category = ErrorType.Validation;
-```
-
-## Validation
-
-### Validation Issue
-
-`ValidationIssue` validates and stores immutable path, code, message, and
-severity.
-
-```csharp
-var issue = new ValidationIssue("email", "EMAIL_INVALID", "Email is invalid.");
-```
-
-### Validation Errors Construction
-
-ValidationErrors constructors copy an enumerable or params array into private
-immutable storage.
-
-```csharp
-var errors = new ValidationErrors(issue);
-```
-
-### Validation Errors Create
-
-`Create` maps an `IReadOnlyList<TFailure>` through a delegate, caller-state
-callback, or struct mapper without a validator runtime dependency.
-
-```csharp
-ValidationErrors errors = ValidationErrors.Create(failures, MapFailure);
-```
-
-### Validation Errors Read
-
-`Count`, the indexer, `AsSpan`, and `GetEnumerator` read immutable issues.
-`AsSpan` is the allocation-free iteration path. `ValidationErrors` retains
-reference identity rather than performing implicit sequence equality or
-hashing; compare the span explicitly when sequence semantics are required.
-
-```csharp
-foreach (ref readonly ValidationIssue issue in errors.AsSpan())
-{
-    Render(issue);
-}
-```
-
-### Validation Severity
-
-ValidationSeverity classifies Error, Warning, and Information independently of
-third-party validation enums.
-
-```csharp
-ValidationSeverity severity = ValidationSeverity.Warning;
-```
-
-## Diagnostics
-
-### Telemetry Record
-
-`ErrorTelemetry.Record` does nothing for null or unsampled activities. Otherwise
-it adds bounded tags, exception/event data, and policy-selected status.
-
-```csharp
-ErrorTelemetry.Record(Activity.Current, error);
-```
-
-### Activity Policy
-
-`Automatic` marks server failures, `Preserve` does not change status, and
-`MarkError` marks every recorded error.
-
-```csharp
-ErrorTelemetry.Record(Activity.Current, error, ErrorActivityStatusPolicy.Preserve);
-```
-
-### Metrics Construction
-
-The ErrorMetrics constructor creates one counter on a caller-owned Meter. Error
-code tags are opt-in because they can have high cardinality.
-
-```csharp
-var metrics = new ErrorMetrics(meter, includeErrorCode: false);
-```
-
-### Metrics Disabled
-
-`ErrorMetrics.Disabled` creates no instrument and returns the zero-state
-recorder.
-
-```csharp
-ErrorMetrics metrics = ErrorMetrics.Disabled;
-```
-
-### Metrics Enabled
-
-`IsEnabled` reports whether the counter currently has a listener.
-
-```csharp
-if (metrics.IsEnabled)
-{
-    metrics.Record(error);
-}
-```
-
-### Metrics Record
-
-`Record` returns immediately when disabled; otherwise it increments the counter
-with category and optional code tags.
-
-```csharp
-metrics.Record(error);
-```
-
-## ASP.NET Core
-
-### To HTTP Result
-
-`ToHttpResult` maps both branches to strongly typed `Results<,>`. Built-in
-overloads cover Error, ValidationErrors, and convertible domain errors; generic
-delegate and struct-mapper overloads are the escape hatch.
-
-```csharp
-Results<Ok<User>, ProblemHttpResult> response = result.ToHttpResult(TypedResults.Ok);
-```
-
-### HTTP Result Mapper
-
-`IHttpResultMapper<TError,TResult>.Map` defines a value-type-capable custom
-failure mapping contract with optional HttpContext.
-
-```csharp
-public readonly struct UserErrorMapper : IHttpResultMapper<UserError, ProblemHttpResult>
-{
-    public ProblemHttpResult Map(in UserError error, HttpContext? context) =>
-        TypedResults.Problem(statusCode: error.StatusCode, title: error.Code);
-}
-```
-
-### Default HTTP Mapper
-
-`DefaultErrorHttpResultMapper.Map` applies the built-in Error-to-problem policy.
-
-```csharp
-ProblemHttpResult problem = default(DefaultErrorHttpResultMapper).Map(error, context);
-```
-
-### Problem Create
-
-`ErrorProblemDetails.Create` builds ProblemDetails with status, type URI, stable
-code, optional public detail, and an optional request trace ID. Its
-`HttpContext?` argument defaults to null. The trace ID comes from the ambient
-`Activity` first and then the supplied context, so omitting the context alone
-does not make output deterministic. Cause is never serialized.
-
-```csharp
-ProblemDetails details = ErrorProblemDetails.Create(error, context);
-```
-
-### Problem Example
-
-`ErrorProblemDetails.CreateExample` applies the same status, title, type, code,
-and public-detail policy while deliberately omitting ambient activity and
-request trace data. Use it for deterministic tests and documentation examples.
+**Example**
 
 ```csharp
 ProblemDetails example = ErrorProblemDetails.CreateExample(error);
 ```
 
-### Problem Result
+| Overload | Description |
+| --- | --- |
+| [`ProblemDetails CreateExample(in Error error)`](#overload-problemdetails-createexamplein-error-error-on-errorproblemdetails) | Creates deterministic problem details for documentation without request or activity data. |
 
-`ErrorProblemDetails.ToHttpResult` wraps the created details in a strongly typed
-ProblemHttpResult.
+##### Overload: `ProblemDetails CreateExample(in Error error)` on `ErrorProblemDetails`
 
-```csharp
-ProblemHttpResult result = ErrorProblemDetails.ToHttpResult(error, context);
-```
+Creates deterministic problem details for documentation without request or activity data.
 
-### Problem Status
+**Parameters**
 
-`GetStatusCode` maps an initialized ErrorType to the default HTTP status.
+- `error`: The initialized error to convert.
+
+**Returns:** Problem details without a trace identifier.
+
+#### Member: `ErrorProblemDetails.GetStatusCode`
+
+**Example**
 
 ```csharp
 int status = ErrorProblemDetails.GetStatusCode(ErrorType.NotFound);
 ```
 
-### Validation Problem
+| Overload | Description |
+| --- | --- |
+| [`int GetStatusCode(ErrorType type)`](#overload-int-getstatuscodeerrortype-type-on-errorproblemdetails) | Gets the default HTTP status code for an error category. |
 
-`ValidationErrorProblemDetails.ToHttpResult` groups issues by path and emits
-messages, machine codes, and an optional trace ID.
+##### Overload: `int GetStatusCode(ErrorType type)` on `ErrorProblemDetails`
 
-```csharp
-ValidationProblem problem = ValidationErrorProblemDetails.ToHttpResult(errors, context);
-```
+Gets the default HTTP status code for an error category.
 
-### Produces Errors
+**Parameters**
 
-`ProducesErrors` adds one response metadata item per category to a Minimal API
-endpoint builder without reflection.
+- `type`: The initialized error category.
 
-```csharp
-app.MapGet("/users/{id:int}", GetUser)
-    .ProducesErrors(ErrorType.NotFound, ErrorType.Unexpected);
-```
+**Returns:** The corresponding HTTP status code.
 
-### Error Catalog Entry
+#### Member: `ErrorProblemDetails.ToHttpResult`
 
-`ErrorCatalogEntry` is an immutable documentation value containing `Type`,
-`Code`, and `Description`. Construction rejects `ErrorType.Uninitialized`,
-undefined enum values, blank codes, and blank descriptions. The description is
-public API text and must not contain retained exception messages or private
-diagnostics.
+**Example**
 
 ```csharp
-ErrorCatalogEntry entry = new(
-    ErrorType.NotFound,
-    "USER_NOT_FOUND",
-    "The user does not exist.");
+ProblemHttpResult result = ErrorProblemDetails.ToHttpResult(error, httpContext);
 ```
 
-### Error Catalog Metadata
+| Overload | Description |
+| --- | --- |
+| [`ProblemHttpResult ToHttpResult(in Error error, HttpContext? httpContext)`](#overload-problemhttpresult-tohttpresultin-error-error-httpcontext-httpcontext-on-errorproblemdetails) | Creates a strongly typed problem HTTP result for an error. |
 
-`ErrorCatalogMetadata` requires at least one initialized entry, rejects
-duplicate codes using ordinal comparison, and copies the input span. OpenAPI
-transformation also rejects duplicates across all catalog metadata attached to
-an endpoint, including controller attributes mapped to different statuses.
-`Count` reports the owned length and `AsSpan` provides a zero-allocation readonly
-view. The copy makes endpoint metadata independent of later caller mutation.
+##### Overload: `ProblemHttpResult ToHttpResult(in Error error, HttpContext? httpContext)` on `ErrorProblemDetails`
+
+Creates a strongly typed problem HTTP result for an error.
+
+**Parameters**
+
+- `error`: The initialized error to convert.
+- `httpContext`: An optional context supplying a fallback trace identifier.
+
+**Returns:** A strongly typed problem result.
+
+### Type: `IHttpResultMapper<TError, TResult>`
+
+Maps any Result error at the HTTP boundary without DI or reflection.
+
+| Member | Description |
+| --- | --- |
+| [`Map`](#member-ihttpresultmapperterror-tresultmap) | Maps an error to a strongly typed HTTP result. |
+
+#### Member: `IHttpResultMapper<TError, TResult>.Map`
+
+**Example**
 
 ```csharp
-ErrorCatalogEntry[] source = [entry];
-ErrorCatalogMetadata metadata = new(source);
-ReadOnlySpan<ErrorCatalogEntry> entries = metadata.AsSpan();
+ProblemHttpResult result = mapper.Map(error, httpContext);
 ```
 
-Construction is a route-registration operation. For two entries the accepted
-NativeAOT baseline is 96 B: a 72 B owned array and one 24 B metadata owner.
-Reads and entry-value construction allocate `0 B`.
+| Overload | Description |
+| --- | --- |
+| [`TResult Map(in TError failure, HttpContext? httpContext)`](#overload-tresult-mapin-terror-failure-httpcontext-httpcontext-on-ihttpresultmapperterror-tresult) | Maps an error to a strongly typed HTTP result. |
 
-### Produces Error Catalog
+##### Overload: `TResult Map(in TError failure, HttpContext? httpContext)` on `IHttpResultMapper<TError, TResult>`
 
-`ProducesErrorCatalog` constructs and attaches `ErrorCatalogMetadata`, then
-adds one `ProducesErrorAttribute` for each distinct category. It accepts inline
-entries through `params ReadOnlySpan<ErrorCatalogEntry>`; spell entry
-construction explicitly because target-typed `new(...)` can bind to the
-expanded params array in package consumers.
+Maps an error to a strongly typed HTTP result.
 
-```csharp
-app.MapGet("/users/{id:int}", GetUser)
-    .ProducesErrorCatalog(
-        new ErrorCatalogEntry(
-            ErrorType.NotFound,
-            "USER_NOT_FOUND",
-            "The user does not exist."));
-```
+**Parameters**
 
-### Produces Error Attribute
+- `failure`: The failure value to map.
+- `httpContext`: Optional request context for transport-specific metadata.
 
-`ProducesErrorAttribute` supplies controller or endpoint response type, status,
-content type, and category metadata through its public properties.
+**Returns:** The mapped HTTP result.
+
+### Type: `ProducesErrorAttribute`
+
+Adds one structured problem response to controller or endpoint metadata.
+
+**Example**
 
 ```csharp
 [ProducesError(ErrorType.NotFound)]
-public ActionResult<User> GetUser(int id) => Handle(id);
 ```
 
-### Produces Error Catalog Attribute
+| Member | Description |
+| --- | --- |
+| [`ProducesErrorAttribute`](#member-produceserrorattributeproduceserrorattribute) | Adds one structured problem response to controller or endpoint metadata. |
+| [`ContentTypes`](#member-produceserrorattributecontenttypes) | Gets the supported RFC 9457 response content type. |
+| [`Description`](#member-produceserrorattributedescription) | Gets the optional response description; this attribute leaves it unspecified. |
+| [`ErrorType`](#member-produceserrorattributeerrortype) | Gets the configured error category. |
+| [`StatusCode`](#member-produceserrorattributestatuscode) | Gets the HTTP status mapped from `ErrorType`. |
+| [`Type`](#member-produceserrorattributetype) | Gets the documented RFC 9457 response body type. |
 
-`ProducesErrorCatalogAttribute` is repeatable on controller classes and
-methods. Its constructor validates and stores `Entry`; `Type`, `StatusCode`,
-`Description`, and `ContentTypes` implement ASP.NET Core response metadata.
-`Description` is null because operation/response description policy belongs to
-the selected document pipeline.
+#### Member: `ProducesErrorAttribute.ProducesErrorAttribute`
+
+**Example**
 
 ```csharp
-[ProducesErrorCatalog(
-    ErrorType.NotFound,
-    "USER_NOT_FOUND",
-    "The user does not exist.")]
-public ActionResult<User> GetUser(int id) => Handle(id);
+[ProducesError(ErrorType.NotFound)]
 ```
 
-### Add Error Catalog OpenAPI
+| Overload | Description |
+| --- | --- |
+| [`ProducesErrorAttribute(ErrorType errorType)`](#overload-produceserrorattributeerrortype-errortype-on-produceserrorattribute) | Adds one structured problem response to controller or endpoint metadata. |
 
-`IServiceCollection.AddErrorCatalogOpenApi` is the default setup. It registers
-ASP.NET Core OpenAPI, the error-catalog transformer, and package-owned
-source-generated JSON metadata for the problem payload returned by
-`ProblemHttpResult`. It does not call `AddProblemDetails`, register
-`IProblemDetailsService`, or enable reflection.
+##### Overload: `ProducesErrorAttribute(ErrorType errorType)` on `ProducesErrorAttribute`
+
+Adds one structured problem response to controller or endpoint metadata.
+
+**Parameters**
+
+- `errorType`: The initialized error category exposed by the operation.
+
+#### Member: `ProducesErrorAttribute.ContentTypes`
+
+**Example**
 
 ```csharp
-using MonadicTypes.AspNetCore.OpenApi;
+IEnumerable<string> contentTypes = metadata.ContentTypes;
+```
 
+| Overload | Description |
+| --- | --- |
+| [`IEnumerable<string> ContentTypes`](#overload-ienumerablestring-contenttypes-on-produceserrorattribute) | Gets the supported RFC 9457 response content type. |
+
+##### Overload: `IEnumerable<string> ContentTypes` on `ProducesErrorAttribute`
+
+Gets the supported RFC 9457 response content type.
+
+#### Member: `ProducesErrorAttribute.Description`
+
+**Example**
+
+```csharp
+string? description = metadata.Description;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string? Description`](#overload-string-description-on-produceserrorattribute) | Gets the optional response description; this attribute leaves it unspecified. |
+
+##### Overload: `string? Description` on `ProducesErrorAttribute`
+
+Gets the optional response description; this attribute leaves it unspecified.
+
+#### Member: `ProducesErrorAttribute.ErrorType`
+
+**Example**
+
+```csharp
+ErrorType type = metadata.ErrorType;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType ErrorType`](#overload-errortype-errortype-on-produceserrorattribute) | Gets the configured error category. |
+
+##### Overload: `ErrorType ErrorType` on `ProducesErrorAttribute`
+
+Gets the configured error category.
+
+#### Member: `ProducesErrorAttribute.StatusCode`
+
+**Example**
+
+```csharp
+int status = metadata.StatusCode;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`int StatusCode`](#overload-int-statuscode-on-produceserrorattribute) | Gets the HTTP status mapped from `ErrorType`. |
+
+##### Overload: `int StatusCode` on `ProducesErrorAttribute`
+
+Gets the HTTP status mapped from `ErrorType`.
+
+#### Member: `ProducesErrorAttribute.Type`
+
+**Example**
+
+```csharp
+Type? bodyType = metadata.Type;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Type? Type`](#overload-type-type-on-produceserrorattribute) | Gets the documented RFC 9457 response body type. |
+
+##### Overload: `Type? Type` on `ProducesErrorAttribute`
+
+Gets the documented RFC 9457 response body type.
+
+### Type: `ProducesErrorCatalogAttribute`
+
+Adds one stable domain error and its response category to controller or endpoint metadata.
+
+**Example**
+
+```csharp
+[ProducesErrorCatalog(ErrorType.NotFound, "USER_NOT_FOUND", "User not found.")]
+```
+
+| Member | Description |
+| --- | --- |
+| [`ProducesErrorCatalogAttribute`](#member-produceserrorcatalogattributeproduceserrorcatalogattribute) | Adds one stable domain error and its response category to controller or endpoint metadata. |
+| [`ContentTypes`](#member-produceserrorcatalogattributecontenttypes) | Gets the supported RFC 9457 response content type. |
+| [`Description`](#member-produceserrorcatalogattributedescription) | Gets the optional response description; this attribute leaves it unspecified. |
+| [`Entry`](#member-produceserrorcatalogattributeentry) | Gets the documented error entry. |
+| [`StatusCode`](#member-produceserrorcatalogattributestatuscode) | Gets the HTTP status mapped from the catalog entry. |
+| [`Type`](#member-produceserrorcatalogattributetype) | Gets the documented RFC 9457 response body type. |
+
+#### Member: `ProducesErrorCatalogAttribute.ProducesErrorCatalogAttribute`
+
+**Example**
+
+```csharp
+[ProducesErrorCatalog(ErrorType.NotFound, "USER_NOT_FOUND", "User not found.")]
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ProducesErrorCatalogAttribute(ErrorType type, string code, string description)`](#overload-produceserrorcatalogattributeerrortype-type-string-code-string-description-on-produceserrorcatalogattribute) | Adds one stable domain error and its response category to controller or endpoint metadata. |
+
+##### Overload: `ProducesErrorCatalogAttribute(ErrorType type, string code, string description)` on `ProducesErrorCatalogAttribute`
+
+Adds one stable domain error and its response category to controller or endpoint metadata.
+
+**Parameters**
+
+- `type`: The initialized category that determines the HTTP status.
+- `code`: The stable machine-readable error code.
+- `description`: The public description exposed in API documentation.
+
+#### Member: `ProducesErrorCatalogAttribute.ContentTypes`
+
+**Example**
+
+```csharp
+IEnumerable<string> contentTypes = metadata.ContentTypes;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`IEnumerable<string> ContentTypes`](#overload-ienumerablestring-contenttypes-on-produceserrorcatalogattribute) | Gets the supported RFC 9457 response content type. |
+
+##### Overload: `IEnumerable<string> ContentTypes` on `ProducesErrorCatalogAttribute`
+
+Gets the supported RFC 9457 response content type.
+
+#### Member: `ProducesErrorCatalogAttribute.Description`
+
+**Example**
+
+```csharp
+string? description = metadata.Description;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string? Description`](#overload-string-description-on-produceserrorcatalogattribute) | Gets the optional response description; this attribute leaves it unspecified. |
+
+##### Overload: `string? Description` on `ProducesErrorCatalogAttribute`
+
+Gets the optional response description; this attribute leaves it unspecified.
+
+#### Member: `ProducesErrorCatalogAttribute.Entry`
+
+**Example**
+
+```csharp
+ErrorCatalogEntry entry = metadata.Entry;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorCatalogEntry Entry`](#overload-errorcatalogentry-entry-on-produceserrorcatalogattribute) | Gets the documented error entry. |
+
+##### Overload: `ErrorCatalogEntry Entry` on `ProducesErrorCatalogAttribute`
+
+Gets the documented error entry.
+
+#### Member: `ProducesErrorCatalogAttribute.StatusCode`
+
+**Example**
+
+```csharp
+int status = metadata.StatusCode;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`int StatusCode`](#overload-int-statuscode-on-produceserrorcatalogattribute) | Gets the HTTP status mapped from the catalog entry. |
+
+##### Overload: `int StatusCode` on `ProducesErrorCatalogAttribute`
+
+Gets the HTTP status mapped from the catalog entry.
+
+#### Member: `ProducesErrorCatalogAttribute.Type`
+
+**Example**
+
+```csharp
+Type? bodyType = metadata.Type;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Type? Type`](#overload-type-type-on-produceserrorcatalogattribute) | Gets the documented RFC 9457 response body type. |
+
+##### Overload: `Type? Type` on `ProducesErrorCatalogAttribute`
+
+Gets the documented RFC 9457 response body type.
+
+### Type: `ResultHttpExtensions`
+
+Maps result branches to strongly typed ASP.NET Core HTTP results.
+
+| Member | Description |
+| --- | --- |
+| [`ToHttpResult`](#member-resulthttpextensionstohttpresult) | Maps success with a delegate and structured failure with the default problem policy. |
+
+#### Member: `ResultHttpExtensions.ToHttpResult`
+
+**Example**
+
+```csharp
+Results<Ok<User>, ProblemHttpResult> response = result.ToHttpResult(TypedResults.Ok, httpContext);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess>(in Result<T, Error> result, Func<T, TSuccess> success, HttpContext? httpContext)`](#overload-resultstsuccess-problemhttpresult-tohttpresultt-tsuccessin-resultt-error-result-funct-tsuccess-success-httpcontext-httpcontext-on-resulthttpextensions) | Maps success with a delegate and structured failure with the default problem policy. |
+| [`Results<TSuccess, ValidationProblem> ToHttpResult<T, TSuccess>(in Result<T, ValidationErrors> result, Func<T, TSuccess> success, HttpContext? httpContext)`](#overload-resultstsuccess-validationproblem-tohttpresultt-tsuccessin-resultt-validationerrors-result-funct-tsuccess-success-httpcontext-httpcontext-on-resulthttpextensions) | Maps success with a delegate and failures to a validation problem result. |
+| [`Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess, TSuccessMapper>(in Result<T, Error> result, TSuccessMapper success, HttpContext? httpContext)`](#overload-resultstsuccess-problemhttpresult-tohttpresultt-tsuccess-tsuccessmapperin-resultt-error-result-tsuccessmapper-success-httpcontext-httpcontext-on-resulthttpextensions) | Maps success with a value-function struct and structured failure with the default problem policy. |
+| [`Results<TSuccess, ValidationProblem> ToHttpResult<T, TSuccess, TSuccessMapper>(in Result<T, ValidationErrors> result, TSuccessMapper success, HttpContext? httpContext)`](#overload-resultstsuccess-validationproblem-tohttpresultt-tsuccess-tsuccessmapperin-resultt-validationerrors-result-tsuccessmapper-success-httpcontext-httpcontext-on-resulthttpextensions) | Maps success with a value-function struct and failures to a validation problem result. |
+| [`Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TError, TSuccess>(in Result<T, TError> result, Func<T, TSuccess> success, HttpContext? httpContext)`](#overload-resultstsuccess-problemhttpresult-tohttpresultt-terror-tsuccessin-resultt-terror-result-funct-tsuccess-success-httpcontext-httpcontext-on-resulthttpextensions) | Maps success with a delegate and converts a domain error to the default problem result. |
+| [`Results<TSuccess, TFailure> ToHttpResult<T, TError, TSuccess, TFailure>(in Result<T, TError> result, Func<T, TSuccess> success, Func<TError, TFailure> failure)`](#overload-resultstsuccess-tfailure-tohttpresultt-terror-tsuccess-tfailurein-resultt-terror-result-funct-tsuccess-success-functerror-tfailure-failure-on-resulthttpextensions) | Fully caller-owned mapping path for any error type. Use this to return custom ProblemDetails, framework results, or application-specific results. |
+| [`Results<TSuccess, TFailure> ToHttpResult<T, TError, TSuccess, TFailure, TMapper>(in Result<T, TError> result, Func<T, TSuccess> success, TMapper failure, HttpContext? httpContext)`](#overload-resultstsuccess-tfailure-tohttpresultt-terror-tsuccess-tfailure-tmapperin-resultt-terror-result-funct-tsuccess-success-tmapper-failure-httpcontext-httpcontext-on-resulthttpextensions) | Maps failure with a value-type mapper while retaining a delegate success mapper. |
+| [`Results<TSuccess, TFailure> ToHttpResult<T, TError, TSuccess, TFailure, TSuccessMapper, TFailureMapper>(in Result<T, TError> result, TSuccessMapper success, TFailureMapper failure, HttpContext? httpContext)`](#overload-resultstsuccess-tfailure-tohttpresultt-terror-tsuccess-tfailure-tsuccessmapper-tfailuremapperin-resultt-terror-result-tsuccessmapper-success-tfailuremapper-failure-httpcontext-httpcontext-on-resulthttpextensions) | Maps both branches through value-type mappers for allocation-free dispatch. |
+
+##### Overload: `Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess>(in Result<T, Error> result, Func<T, TSuccess> success, HttpContext? httpContext)` on `ResultHttpExtensions`
+
+Maps success with a delegate and structured failure with the default problem policy.
+
+##### Overload: `Results<TSuccess, ValidationProblem> ToHttpResult<T, TSuccess>(in Result<T, ValidationErrors> result, Func<T, TSuccess> success, HttpContext? httpContext)` on `ResultHttpExtensions`
+
+Maps success with a delegate and failures to a validation problem result.
+
+##### Overload: `Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess, TSuccessMapper>(in Result<T, Error> result, TSuccessMapper success, HttpContext? httpContext)` on `ResultHttpExtensions`
+
+Maps success with a value-function struct and structured failure with the default problem policy.
+
+##### Overload: `Results<TSuccess, ValidationProblem> ToHttpResult<T, TSuccess, TSuccessMapper>(in Result<T, ValidationErrors> result, TSuccessMapper success, HttpContext? httpContext)` on `ResultHttpExtensions`
+
+Maps success with a value-function struct and failures to a validation problem result.
+
+##### Overload: `Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TError, TSuccess>(in Result<T, TError> result, Func<T, TSuccess> success, HttpContext? httpContext)` on `ResultHttpExtensions`
+
+Maps success with a delegate and converts a domain error to the default problem result.
+
+##### Overload: `Results<TSuccess, TFailure> ToHttpResult<T, TError, TSuccess, TFailure>(in Result<T, TError> result, Func<T, TSuccess> success, Func<TError, TFailure> failure)` on `ResultHttpExtensions`
+
+Fully caller-owned mapping path for any error type. Use this to return custom ProblemDetails, framework results, or application-specific results.
+
+##### Overload: `Results<TSuccess, TFailure> ToHttpResult<T, TError, TSuccess, TFailure, TMapper>(in Result<T, TError> result, Func<T, TSuccess> success, TMapper failure, HttpContext? httpContext)` on `ResultHttpExtensions`
+
+Maps failure with a value-type mapper while retaining a delegate success mapper.
+
+##### Overload: `Results<TSuccess, TFailure> ToHttpResult<T, TError, TSuccess, TFailure, TSuccessMapper, TFailureMapper>(in Result<T, TError> result, TSuccessMapper success, TFailureMapper failure, HttpContext? httpContext)` on `ResultHttpExtensions`
+
+Maps both branches through value-type mappers for allocation-free dispatch.
+
+### Type: `ValidationErrorProblemDetails`
+
+Converts validation issues to strongly typed validation problem results.
+
+| Member | Description |
+| --- | --- |
+| [`ToHttpResult`](#member-validationerrorproblemdetailstohttpresult) | Groups validation issues by path and preserves their machine-readable codes. |
+
+#### Member: `ValidationErrorProblemDetails.ToHttpResult`
+
+**Example**
+
+```csharp
+ValidationProblem result = ValidationErrorProblemDetails.ToHttpResult(errors, httpContext);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationProblem ToHttpResult(ValidationErrors validationErrors, HttpContext? httpContext)`](#overload-validationproblem-tohttpresultvalidationerrors-validationerrors-httpcontext-httpcontext-on-validationerrorproblemdetails) | Groups validation issues by path and preserves their machine-readable codes. |
+
+##### Overload: `ValidationProblem ToHttpResult(ValidationErrors validationErrors, HttpContext? httpContext)` on `ValidationErrorProblemDetails`
+
+Groups validation issues by path and preserves their machine-readable codes.
+
+**Parameters**
+
+- `validationErrors`: The validation issues to convert.
+- `httpContext`: An optional context supplying a fallback trace identifier.
+
+**Returns:** A strongly typed validation problem result.
+
+
+## Package MonadicTypes.NET.AspNetCore.OpenApi
+
+**Types:** [`OpenApiOptionsExtensions`](#type-openapioptionsextensions) · [`OpenApiServiceCollectionExtensions`](#type-openapiservicecollectionextensions)
+
+### Type: `OpenApiOptionsExtensions`
+
+Registers MonadicTypes error-catalog document generation.
+
+| Member | Description |
+| --- | --- |
+| [`AddErrorCatalogs`](#member-openapioptionsextensionsadderrorcatalogs) | Adds the explicit endpoint error-catalog transformer without reflection or DI activation. |
+
+#### Member: `OpenApiOptionsExtensions.AddErrorCatalogs`
+
+**Example**
+
+```csharp
+builder.Services.AddOpenApi(options => options.AddErrorCatalogs());
+```
+
+| Overload | Description |
+| --- | --- |
+| [`OpenApiOptions AddErrorCatalogs(OpenApiOptions options)`](#overload-openapioptions-adderrorcatalogsopenapioptions-options-on-openapioptionsextensions) | Adds the explicit endpoint error-catalog transformer without reflection or DI activation. |
+
+##### Overload: `OpenApiOptions AddErrorCatalogs(OpenApiOptions options)` on `OpenApiOptionsExtensions`
+
+Adds the explicit endpoint error-catalog transformer without reflection or DI activation.
+
+**Returns:** The same options instance for continued configuration.
+
+### Type: `OpenApiServiceCollectionExtensions`
+
+Registers reflection-free error-catalog OpenAPI services.
+
+| Member | Description |
+| --- | --- |
+| [`AddErrorCatalogOpenApi`](#member-openapiservicecollectionextensionsadderrorcatalogopenapi) | Adds OpenAPI error-catalog transformation and source-generated JSON metadata for the problem payload returned by `ProblemHttpResult`. |
+
+#### Member: `OpenApiServiceCollectionExtensions.AddErrorCatalogOpenApi`
+
+**Example**
+
+```csharp
 builder.Services.AddErrorCatalogOpenApi();
 ```
 
-### Add Error Catalogs
+| Overload | Description |
+| --- | --- |
+| [`IServiceCollection AddErrorCatalogOpenApi(IServiceCollection services)`](#overload-iservicecollection-adderrorcatalogopenapiiservicecollection-services-on-openapiservicecollectionextensions) | Adds OpenAPI error-catalog transformation and source-generated JSON metadata for the problem payload returned by `ProblemHttpResult`. |
 
-`OpenApiOptions.AddErrorCatalogs` is provided by
-`MonadicTypes.NET.AspNetCore.OpenApi`. It registers one singleton operation
-transformer instance without DI activation. The transformer reads typed
-endpoint metadata and adds status-scoped code enums and deterministic problem
-examples during document generation; it does not run while handling requests.
+##### Overload: `IServiceCollection AddErrorCatalogOpenApi(IServiceCollection services)` on `OpenApiServiceCollectionExtensions`
 
-```csharp
-builder.Services.AddOpenApi(static options => options.AddErrorCatalogs());
-```
+Adds OpenAPI error-catalog transformation and source-generated JSON metadata for the problem payload returned by `ProblemHttpResult`.
 
-This lower-level overload is for advanced or named-document configuration. The
-caller must register equivalent `ProblemDetails` metadata in an
-application-owned source-generated `JsonSerializerContext`; the default service
-extension handles this package-owned type automatically.
+**Returns:** The same service collection for continued configuration.
 
-Under NativeAOT, ASP.NET Core's schema exporter also requires the application
-to register request, response, and bound parameter types in a source-generated
-`JsonSerializerContext`. This includes primitive route types such as `int`.
-`AddErrorCatalogOpenApi()` supplies package-owned problem response metadata.
-Missing application metadata fails document generation; this adapter never
-enables a reflection fallback. See the OpenAPI package README for the complete
-setup.
 
-### OpenAPI XML Comment Diagnostic
+## Package MonadicTypes.NET.Async
 
-`MTAPI001` is an informational compile/live-analysis diagnostic bundled with
-the OpenAPI package. Rider and Visual Studio show it for a documented Minimal
-API method-group handler whose route chain has no explicit `WithSummary` or
-`WithDescription` metadata and whose compilation has no Microsoft XML-comment
-projection.
+**Types:** [`AsyncResultExtensions`](#type-asyncresultextensions)
 
-The default fix is explicit standard metadata, which stays reflection-free. A
-direct `Microsoft.AspNetCore.OpenApi` package reference intentionally enables
-Microsoft's complete XML-comment generator and reflection-based document
-transformer; the MonadicTypes build target detects that direct reference and
-does not remove the generator. Generating and serving a static OpenAPI artifact
-is the reflection-free production alternative when automatic XML projection is
-required only during documentation builds.
+### Type: `AsyncResultExtensions`
 
-## Source Generation
+Lifts synchronous and asynchronous result combinators over `Task` and `ValueTask` receivers. Every operator consumes its source once and converges on `ValueTask` for continued composition.
 
-### Generate Value Function
+| Member | Description |
+| --- | --- |
+| [`Bind`](#member-asyncresultextensionsbind) | Binds a Task-backed result through a synchronous continuation. |
+| [`BindAsync`](#member-asyncresultextensionsbindasync) | Binds a successful value through an asynchronous continuation. |
+| [`BindError`](#member-asyncresultextensionsbinderror) | Binds a Task-backed failure through a synchronous continuation. |
+| [`BindErrorAsync`](#member-asyncresultextensionsbinderrorasync) | Binds a failure through an asynchronous continuation. |
+| [`BindErrorTaskAsync`](#member-asyncresultextensionsbinderrortaskasync) | Binds a failure through a Task-returning continuation. |
+| [`BindTaskAsync`](#member-asyncresultextensionsbindtaskasync) | Binds a successful value through a Task-returning continuation. |
+| [`Map`](#member-asyncresultextensionsmap) | Maps a Task-backed result through a synchronous callback. |
+| [`MapAsync`](#member-asyncresultextensionsmapasync) | Maps a successful value through an asynchronous callback. |
+| [`MapTaskAsync`](#member-asyncresultextensionsmaptaskasync) | Maps a successful value through a Task-returning callback. |
 
-`GenerateValueFunctionAttribute` marks an implemented, non-generic static
-one-parameter method in a top-level static partial class. The optional name
-controls the generated property while the original method remains callable.
+#### Member: `AsyncResultExtensions.Bind`
+
+**Example**
 
 ```csharp
-public static partial class Operations
-{
-    [GenerateValueFunction("ParseFast")]
-    public static int Parse(string text) => int.Parse(text);
-}
+Result<Account, LoadError> account = await pending.Bind(LoadAccount);
 ```
 
-### Generated Functions
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<TResult, TError>> Bind<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, Result<TResult, TError>> bind)`](#overload-valuetaskresulttresult-terror-bindt-terror-tresulttaskresultt-terror-source-funct-resulttresult-terror-bind-on-asyncresultextensions) | Binds a Task-backed result through a synchronous continuation. |
+| [`ValueTask<Result<TResult, TError>> Bind<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, Result<TResult, TError>> bind)`](#overload-valuetaskresulttresult-terror-bindt-terror-tresultin-valuetaskresultt-terror-source-funct-resulttresult-terror-bind-on-asyncresultextensions) | Binds a completed or pending result through a synchronous continuation. |
 
-`Functions.<Method>` exposes an inferred ValueFunction or ValueAction token for
-sync and async operators.
+##### Overload: `ValueTask<Result<TResult, TError>> Bind<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, Result<TResult, TError>> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed result through a synchronous continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the continuation result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> Bind<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, Result<TResult, TError>> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending result through a synchronous continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the continuation result.
+
+#### Member: `AsyncResultExtensions.BindAsync`
+
+**Example**
 
 ```csharp
-Result<int, Error> parsed = input.Map(Operations.Functions.ParseFast);
+Result<Account, LoadError> account = await result.BindAsync(LoadAccountAsync);
 ```
 
-### Value Function Generator
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, ValueTask<Result<TResult, TError>>> bind)`](#overload-valuetaskresulttresult-terror-bindasynct-terror-tresultin-resultt-terror-result-funct-valuetaskresulttresult-terror-bind-on-asyncresultextensions) | Binds a successful value through an asynchronous continuation. |
+| [`ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, ValueTask<Result<TResult, TError>>> bind)`](#overload-valuetaskresulttresult-terror-bindasynct-terror-tresulttaskresultt-terror-source-funct-valuetaskresulttresult-terror-bind-on-asyncresultextensions) | Binds a Task-backed result through an asynchronous continuation. |
+| [`ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, ValueTask<Result<TResult, TError>>> bind)`](#overload-valuetaskresulttresult-terror-bindasynct-terror-tresultin-valuetaskresultt-terror-source-funct-valuetaskresulttresult-terror-bind-on-asyncresultextensions) | Binds a completed or pending result through an asynchronous continuation. |
+| [`ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, ValueTask<Result<TResult, TError>>, TFunction> bind)`](#overload-valuetaskresulttresult-terror-bindasynct-terror-tresult-tfunctionin-resultt-terror-result-valuefunctiont-valuetaskresulttresult-terror-tfunction-bind-on-asyncresultextensions) | Binds a successful value through a generated ValueTask-returning callable. |
+| [`ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, ValueTask<Result<TResult, TError>>, TFunction> bind)`](#overload-valuetaskresulttresult-terror-bindasynct-terror-tresult-tfunctiontaskresultt-terror-source-valuefunctiont-valuetaskresulttresult-terror-tfunction-bind-on-asyncresultextensions) | Binds a Task-backed result through a generated ValueTask-returning callable. |
+| [`ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, ValueTask<Result<TResult, TError>>, TFunction> bind)`](#overload-valuetaskresulttresult-terror-bindasynct-terror-tresult-tfunctionin-valuetaskresultt-terror-source-valuefunctiont-valuetaskresulttresult-terror-tfunction-bind-on-asyncresultextensions) | Binds a completed or pending result through a generated ValueTask-returning callable. |
 
-`ValueFunctionGenerator.Initialize` is the Roslyn entry point that registers
-attribute emission, MTGEN001-004 diagnostics, and adapter generation.
-Application code does not call it directly.
+##### Overload: `ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, ValueTask<Result<TResult, TError>>> bind)` on `AsyncResultExtensions`
+
+Binds a successful value through an asynchronous continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** The asynchronous continuation result or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, ValueTask<Result<TResult, TError>>> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed result through an asynchronous continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the continuation result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, ValueTask<Result<TResult, TError>>> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending result through an asynchronous continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the continuation result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, ValueTask<Result<TResult, TError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a successful value through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for success.
+
+**Returns:** The asynchronous continuation result or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, ValueTask<Result<TResult, TError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed result through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the continuation result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, ValueTask<Result<TResult, TError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending result through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the continuation result.
+
+#### Member: `AsyncResultExtensions.BindError`
+
+**Example**
 
 ```csharp
-// Referencing MonadicTypes.Generators as an analyzer invokes the generator.
-// No runtime registration or reflection is required.
+Result<User, FinalError> recovered = await pending.BindError(Retry);
 ```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, TNextError>> BindError<T, TError, TNextError>(Task<Result<T, TError>> source, Func<TError, Result<T, TNextError>> bind)`](#overload-valuetaskresultt-tnexterror-binderrort-terror-tnexterrortaskresultt-terror-source-functerror-resultt-tnexterror-bind-on-asyncresultextensions) | Binds a Task-backed failure through a synchronous continuation. |
+| [`ValueTask<Result<T, TNextError>> BindError<T, TError, TNextError>(in ValueTask<Result<T, TError>> source, Func<TError, Result<T, TNextError>> bind)`](#overload-valuetaskresultt-tnexterror-binderrort-terror-tnexterrorin-valuetaskresultt-terror-source-functerror-resultt-tnexterror-bind-on-asyncresultextensions) | Binds a completed or pending failure through a synchronous continuation. |
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindError<T, TError, TNextError>(Task<Result<T, TError>> source, Func<TError, Result<T, TNextError>> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed failure through a synchronous continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** A ValueTask-backed pipeline containing the resulting value.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindError<T, TError, TNextError>(in ValueTask<Result<T, TError>> source, Func<TError, Result<T, TNextError>> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending failure through a synchronous continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** A single-consumption awaitable containing the resulting value.
+
+#### Member: `AsyncResultExtensions.BindErrorAsync`
+
+**Example**
+
+```csharp
+Result<User, FinalError> recovered = await result.BindErrorAsync(RetryAsync);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError>(in Result<T, TError> result, Func<TError, ValueTask<Result<T, TNextError>>> bind)`](#overload-valuetaskresultt-tnexterror-binderrorasynct-terror-tnexterrorin-resultt-terror-result-functerror-valuetaskresultt-tnexterror-bind-on-asyncresultextensions) | Binds a failure through an asynchronous continuation. |
+| [`ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError>(Task<Result<T, TError>> source, Func<TError, ValueTask<Result<T, TNextError>>> bind)`](#overload-valuetaskresultt-tnexterror-binderrorasynct-terror-tnexterrortaskresultt-terror-source-functerror-valuetaskresultt-tnexterror-bind-on-asyncresultextensions) | Binds a Task-backed failure through an asynchronous continuation. |
+| [`ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError>(in ValueTask<Result<T, TError>> source, Func<TError, ValueTask<Result<T, TNextError>>> bind)`](#overload-valuetaskresultt-tnexterror-binderrorasynct-terror-tnexterrorin-valuetaskresultt-terror-source-functerror-valuetaskresultt-tnexterror-bind-on-asyncresultextensions) | Binds a completed or pending failure through an asynchronous continuation. |
+| [`ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError, TFunction>(in Result<T, TError> result, ValueFunction<TError, ValueTask<Result<T, TNextError>>, TFunction> bind)`](#overload-valuetaskresultt-tnexterror-binderrorasynct-terror-tnexterror-tfunctionin-resultt-terror-result-valuefunctionterror-valuetaskresultt-tnexterror-tfunction-bind-on-asyncresultextensions) | Binds a failure through a generated ValueTask-returning callable. |
+| [`ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError, TFunction>(Task<Result<T, TError>> source, ValueFunction<TError, ValueTask<Result<T, TNextError>>, TFunction> bind)`](#overload-valuetaskresultt-tnexterror-binderrorasynct-terror-tnexterror-tfunctiontaskresultt-terror-source-valuefunctionterror-valuetaskresultt-tnexterror-tfunction-bind-on-asyncresultextensions) | Binds a Task-backed failure through a generated ValueTask-returning callable. |
+| [`ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<TError, ValueTask<Result<T, TNextError>>, TFunction> bind)`](#overload-valuetaskresultt-tnexterror-binderrorasynct-terror-tnexterror-tfunctionin-valuetaskresultt-terror-source-valuefunctionterror-valuetaskresultt-tnexterror-tfunction-bind-on-asyncresultextensions) | Binds a completed or pending failure through a generated ValueTask-returning callable. |
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError>(in Result<T, TError> result, Func<TError, ValueTask<Result<T, TNextError>>> bind)` on `AsyncResultExtensions`
+
+Binds a failure through an asynchronous continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** The unchanged success or asynchronous failure continuation result.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError>(Task<Result<T, TError>> source, Func<TError, ValueTask<Result<T, TNextError>>> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed failure through an asynchronous continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** A ValueTask-backed pipeline containing the resulting value.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError>(in ValueTask<Result<T, TError>> source, Func<TError, ValueTask<Result<T, TNextError>>> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending failure through an asynchronous continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** A single-consumption awaitable containing the resulting value.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError, TFunction>(in Result<T, TError> result, ValueFunction<TError, ValueTask<Result<T, TNextError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a failure through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for failure.
+
+**Returns:** The unchanged success or asynchronous failure continuation result.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError, TFunction>(Task<Result<T, TError>> source, ValueFunction<TError, ValueTask<Result<T, TNextError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed failure through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for failure.
+
+**Returns:** A ValueTask-backed pipeline containing the resulting value.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorAsync<T, TError, TNextError, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<TError, ValueTask<Result<T, TNextError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending failure through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for failure.
+
+**Returns:** A single-consumption awaitable containing the resulting value.
+
+#### Member: `AsyncResultExtensions.BindErrorTaskAsync`
+
+**Example**
+
+```csharp
+Result<User, FinalError> recovered = await result.BindErrorTaskAsync(RetryTaskAsync);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError>(in Result<T, TError> result, Func<TError, Task<Result<T, TNextError>>> bind)`](#overload-valuetaskresultt-tnexterror-binderrortaskasynct-terror-tnexterrorin-resultt-terror-result-functerror-taskresultt-tnexterror-bind-on-asyncresultextensions) | Binds a failure through a Task-returning continuation. |
+| [`ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError>(Task<Result<T, TError>> source, Func<TError, Task<Result<T, TNextError>>> bind)`](#overload-valuetaskresultt-tnexterror-binderrortaskasynct-terror-tnexterrortaskresultt-terror-source-functerror-taskresultt-tnexterror-bind-on-asyncresultextensions) | Binds a Task-backed failure through a Task-returning continuation. |
+| [`ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError>(in ValueTask<Result<T, TError>> source, Func<TError, Task<Result<T, TNextError>>> bind)`](#overload-valuetaskresultt-tnexterror-binderrortaskasynct-terror-tnexterrorin-valuetaskresultt-terror-source-functerror-taskresultt-tnexterror-bind-on-asyncresultextensions) | Binds a completed or pending failure through a Task-returning continuation. |
+| [`ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError, TFunction>(in Result<T, TError> result, ValueFunction<TError, Task<Result<T, TNextError>>, TFunction> bind)`](#overload-valuetaskresultt-tnexterror-binderrortaskasynct-terror-tnexterror-tfunctionin-resultt-terror-result-valuefunctionterror-taskresultt-tnexterror-tfunction-bind-on-asyncresultextensions) | Binds a failure through a generated Task-returning callable. |
+| [`ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError, TFunction>(Task<Result<T, TError>> source, ValueFunction<TError, Task<Result<T, TNextError>>, TFunction> bind)`](#overload-valuetaskresultt-tnexterror-binderrortaskasynct-terror-tnexterror-tfunctiontaskresultt-terror-source-valuefunctionterror-taskresultt-tnexterror-tfunction-bind-on-asyncresultextensions) | Binds a Task-backed failure through a generated Task-returning callable. |
+| [`ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<TError, Task<Result<T, TNextError>>, TFunction> bind)`](#overload-valuetaskresultt-tnexterror-binderrortaskasynct-terror-tnexterror-tfunctionin-valuetaskresultt-terror-source-valuefunctionterror-taskresultt-tnexterror-tfunction-bind-on-asyncresultextensions) | Binds a completed or pending failure through a generated Task-returning callable. |
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError>(in Result<T, TError> result, Func<TError, Task<Result<T, TNextError>>> bind)` on `AsyncResultExtensions`
+
+Binds a failure through a Task-returning continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** The unchanged success or asynchronous failure continuation result.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError>(Task<Result<T, TError>> source, Func<TError, Task<Result<T, TNextError>>> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed failure through a Task-returning continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** A ValueTask-backed pipeline containing the resulting value.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError>(in ValueTask<Result<T, TError>> source, Func<TError, Task<Result<T, TNextError>>> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending failure through a Task-returning continuation.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for failure.
+
+**Returns:** A single-consumption awaitable containing the resulting value.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError, TFunction>(in Result<T, TError> result, ValueFunction<TError, Task<Result<T, TNextError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a failure through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for failure.
+
+**Returns:** The unchanged success or asynchronous failure continuation result.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError, TFunction>(Task<Result<T, TError>> source, ValueFunction<TError, Task<Result<T, TNextError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed failure through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for failure.
+
+**Returns:** A ValueTask-backed pipeline containing the resulting value.
+
+##### Overload: `ValueTask<Result<T, TNextError>> BindErrorTaskAsync<T, TError, TNextError, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<TError, Task<Result<T, TNextError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending failure through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TNextError`: Continuation error type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for failure.
+
+**Returns:** A single-consumption awaitable containing the resulting value.
+
+#### Member: `AsyncResultExtensions.BindTaskAsync`
+
+**Example**
+
+```csharp
+Result<Account, LoadError> account = await result.BindTaskAsync(LoadAccountTaskAsync);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, Task<Result<TResult, TError>>> bind)`](#overload-valuetaskresulttresult-terror-bindtaskasynct-terror-tresultin-resultt-terror-result-funct-taskresulttresult-terror-bind-on-asyncresultextensions) | Binds a successful value through a Task-returning continuation. |
+| [`ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, Task<Result<TResult, TError>>> bind)`](#overload-valuetaskresulttresult-terror-bindtaskasynct-terror-tresulttaskresultt-terror-source-funct-taskresulttresult-terror-bind-on-asyncresultextensions) | Binds a Task-backed result through a Task-returning continuation. |
+| [`ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, Task<Result<TResult, TError>>> bind)`](#overload-valuetaskresulttresult-terror-bindtaskasynct-terror-tresultin-valuetaskresultt-terror-source-funct-taskresulttresult-terror-bind-on-asyncresultextensions) | Binds a completed or pending result through a Task-returning continuation. |
+| [`ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, Task<Result<TResult, TError>>, TFunction> bind)`](#overload-valuetaskresulttresult-terror-bindtaskasynct-terror-tresult-tfunctionin-resultt-terror-result-valuefunctiont-taskresulttresult-terror-tfunction-bind-on-asyncresultextensions) | Binds a successful value through a generated Task-returning callable. |
+| [`ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, Task<Result<TResult, TError>>, TFunction> bind)`](#overload-valuetaskresulttresult-terror-bindtaskasynct-terror-tresult-tfunctiontaskresultt-terror-source-valuefunctiont-taskresulttresult-terror-tfunction-bind-on-asyncresultextensions) | Binds a Task-backed result through a generated Task-returning callable. |
+| [`ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, Task<Result<TResult, TError>>, TFunction> bind)`](#overload-valuetaskresulttresult-terror-bindtaskasynct-terror-tresult-tfunctionin-valuetaskresultt-terror-source-valuefunctiont-taskresulttresult-terror-tfunction-bind-on-asyncresultextensions) | Binds a completed or pending result through a generated Task-returning callable. |
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, Task<Result<TResult, TError>>> bind)` on `AsyncResultExtensions`
+
+Binds a successful value through a Task-returning continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** The asynchronous continuation result or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, Task<Result<TResult, TError>>> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed result through a Task-returning continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the continuation result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, Task<Result<TResult, TError>>> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending result through a Task-returning continuation.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Continuation invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the continuation result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, Task<Result<TResult, TError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a successful value through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for success.
+
+**Returns:** The asynchronous continuation result or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, Task<Result<TResult, TError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a Task-backed result through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the continuation result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> BindTaskAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, Task<Result<TResult, TError>>, TFunction> bind)` on `AsyncResultExtensions`
+
+Binds a completed or pending result through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `bind`: Allocation-free callable token invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the continuation result.
+
+#### Member: `AsyncResultExtensions.Map`
+
+**Example**
+
+```csharp
+Result<int, LoadError> id = await pending.Map(static user => user.Id);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<TResult, TError>> Map<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, TResult> map)`](#overload-valuetaskresulttresult-terror-mapt-terror-tresulttaskresultt-terror-source-funct-tresult-map-on-asyncresultextensions) | Maps a Task-backed result through a synchronous callback. |
+| [`ValueTask<Result<TResult, TError>> Map<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, TResult> map)`](#overload-valuetaskresulttresult-terror-mapt-terror-tresultin-valuetaskresultt-terror-source-funct-tresult-map-on-asyncresultextensions) | Maps a completed or pending result through a synchronous callback. |
+
+##### Overload: `ValueTask<Result<TResult, TError>> Map<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, TResult> map)` on `AsyncResultExtensions`
+
+Maps a Task-backed result through a synchronous callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the mapped result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> Map<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, TResult> map)` on `AsyncResultExtensions`
+
+Maps a completed or pending result through a synchronous callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the mapped result.
+
+#### Member: `AsyncResultExtensions.MapAsync`
+
+**Example**
+
+```csharp
+Result<UserDto, LoadError> mapped = await result.MapAsync(LoadDtoAsync);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, ValueTask<TResult>> map)`](#overload-valuetaskresulttresult-terror-mapasynct-terror-tresultin-resultt-terror-result-funct-valuetasktresult-map-on-asyncresultextensions) | Maps a successful value through an asynchronous callback. |
+| [`ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, ValueTask<TResult>> map)`](#overload-valuetaskresulttresult-terror-mapasynct-terror-tresulttaskresultt-terror-source-funct-valuetasktresult-map-on-asyncresultextensions) | Maps a Task-backed result through an asynchronous callback. |
+| [`ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, ValueTask<TResult>> map)`](#overload-valuetaskresulttresult-terror-mapasynct-terror-tresultin-valuetaskresultt-terror-source-funct-valuetasktresult-map-on-asyncresultextensions) | Maps a completed or pending result through an asynchronous callback. |
+| [`ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, ValueTask<TResult>, TFunction> map)`](#overload-valuetaskresulttresult-terror-mapasynct-terror-tresult-tfunctionin-resultt-terror-result-valuefunctiont-valuetasktresult-tfunction-map-on-asyncresultextensions) | Maps a successful value through a generated ValueTask-returning callable. |
+| [`ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, ValueTask<TResult>, TFunction> map)`](#overload-valuetaskresulttresult-terror-mapasynct-terror-tresult-tfunctiontaskresultt-terror-source-valuefunctiont-valuetasktresult-tfunction-map-on-asyncresultextensions) | Maps a Task-backed result through a generated ValueTask-returning callable. |
+| [`ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, ValueTask<TResult>, TFunction> map)`](#overload-valuetaskresulttresult-terror-mapasynct-terror-tresult-tfunctionin-valuetaskresultt-terror-source-valuefunctiont-valuetasktresult-tfunction-map-on-asyncresultextensions) | Maps a completed or pending result through a generated ValueTask-returning callable. |
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, ValueTask<TResult>> map)` on `AsyncResultExtensions`
+
+Maps a successful value through an asynchronous callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** An awaitable result containing the mapped value or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, ValueTask<TResult>> map)` on `AsyncResultExtensions`
+
+Maps a Task-backed result through an asynchronous callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the mapped result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, ValueTask<TResult>> map)` on `AsyncResultExtensions`
+
+Maps a completed or pending result through an asynchronous callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the mapped result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, ValueTask<TResult>, TFunction> map)` on `AsyncResultExtensions`
+
+Maps a successful value through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `map`: Allocation-free callable token invoked only for success.
+
+**Returns:** An awaitable result containing the mapped value or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, ValueTask<TResult>, TFunction> map)` on `AsyncResultExtensions`
+
+Maps a Task-backed result through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `map`: Allocation-free callable token invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the mapped result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, ValueTask<TResult>, TFunction> map)` on `AsyncResultExtensions`
+
+Maps a completed or pending result through a generated ValueTask-returning callable.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `map`: Allocation-free callable token invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the mapped result.
+
+#### Member: `AsyncResultExtensions.MapTaskAsync`
+
+**Example**
+
+```csharp
+Result<UserDto, LoadError> mapped = await result.MapTaskAsync(LoadDtoTaskAsync);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, Task<TResult>> map)`](#overload-valuetaskresulttresult-terror-maptaskasynct-terror-tresultin-resultt-terror-result-funct-tasktresult-map-on-asyncresultextensions) | Maps a successful value through a Task-returning callback. |
+| [`ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, Task<TResult>> map)`](#overload-valuetaskresulttresult-terror-maptaskasynct-terror-tresulttaskresultt-terror-source-funct-tasktresult-map-on-asyncresultextensions) | Maps a Task-backed result through a Task-returning callback. |
+| [`ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, Task<TResult>> map)`](#overload-valuetaskresulttresult-terror-maptaskasynct-terror-tresultin-valuetaskresultt-terror-source-funct-tasktresult-map-on-asyncresultextensions) | Maps a completed or pending result through a Task-returning callback. |
+| [`ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, Task<TResult>, TFunction> map)`](#overload-valuetaskresulttresult-terror-maptaskasynct-terror-tresult-tfunctionin-resultt-terror-result-valuefunctiont-tasktresult-tfunction-map-on-asyncresultextensions) | Maps a successful value through a generated Task-returning callable. |
+| [`ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, Task<TResult>, TFunction> map)`](#overload-valuetaskresulttresult-terror-maptaskasynct-terror-tresult-tfunctiontaskresultt-terror-source-valuefunctiont-tasktresult-tfunction-map-on-asyncresultextensions) | Maps a Task-backed result through a generated Task-returning callable. |
+| [`ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, Task<TResult>, TFunction> map)`](#overload-valuetaskresulttresult-terror-maptaskasynct-terror-tresult-tfunctionin-valuetaskresultt-terror-source-valuefunctiont-tasktresult-tfunction-map-on-asyncresultextensions) | Maps a completed or pending result through a generated Task-returning callable. |
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, Task<TResult>> map)` on `AsyncResultExtensions`
+
+Maps a successful value through a Task-returning callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** An awaitable result containing the mapped value or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult>(Task<Result<T, TError>> source, Func<T, Task<TResult>> map)` on `AsyncResultExtensions`
+
+Maps a Task-backed result through a Task-returning callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the mapped result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult>(in ValueTask<Result<T, TError>> source, Func<T, Task<TResult>> map)` on `AsyncResultExtensions`
+
+Maps a completed or pending result through a Task-returning callback.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Callback invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the mapped result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult, TFunction>(in Result<T, TError> result, ValueFunction<T, Task<TResult>, TFunction> map)` on `AsyncResultExtensions`
+
+Maps a successful value through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `map`: Allocation-free callable token invoked only for success.
+
+**Returns:** An awaitable result containing the mapped value or original failure.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult, TFunction>(Task<Result<T, TError>> source, ValueFunction<T, Task<TResult>, TFunction> map)` on `AsyncResultExtensions`
+
+Maps a Task-backed result through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `map`: Allocation-free callable token invoked only for success.
+
+**Returns:** A ValueTask-backed pipeline containing the mapped result.
+
+##### Overload: `ValueTask<Result<TResult, TError>> MapTaskAsync<T, TError, TResult, TFunction>(in ValueTask<Result<T, TError>> source, ValueFunction<T, Task<TResult>, TFunction> map)` on `AsyncResultExtensions`
+
+Maps a completed or pending result through a generated Task-returning callable.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+- `TFunction`: Generated callable adapter type.
+
+**Parameters**
+
+- `map`: Allocation-free callable token invoked only for success.
+
+**Returns:** A single-consumption awaitable containing the mapped result.
+
+
+## Package MonadicTypes.NET.Collections
+
+**Types:** [`ResultCollectionExtensions`](#type-resultcollectionextensions)
+
+### Type: `ResultCollectionExtensions`
+
+Provides fail-fast traversal for count-known collections.
+
+| Member | Description |
+| --- | --- |
+| [`SequenceToArray`](#member-resultcollectionextensionssequencetoarray) | Converts a span of results to one newly allocated array using fail-fast semantics. |
+| [`TraverseToArray`](#member-resultcollectionextensionstraversetoarray) | Traverses each item once and returns a newly allocated array of successful values. |
+
+#### Member: `ResultCollectionExtensions.SequenceToArray`
+
+**Example**
+
+```csharp
+Result<User[], LoadError> users = results.AsSpan().SequenceToArray();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T[], TError> SequenceToArray<T, TError>(ReadOnlySpan<Result<T, TError>> source)`](#overload-resultt-terror-sequencetoarrayt-terrorreadonlyspanresultt-terror-source-on-resultcollectionextensions) | Converts a span of results to one newly allocated array using fail-fast semantics. |
+
+##### Overload: `Result<T[], TError> SequenceToArray<T, TError>(ReadOnlySpan<Result<T, TError>> source)` on `ResultCollectionExtensions`
+
+Converts a span of results to one newly allocated array using fail-fast semantics.
+
+Empty input reuses `Empty`. Non-empty input allocates one array.
+
+#### Member: `ResultCollectionExtensions.TraverseToArray`
+
+**Example**
+
+```csharp
+Result<User[], LoadError> users = ids.TraverseToArray(LoadUser);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError>(IReadOnlyList<TSource> source, Func<TSource, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terrorireadonlylisttsource-source-functsource-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each item once and returns a newly allocated array of successful values. |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError>(ReadOnlySpan<TSource> source, Func<TSource, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terrorreadonlyspantsource-source-functsource-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each span item once and returns a newly allocated array of successful values. |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(IReadOnlyList<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tstate-tresult-terrorireadonlylisttsource-source-tstate-state-functsource-tstate-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each item once using caller-owned state and returns a new array. |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(IReadOnlyList<TSource> source, TFunction selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionireadonlylisttsource-source-tfunction-selector-on-resultcollectionextensions) | Traverses each item once using an allocation-free callable and returns a new array. |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(ReadOnlySpan<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tstate-tresult-terrorreadonlyspantsource-source-tstate-state-functsource-tstate-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each span item once using caller-owned state and returns a new array. |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(ReadOnlySpan<TSource> source, TFunction selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionreadonlyspantsource-source-tfunction-selector-on-resultcollectionextensions) | Traverses each span item once using an allocation-free callable and returns a new array. |
+
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TResult, TError>(IReadOnlyList<TSource> source, Func<TSource, Result<TResult, TError>> selector)` on `ResultCollectionExtensions`
+
+Traverses each item once and returns a newly allocated array of successful values.
+
+Empty input reuses `Empty`. Non-empty input allocates exactly one output array, including when a later item fails.
+
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TResult, TError>(ReadOnlySpan<TSource> source, Func<TSource, Result<TResult, TError>> selector)` on `ResultCollectionExtensions`
+
+Traverses each span item once and returns a newly allocated array of successful values.
+
+Empty input reuses `Empty`. Non-empty input allocates exactly one output array, including when a later item fails.
+
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(IReadOnlyList<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)` on `ResultCollectionExtensions`
+
+Traverses each item once using caller-owned state and returns a new array.
+
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(IReadOnlyList<TSource> source, TFunction selector)` on `ResultCollectionExtensions`
+
+Traverses each item once using an allocation-free callable and returns a new array.
+
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(ReadOnlySpan<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)` on `ResultCollectionExtensions`
+
+Traverses each span item once using caller-owned state and returns a new array.
+
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(ReadOnlySpan<TSource> source, TFunction selector)` on `ResultCollectionExtensions`
+
+Traverses each span item once using an allocation-free callable and returns a new array.
+
+
+## Package MonadicTypes.NET.Diagnostics
+
+**Types:** [`ErrorActivityStatusPolicy`](#type-erroractivitystatuspolicy) · [`ErrorMetrics`](#type-errormetrics) · [`ErrorTelemetry`](#type-errortelemetry)
+
+### Type: `ErrorActivityStatusPolicy`
+
+Controls whether recording an error changes the current activity status.
+
+**Example**
+
+```csharp
+ErrorActivityStatusPolicy policy = ErrorActivityStatusPolicy.Automatic;
+```
+
+| Member | Description |
+| --- | --- |
+| [`Automatic`](#member-erroractivitystatuspolicyautomatic) | Marks categories that normally represent server failures as errors. |
+| [`MarkError`](#member-erroractivitystatuspolicymarkerror) | Marks every recorded error category as an activity error. |
+| [`Preserve`](#member-erroractivitystatuspolicypreserve) | Records error tags and events without changing the activity status. |
+
+#### Member: `ErrorActivityStatusPolicy.Automatic`
+
+**Example**
+
+```csharp
+ErrorActivityStatusPolicy policy = ErrorActivityStatusPolicy.Automatic;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorActivityStatusPolicy Automatic`](#overload-erroractivitystatuspolicy-automatic-on-erroractivitystatuspolicy) | Marks categories that normally represent server failures as errors. |
+
+##### Overload: `ErrorActivityStatusPolicy Automatic` on `ErrorActivityStatusPolicy`
+
+Marks categories that normally represent server failures as errors.
+
+#### Member: `ErrorActivityStatusPolicy.MarkError`
+
+**Example**
+
+```csharp
+ErrorActivityStatusPolicy policy = ErrorActivityStatusPolicy.MarkError;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorActivityStatusPolicy MarkError`](#overload-erroractivitystatuspolicy-markerror-on-erroractivitystatuspolicy) | Marks every recorded error category as an activity error. |
+
+##### Overload: `ErrorActivityStatusPolicy MarkError` on `ErrorActivityStatusPolicy`
+
+Marks every recorded error category as an activity error.
+
+#### Member: `ErrorActivityStatusPolicy.Preserve`
+
+**Example**
+
+```csharp
+ErrorActivityStatusPolicy policy = ErrorActivityStatusPolicy.Preserve;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorActivityStatusPolicy Preserve`](#overload-erroractivitystatuspolicy-preserve-on-erroractivitystatuspolicy) | Records error tags and events without changing the activity status. |
+
+##### Overload: `ErrorActivityStatusPolicy Preserve` on `ErrorActivityStatusPolicy`
+
+Records error tags and events without changing the activity status.
+
+### Type: `ErrorMetrics`
+
+Vendor-neutral error counter backed by a caller-owned Meter. Export through OpenTelemetry, Prometheus, or any System.Diagnostics.Metrics listener.
+
+| Member | Description |
+| --- | --- |
+| [`ErrorMetrics`](#member-errormetricserrormetrics) | Creates an error counter on a caller-owned meter. |
+| [`Disabled`](#member-errormetricsdisabled) | Gets a recorder that performs no work and creates no instrument. |
+| [`IsEnabled`](#member-errormetricsisenabled) | Gets whether the counter currently has an enabled listener. |
+| [`Record`](#member-errormetricsrecord) | Records one observed error when the counter has an enabled listener. |
+
+#### Member: `ErrorMetrics.ErrorMetrics`
+
+**Example**
+
+```csharp
+ErrorMetrics metrics = new(meter, includeErrorCode: false);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorMetrics(Meter meter, bool includeErrorCode, string instrumentName)`](#overload-errormetricsmeter-meter-bool-includeerrorcode-string-instrumentname-on-errormetrics) | Creates an error counter on a caller-owned meter. |
+
+##### Overload: `ErrorMetrics(Meter meter, bool includeErrorCode, string instrumentName)` on `ErrorMetrics`
+
+Creates an error counter on a caller-owned meter.
+
+**Parameters**
+
+- `meter`: The meter through which consumers export measurements.
+- `includeErrorCode`: Whether to add the potentially high-cardinality error code tag.
+- `instrumentName`: The counter instrument name.
+
+#### Member: `ErrorMetrics.Disabled`
+
+**Example**
+
+```csharp
+ErrorMetrics metrics = ErrorMetrics.Disabled;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorMetrics Disabled`](#overload-errormetrics-disabled-on-errormetrics) | Gets a recorder that performs no work and creates no instrument. |
+
+##### Overload: `ErrorMetrics Disabled` on `ErrorMetrics`
+
+Gets a recorder that performs no work and creates no instrument.
+
+#### Member: `ErrorMetrics.IsEnabled`
+
+**Example**
+
+```csharp
+if (metrics.IsEnabled) metrics.Record(error);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool IsEnabled`](#overload-bool-isenabled-on-errormetrics) | Gets whether the counter currently has an enabled listener. |
+
+##### Overload: `bool IsEnabled` on `ErrorMetrics`
+
+Gets whether the counter currently has an enabled listener.
+
+#### Member: `ErrorMetrics.Record`
+
+**Example**
+
+```csharp
+metrics.Record(error);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`void Record(Error? error)`](#overload-void-recorderror-error-on-errormetrics) | Records one observed error when the counter has an enabled listener. |
+
+##### Overload: `void Record(Error? error)` on `ErrorMetrics`
+
+Records one observed error when the counter has an enabled listener.
+
+**Parameters**
+
+- `error`: The initialized error to categorize and count.
+
+**Throws**
+
+- `ArgumentNullException`: The counter is enabled and `error` is null.
+
+### Type: `ErrorTelemetry`
+
+Explicitly records an observed error. Call this once at an application boundary; constructing or propagating an Error has no telemetry side effects.
+
+| Member | Description |
+| --- | --- |
+| [`Record`](#member-errortelemetryrecord) | Records an error on a sampled activity without creating an activity. |
+
+#### Member: `ErrorTelemetry.Record`
+
+**Example**
+
+```csharp
+ErrorTelemetry.Record(Activity.Current, error);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`void Record(Activity? activity, Error? error, ErrorActivityStatusPolicy statusPolicy)`](#overload-void-recordactivity-activity-error-error-erroractivitystatuspolicy-statuspolicy-on-errortelemetry) | Records an error on a sampled activity without creating an activity. |
+
+##### Overload: `void Record(Activity? activity, Error? error, ErrorActivityStatusPolicy statusPolicy)` on `ErrorTelemetry`
+
+Records an error on a sampled activity without creating an activity.
+
+**Parameters**
+
+- `activity`: The caller-owned activity, or null to perform no work.
+- `error`: The initialized error to record.
+- `statusPolicy`: The policy controlling activity status mutation.
+
+**Throws**
+
+- `ArgumentNullException`: The activity is sampled and `error` is null.
+- `ArgumentOutOfRangeException`: `statusPolicy` or the error category is invalid.
+
+
+## Package MonadicTypes.NET.Effects
+
+**Types:** [`Effect`](#type-effect) · [`ResultEffectExtensions`](#type-resulteffectextensions)
+
+### Type: `Effect`
+
+Executes explicitly fallible effects and converts selected exceptions into result failures.
+
+| Member | Description |
+| --- | --- |
+| [`Try`](#member-effecttry) | Executes a synchronous effect and converts recoverable exceptions to failures. |
+| [`TryAsync`](#member-effecttryasync) | Executes a ValueTask-producing effect and converts recoverable exceptions to failures. |
+| [`TryTaskAsync`](#member-effecttrytaskasync) | Executes a Task-producing effect and converts recoverable exceptions to failures. |
+
+#### Member: `Effect.Try`
+
+**Example**
+
+```csharp
+Result<Config, ReadError> config = Effect.Try(ReadConfig, ReadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TError> Try<T, TError>(Func<T> operation, Func<Exception, TError> mapException)`](#overload-resultt-terror-tryt-terrorfunct-operation-funcexception-terror-mapexception-on-effect) | Executes a synchronous effect and converts recoverable exceptions to failures. |
+| [`Result<T, TError> Try<T, TError, TException>(Func<T> operation, Func<TException, TError> mapException)`](#overload-resultt-terror-tryt-terror-texceptionfunct-operation-functexception-terror-mapexception-on-effect) | Executes a synchronous effect and converts only the selected exception type. |
+
+##### Overload: `Result<T, TError> Try<T, TError>(Func<T> operation, Func<Exception, TError> mapException)` on `Effect`
+
+Executes a synchronous effect and converts recoverable exceptions to failures.
+
+Cancellation and fatal runtime exceptions propagate. Use the typed overload when cancellation or another normally excluded exception must be represented explicitly.
+
+**Type parameters**
+
+- `T`: Effect value type.
+- `TError`: Failure type.
+
+**Parameters**
+
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** The effect value or mapped failure.
+
+##### Overload: `Result<T, TError> Try<T, TError, TException>(Func<T> operation, Func<TException, TError> mapException)` on `Effect`
+
+Executes a synchronous effect and converts only the selected exception type.
+
+**Type parameters**
+
+- `T`: Effect value type.
+- `TError`: Failure type.
+- `TException`: Exception type to convert.
+
+**Parameters**
+
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** The effect value or mapped failure.
+
+#### Member: `Effect.TryAsync`
+
+**Example**
+
+```csharp
+Result<User, LoadError> user = await Effect.TryAsync(LoadUserAsync, LoadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, TError>> TryAsync<T, TError>(Func<ValueTask<T>> operation, Func<Exception, TError> mapException)`](#overload-valuetaskresultt-terror-tryasynct-terrorfuncvaluetaskt-operation-funcexception-terror-mapexception-on-effect) | Executes a ValueTask-producing effect and converts recoverable exceptions to failures. |
+| [`ValueTask<Result<T, TError>> TryAsync<T, TError, TException>(Func<ValueTask<T>> operation, Func<TException, TError> mapException)`](#overload-valuetaskresultt-terror-tryasynct-terror-texceptionfuncvaluetaskt-operation-functexception-terror-mapexception-on-effect) | Executes a ValueTask-producing effect and converts only the selected exception type. |
+
+##### Overload: `ValueTask<Result<T, TError>> TryAsync<T, TError>(Func<ValueTask<T>> operation, Func<Exception, TError> mapException)` on `Effect`
+
+Executes a ValueTask-producing effect and converts recoverable exceptions to failures.
+
+**Type parameters**
+
+- `T`: Effect value type.
+- `TError`: Failure type.
+
+**Parameters**
+
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** An awaitable containing the effect value or mapped failure.
+
+##### Overload: `ValueTask<Result<T, TError>> TryAsync<T, TError, TException>(Func<ValueTask<T>> operation, Func<TException, TError> mapException)` on `Effect`
+
+Executes a ValueTask-producing effect and converts only the selected exception type.
+
+**Type parameters**
+
+- `T`: Effect value type.
+- `TError`: Failure type.
+- `TException`: Exception type to convert.
+
+**Parameters**
+
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** An awaitable containing the effect value or mapped failure.
+
+#### Member: `Effect.TryTaskAsync`
+
+**Example**
+
+```csharp
+Result<User, LoadError> user = await Effect.TryTaskAsync(LoadUserTaskAsync, LoadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, TError>> TryTaskAsync<T, TError>(Func<Task<T>> operation, Func<Exception, TError> mapException)`](#overload-valuetaskresultt-terror-trytaskasynct-terrorfunctaskt-operation-funcexception-terror-mapexception-on-effect) | Executes a Task-producing effect and converts recoverable exceptions to failures. |
+| [`ValueTask<Result<T, TError>> TryTaskAsync<T, TError, TException>(Func<Task<T>> operation, Func<TException, TError> mapException)`](#overload-valuetaskresultt-terror-trytaskasynct-terror-texceptionfunctaskt-operation-functexception-terror-mapexception-on-effect) | Executes a Task-producing effect and converts only the selected exception type. |
+| [`ValueTask<Result<T, TError>> TryTaskAsync<TState, T, TError>(TState state, Func<TState, Task<T>> operation, Func<Exception, TError> mapException)`](#overload-valuetaskresultt-terror-trytaskasynctstate-t-terrortstate-state-functstate-taskt-operation-funcexception-terror-mapexception-on-effect) | Executes a Task effect with caller-owned state and converts recoverable exceptions. |
+| [`ValueTask<Result<T, TError>> TryTaskAsync<TState, T, TError, TException>(TState state, Func<TState, Task<T>> operation, Func<TException, TError> mapException)`](#overload-valuetaskresultt-terror-trytaskasynctstate-t-terror-texceptiontstate-state-functstate-taskt-operation-functexception-terror-mapexception-on-effect) | Executes a Task effect with caller-owned state and converts one exception type. |
+
+##### Overload: `ValueTask<Result<T, TError>> TryTaskAsync<T, TError>(Func<Task<T>> operation, Func<Exception, TError> mapException)` on `Effect`
+
+Executes a Task-producing effect and converts recoverable exceptions to failures.
+
+**Type parameters**
+
+- `T`: Effect value type.
+- `TError`: Failure type.
+
+**Parameters**
+
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** An awaitable containing the effect value or mapped failure.
+
+##### Overload: `ValueTask<Result<T, TError>> TryTaskAsync<T, TError, TException>(Func<Task<T>> operation, Func<TException, TError> mapException)` on `Effect`
+
+Executes a Task-producing effect and converts only the selected exception type.
+
+**Type parameters**
+
+- `T`: Effect value type.
+- `TError`: Failure type.
+- `TException`: Exception type to convert.
+
+**Parameters**
+
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** An awaitable containing the effect value or mapped failure.
+
+##### Overload: `ValueTask<Result<T, TError>> TryTaskAsync<TState, T, TError>(TState state, Func<TState, Task<T>> operation, Func<Exception, TError> mapException)` on `Effect`
+
+Executes a Task effect with caller-owned state and converts recoverable exceptions.
+
+**Type parameters**
+
+- `TState`: Caller state passed to the operation.
+- `T`: Effect value type.
+- `TError`: Failure type.
+
+**Parameters**
+
+- `state`: State passed unchanged to `operation`.
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** An awaitable containing the effect value or mapped failure.
+
+##### Overload: `ValueTask<Result<T, TError>> TryTaskAsync<TState, T, TError, TException>(TState state, Func<TState, Task<T>> operation, Func<TException, TError> mapException)` on `Effect`
+
+Executes a Task effect with caller-owned state and converts one exception type.
+
+**Type parameters**
+
+- `TState`: Caller state passed to the operation.
+- `T`: Effect value type.
+- `TError`: Failure type.
+- `TException`: Exception type to convert.
+
+**Parameters**
+
+- `state`: State passed unchanged to `operation`.
+- `operation`: Effect to execute exactly once.
+- `mapException`: Maps a caught exception to a failure.
+
+**Returns:** An awaitable containing the effect value or mapped failure.
+
+### Type: `ResultEffectExtensions`
+
+Provides explicit exception-catching composition for result pipelines.
+
+| Member | Description |
+| --- | --- |
+| [`TryBind`](#member-resulteffectextensionstrybind) | Binds success while converting recoverable callback exceptions to failures. |
+| [`TryMap`](#member-resulteffectextensionstrymap) | Maps success while converting recoverable callback exceptions to failures. |
+| [`TryMapAsync`](#member-resulteffectextensionstrymapasync) | Maps success asynchronously while converting recoverable exceptions to failures. |
+| [`TryTap`](#member-resulteffectextensionstrytap) | Runs a success side effect while converting recoverable callback exceptions to failures. |
+| [`TryTapAsync`](#member-resulteffectextensionstrytapasync) | Runs an asynchronous success side effect and converts recoverable exceptions to failures. |
+
+#### Member: `ResultEffectExtensions.TryBind`
+
+**Example**
+
+```csharp
+Result<User, LoadError> loaded = id.TryBind(LoadUser, LoadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<TResult, TError> TryBind<T, TError, TResult>(in Result<T, TError> result, Func<T, Result<TResult, TError>> bind, Func<Exception, TError> mapException)`](#overload-resulttresult-terror-trybindt-terror-tresultin-resultt-terror-result-funct-resulttresult-terror-bind-funcexception-terror-mapexception-on-resulteffectextensions) | Binds success while converting recoverable callback exceptions to failures. |
+
+##### Overload: `Result<TResult, TError> TryBind<T, TError, TResult>(in Result<T, TError> result, Func<T, Result<TResult, TError>> bind, Func<Exception, TError> mapException)` on `ResultEffectExtensions`
+
+Binds success while converting recoverable callback exceptions to failures.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+
+**Parameters**
+
+- `bind`: Potentially throwing continuation invoked only for success.
+- `mapException`: Maps a caught exception to the result error type.
+
+**Returns:** The continuation result, original failure, or mapped exception failure.
+
+#### Member: `ResultEffectExtensions.TryMap`
+
+**Example**
+
+```csharp
+Result<Config, ReadError> parsed = text.TryMap(ParseConfig, ReadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<TResult, TError> TryMap<T, TError, TResult>(in Result<T, TError> result, Func<T, TResult> map, Func<Exception, TError> mapException)`](#overload-resulttresult-terror-trymapt-terror-tresultin-resultt-terror-result-funct-tresult-map-funcexception-terror-mapexception-on-resulteffectextensions) | Maps success while converting recoverable callback exceptions to failures. |
+
+##### Overload: `Result<TResult, TError> TryMap<T, TError, TResult>(in Result<T, TError> result, Func<T, TResult> map, Func<Exception, TError> mapException)` on `ResultEffectExtensions`
+
+Maps success while converting recoverable callback exceptions to failures.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Potentially throwing callback invoked only for success.
+- `mapException`: Maps a caught exception to the result error type.
+
+**Returns:** The mapped success, original failure, or mapped exception failure.
+
+#### Member: `ResultEffectExtensions.TryMapAsync`
+
+**Example**
+
+```csharp
+Result<UserDto, LoadError> mapped = await result.TryMapAsync(LoadDtoAsync, LoadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<TResult, TError>> TryMapAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, ValueTask<TResult>> map, Func<Exception, TError> mapException)`](#overload-valuetaskresulttresult-terror-trymapasynct-terror-tresultin-resultt-terror-result-funct-valuetasktresult-map-funcexception-terror-mapexception-on-resulteffectextensions) | Maps success asynchronously while converting recoverable exceptions to failures. |
+
+##### Overload: `ValueTask<Result<TResult, TError>> TryMapAsync<T, TError, TResult>(in Result<T, TError> result, Func<T, ValueTask<TResult>> map, Func<Exception, TError> mapException)` on `ResultEffectExtensions`
+
+Maps success asynchronously while converting recoverable exceptions to failures.
+
+**Type parameters**
+
+- `TResult`: Mapped success type.
+
+**Parameters**
+
+- `map`: Potentially throwing asynchronous callback invoked only for success.
+- `mapException`: Maps a caught exception to the result error type.
+
+**Returns:** An awaitable containing the mapped success, original failure, or exception failure.
+
+#### Member: `ResultEffectExtensions.TryTap`
+
+**Example**
+
+```csharp
+Result<User, LoadError> observed = result.TryTap(Audit, LoadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TError> TryTap<T, TError>(in Result<T, TError> result, Action<T> action, Func<Exception, TError> mapException)`](#overload-resultt-terror-trytapt-terrorin-resultt-terror-result-actiont-action-funcexception-terror-mapexception-on-resulteffectextensions) | Runs a success side effect while converting recoverable callback exceptions to failures. |
+
+##### Overload: `Result<T, TError> TryTap<T, TError>(in Result<T, TError> result, Action<T> action, Func<Exception, TError> mapException)` on `ResultEffectExtensions`
+
+Runs a success side effect while converting recoverable callback exceptions to failures.
+
+**Parameters**
+
+- `action`: Potentially throwing action invoked only for success.
+- `mapException`: Maps a caught exception to the result error type.
+
+**Returns:** The original result or a mapped exception failure.
+
+#### Member: `ResultEffectExtensions.TryTapAsync`
+
+**Example**
+
+```csharp
+Result<User, LoadError> observed = await result.TryTapAsync(AuditAsync, LoadError.FromException);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValueTask<Result<T, TError>> TryTapAsync<T, TError>(in Result<T, TError> result, Func<T, ValueTask> action, Func<Exception, TError> mapException)`](#overload-valuetaskresultt-terror-trytapasynct-terrorin-resultt-terror-result-funct-valuetask-action-funcexception-terror-mapexception-on-resulteffectextensions) | Runs an asynchronous success side effect and converts recoverable exceptions to failures. |
+
+##### Overload: `ValueTask<Result<T, TError>> TryTapAsync<T, TError>(in Result<T, TError> result, Func<T, ValueTask> action, Func<Exception, TError> mapException)` on `ResultEffectExtensions`
+
+Runs an asynchronous success side effect and converts recoverable exceptions to failures.
+
+**Parameters**
+
+- `action`: Potentially throwing action invoked only for success.
+- `mapException`: Maps a caught exception to the result error type.
+
+**Returns:** An awaitable containing the original result or mapped exception failure.
+
+
+## Package MonadicTypes.NET.Errors
+
+**Types:** [`Error`](#type-error) · [`ErrorType`](#type-errortype) · [`IErrorConvertible<TError>`](#type-ierrorconvertibleterror) · [`ResultErrorExtensions`](#type-resulterrorextensions) · [`ValidationErrors`](#type-validationerrors) · [`ValidationIssue`](#type-validationissue) · [`ValidationSeverity`](#type-validationseverity)
+
+### Type: `Error`
+
+A structured error occurrence. `Code` identifies the failure for machines and telemetry; `Message` is diagnostic text and is exposed to clients only when `IsMessagePublic` is true.
+
+**Example**
+
+```csharp
+Error error = Error.NotFound("USER_NOT_FOUND", "The user does not exist.");
+```
+
+| Member | Description |
+| --- | --- |
+| [`Error`](#member-errorerror) | Creates an error in a built-in category. |
+| [`Cancelled`](#member-errorcancelled) | Creates a cancellation error. |
+| [`Cause`](#member-errorcause) | Retained exception for telemetry. Use `ThrowCause` rather than throwing this property directly when exception propagation is required. |
+| [`Code`](#member-errorcode) | Gets the stable machine-readable error code. |
+| [`Conflict`](#member-errorconflict) | Creates a conflict error. |
+| [`Custom`](#member-errorcustom) | Creates a consumer-defined error category with a positive numeric identifier. |
+| [`Equals`](#member-errorequals) | Compares semantic fields and retained-cause identity. |
+| [`Failure`](#member-errorfailure) | Creates a general failure with the default code. |
+| [`Forbidden`](#member-errorforbidden) | Creates an authorization-denied error. |
+| [`GetHashCode`](#member-errorgethashcode) | Hashes the same fields used by `Equals`. |
+| [`IO`](#member-errorio) | Creates a general input/output failure with the standard code. |
+| [`IsMessagePublic`](#member-errorismessagepublic) | Gets whether adapters may safely expose `Message` to clients. |
+| [`Message`](#member-errormessage) | Gets the diagnostic message. |
+| [`NotFound`](#member-errornotfound) | Creates a resource-not-found error. |
+| [`NumericType`](#member-errornumerictype) | Gets the stable numeric category, including custom categories. |
+| [`RateLimited`](#member-errorratelimited) | Creates a rate-limit error. |
+| [`System`](#member-errorsystem) | Creates an unexpected system failure with the standard code. |
+| [`ThrowCause`](#member-errorthrowcause) | Rethrows the retained cause while preserving its original stack trace. |
+| [`Timeout`](#member-errortimeout) | Creates a timeout error. |
+| [`ToString`](#member-errortostring) | Formats the error as `[Code] Message`. |
+| [`TryFormat`](#member-errortryformat) | Attempts to write `[Code] Message` into caller-owned storage. |
+| [`Type`](#member-errortype) | Gets the broad built-in category. |
+| [`Unauthorized`](#member-errorunauthorized) | Creates an authentication-required error. |
+| [`Unavailable`](#member-errorunavailable) | Creates a service-unavailable error. |
+| [`Unexpected`](#member-errorunexpected) | Creates an unexpected failure that retains `cause` for telemetry and rethrow. |
+| [`Validation`](#member-errorvalidation) | Creates a public validation failure with the default code. |
+
+#### Member: `Error.Error`
+
+**Example**
+
+```csharp
+Error error = new(ErrorType.NotFound, "USER_NOT_FOUND", "The user does not exist.", true);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error(ErrorType type, string code, string message, bool isMessagePublic, Exception? cause)`](#overload-errorerrortype-type-string-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates an error in a built-in category. |
+| [`Error(string code, string message)`](#overload-errorstring-code-string-message-on-error) | Creates a general failure with a private diagnostic message. |
+
+##### Overload: `Error(ErrorType type, string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates an error in a built-in category.
+
+##### Overload: `Error(string code, string message)` on `Error`
+
+Creates a general failure with a private diagnostic message.
+
+#### Member: `Error.Cancelled`
+
+**Example**
+
+```csharp
+Error error = Error.Cancelled("OPERATION_CANCELLED", "Operation cancelled.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Cancelled(string code, string message, Exception? cause)`](#overload-error-cancelledstring-code-string-message-exception-cause-on-error) | Creates a cancellation error. |
+
+##### Overload: `Error Cancelled(string code, string message, Exception? cause)` on `Error`
+
+Creates a cancellation error.
+
+#### Member: `Error.Cause`
+
+**Example**
+
+```csharp
+Exception? cause = error.Cause;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Exception? Cause`](#overload-exception-cause-on-error) | Retained exception for telemetry. Use `ThrowCause` rather than throwing this property directly when exception propagation is required. |
+
+##### Overload: `Exception? Cause` on `Error`
+
+Retained exception for telemetry. Use `ThrowCause` rather than throwing this property directly when exception propagation is required.
+
+#### Member: `Error.Code`
+
+**Example**
+
+```csharp
+logger.LogWarning("Failure {Code}", error.Code);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string Code`](#overload-string-code-on-error) | Gets the stable machine-readable error code. |
+
+##### Overload: `string Code` on `Error`
+
+Gets the stable machine-readable error code.
+
+#### Member: `Error.Conflict`
+
+**Example**
+
+```csharp
+Error error = Error.Conflict("VERSION_CONFLICT", "The resource changed.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Conflict(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-conflictstring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a conflict error. |
+
+##### Overload: `Error Conflict(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a conflict error.
+
+#### Member: `Error.Custom`
+
+**Example**
+
+```csharp
+Error error = Error.Custom(10_001, "VENDOR_REJECTED", "The vendor rejected the request.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Custom(int numericType, string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-customint-numerictype-string-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a consumer-defined error category with a positive numeric identifier. |
+
+##### Overload: `Error Custom(int numericType, string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a consumer-defined error category with a positive numeric identifier.
+
+#### Member: `Error.Equals`
+
+**Example**
+
+```csharp
+bool equal = left.Equals(right);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool Equals(Error? other)`](#overload-bool-equalserror-other-on-error) | Compares semantic fields and retained-cause identity. |
+
+##### Overload: `bool Equals(Error? other)` on `Error`
+
+Compares semantic fields and retained-cause identity.
+
+#### Member: `Error.Failure`
+
+**Example**
+
+```csharp
+Error error = Error.Failure("Operation failed.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Failure(string message)`](#overload-error-failurestring-message-on-error) | Creates a general failure with the default code. |
+| [`Error Failure(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-failurestring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a general failure with a caller-defined code and visibility. |
+
+##### Overload: `Error Failure(string message)` on `Error`
+
+Creates a general failure with the default code.
+
+##### Overload: `Error Failure(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a general failure with a caller-defined code and visibility.
+
+#### Member: `Error.Forbidden`
+
+**Example**
+
+```csharp
+Error error = Error.Forbidden("ACCESS_DENIED", "Access is denied.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Forbidden(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-forbiddenstring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates an authorization-denied error. |
+
+##### Overload: `Error Forbidden(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates an authorization-denied error.
+
+#### Member: `Error.GetHashCode`
+
+**Example**
+
+```csharp
+int hash = error.GetHashCode();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`int GetHashCode()`](#overload-int-gethashcode-on-error) | Hashes the same fields used by `Equals`. |
+
+##### Overload: `int GetHashCode()` on `Error`
+
+Hashes the same fields used by `Equals`.
+
+#### Member: `Error.IO`
+
+**Example**
+
+```csharp
+Error error = Error.IO("Unable to read the file.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error IO(string message)`](#overload-error-iostring-message-on-error) | Creates a general input/output failure with the standard code. |
+| [`Error IO(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-iostring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates an input/output failure with a caller-defined code, visibility, and optional retained cause. |
+
+##### Overload: `Error IO(string message)` on `Error`
+
+Creates a general input/output failure with the standard code.
+
+##### Overload: `Error IO(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates an input/output failure with a caller-defined code, visibility, and optional retained cause.
+
+#### Member: `Error.IsMessagePublic`
+
+**Example**
+
+```csharp
+string detail = error.IsMessagePublic ? error.Message : "Request failed.";
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool IsMessagePublic`](#overload-bool-ismessagepublic-on-error) | Gets whether adapters may safely expose `Message` to clients. |
+
+##### Overload: `bool IsMessagePublic` on `Error`
+
+Gets whether adapters may safely expose `Message` to clients.
+
+#### Member: `Error.Message`
+
+**Example**
+
+```csharp
+logger.LogWarning("{Message}", error.Message);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string Message`](#overload-string-message-on-error) | Gets the diagnostic message. |
+
+##### Overload: `string Message` on `Error`
+
+Gets the diagnostic message.
+
+#### Member: `Error.NotFound`
+
+**Example**
+
+```csharp
+Error error = Error.NotFound("USER_NOT_FOUND", "The user does not exist.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error NotFound(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-notfoundstring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a resource-not-found error. |
+
+##### Overload: `Error NotFound(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a resource-not-found error.
+
+#### Member: `Error.NumericType`
+
+**Example**
+
+```csharp
+int category = error.NumericType;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`int NumericType`](#overload-int-numerictype-on-error) | Gets the stable numeric category, including custom categories. |
+
+##### Overload: `int NumericType` on `Error`
+
+Gets the stable numeric category, including custom categories.
+
+#### Member: `Error.RateLimited`
+
+**Example**
+
+```csharp
+Error error = Error.RateLimited("RATE_LIMITED", "Try again later.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error RateLimited(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-ratelimitedstring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a rate-limit error. |
+
+##### Overload: `Error RateLimited(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a rate-limit error.
+
+#### Member: `Error.System`
+
+**Example**
+
+```csharp
+Error error = Error.System("System operation failed.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error System(string message)`](#overload-error-systemstring-message-on-error) | Creates an unexpected system failure with the standard code. |
+| [`Error System(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-systemstring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a system failure with a caller-defined code, visibility, and optional retained cause. |
+
+##### Overload: `Error System(string message)` on `Error`
+
+Creates an unexpected system failure with the standard code.
+
+##### Overload: `Error System(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a system failure with a caller-defined code, visibility, and optional retained cause.
+
+#### Member: `Error.ThrowCause`
+
+**Example**
+
+```csharp
+if (error.Cause is not null) error.ThrowCause();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`void ThrowCause()`](#overload-void-throwcause-on-error) | Rethrows the retained cause while preserving its original stack trace. |
+
+##### Overload: `void ThrowCause()` on `Error`
+
+Rethrows the retained cause while preserving its original stack trace.
+
+**Throws**
+
+- `InvalidOperationException`: No cause is retained.
+
+#### Member: `Error.Timeout`
+
+**Example**
+
+```csharp
+Error error = Error.Timeout("REQUEST_TIMEOUT", "The operation timed out.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Timeout(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-timeoutstring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a timeout error. |
+
+##### Overload: `Error Timeout(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a timeout error.
+
+#### Member: `Error.ToString`
+
+**Example**
+
+```csharp
+string diagnostic = error.ToString();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string ToString()`](#overload-string-tostring-on-error) | Formats the error as `[Code] Message`. |
+| [`string ToString(string? format, IFormatProvider? formatProvider)`](#overload-string-tostringstring-format-iformatprovider-formatprovider-on-error) | Formats the error using the general format. |
+
+##### Overload: `string ToString()` on `Error`
+
+Formats the error as `[Code] Message`.
+
+**Returns:** The diagnostic representation.
+
+##### Overload: `string ToString(string? format, IFormatProvider? formatProvider)` on `Error`
+
+Formats the error using the general format.
+
+**Parameters**
+
+- `format`: Empty, null, or `G`.
+- `formatProvider`: Ignored because error formatting is culture independent.
+
+**Returns:** The diagnostic representation.
+
+**Throws**
+
+- `FormatException`: `format` is not empty and is not `G`.
+
+#### Member: `Error.TryFormat`
+
+**Example**
+
+```csharp
+Span<char> buffer = stackalloc char[128]; bool written = error.TryFormat(buffer, out int count, default, null);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)`](#overload-bool-tryformatspanchar-destination-out-int-charswritten-readonlyspanchar-format-iformatprovider-provider-on-error) | Attempts to write `[Code] Message` into caller-owned storage. |
+
+##### Overload: `bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)` on `Error`
+
+Attempts to write `[Code] Message` into caller-owned storage.
+
+**Parameters**
+
+- `destination`: Destination buffer.
+- `charsWritten`: Number of characters written, or zero when the buffer is too small.
+- `format`: Empty or `G`.
+- `provider`: Ignored because error formatting is culture independent.
+
+**Returns:** True when the complete representation was written.
+
+**Throws**
+
+- `FormatException`: `format` is not empty and is not `G`.
+
+#### Member: `Error.Type`
+
+**Example**
+
+```csharp
+ErrorType category = error.Type;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Type`](#overload-errortype-type-on-error) | Gets the broad built-in category. |
+
+##### Overload: `ErrorType Type` on `Error`
+
+Gets the broad built-in category.
+
+#### Member: `Error.Unauthorized`
+
+**Example**
+
+```csharp
+Error error = Error.Unauthorized("AUTH_REQUIRED", "Authentication is required.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Unauthorized(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-unauthorizedstring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates an authentication-required error. |
+
+##### Overload: `Error Unauthorized(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates an authentication-required error.
+
+#### Member: `Error.Unavailable`
+
+**Example**
+
+```csharp
+Error error = Error.Unavailable("STORE_UNAVAILABLE", "Store unavailable.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Unavailable(string code, string message, bool isMessagePublic, Exception? cause)`](#overload-error-unavailablestring-code-string-message-bool-ismessagepublic-exception-cause-on-error) | Creates a service-unavailable error. |
+
+##### Overload: `Error Unavailable(string code, string message, bool isMessagePublic, Exception? cause)` on `Error`
+
+Creates a service-unavailable error.
+
+#### Member: `Error.Unexpected`
+
+**Example**
+
+```csharp
+Error error = Error.Unexpected("Unexpected failure.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Unexpected(Exception cause, string code)`](#overload-error-unexpectedexception-cause-string-code-on-error) | Creates an unexpected failure that retains `cause` for telemetry and rethrow. |
+| [`Error Unexpected(string message)`](#overload-error-unexpectedstring-message-on-error) | Creates an unexpected failure without a retained exception. |
+
+##### Overload: `Error Unexpected(Exception cause, string code)` on `Error`
+
+Creates an unexpected failure that retains `cause` for telemetry and rethrow.
+
+##### Overload: `Error Unexpected(string message)` on `Error`
+
+Creates an unexpected failure without a retained exception.
+
+#### Member: `Error.Validation`
+
+**Example**
+
+```csharp
+Error error = Error.Validation("Email is invalid.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Error Validation(string message)`](#overload-error-validationstring-message-on-error) | Creates a public validation failure with the default code. |
+| [`Error Validation(string code, string message, Exception? cause)`](#overload-error-validationstring-code-string-message-exception-cause-on-error) | Creates a public validation failure with a caller-defined code. |
+
+##### Overload: `Error Validation(string message)` on `Error`
+
+Creates a public validation failure with the default code.
+
+##### Overload: `Error Validation(string code, string message, Exception? cause)` on `Error`
+
+Creates a public validation failure with a caller-defined code.
+
+### Type: `ErrorType`
+
+Broad operational category used by adapters and telemetry policy.
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Validation;
+```
+
+| Member | Description |
+| --- | --- |
+| [`Cancelled`](#member-errortypecancelled) | An operation was cancelled. |
+| [`Conflict`](#member-errortypeconflict) | A state or concurrency conflict. |
+| [`Custom`](#member-errortypecustom) | A consumer-defined category identified by `NumericType`. |
+| [`Failure`](#member-errortypefailure) | A general expected operational failure. |
+| [`Forbidden`](#member-errortypeforbidden) | The authenticated caller lacks permission. |
+| [`NotFound`](#member-errortypenotfound) | A requested resource does not exist. |
+| [`RateLimited`](#member-errortyperatelimited) | A caller exceeded a rate or quota limit. |
+| [`Timeout`](#member-errortypetimeout) | An operation exceeded its time budget. |
+| [`Unauthorized`](#member-errortypeunauthorized) | Authentication is absent or invalid. |
+| [`Unavailable`](#member-errortypeunavailable) | A dependency or service is temporarily unavailable. |
+| [`Unexpected`](#member-errortypeunexpected) | An unexpected or internal failure. |
+| [`Uninitialized`](#member-errortypeuninitialized) | An invalid default value that no constructed error may use. |
+| [`Validation`](#member-errortypevalidation) | Invalid input or business-rule validation. |
+
+#### Member: `ErrorType.Cancelled`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Cancelled;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Cancelled`](#overload-errortype-cancelled-on-errortype) | An operation was cancelled. |
+
+##### Overload: `ErrorType Cancelled` on `ErrorType`
+
+An operation was cancelled.
+
+#### Member: `ErrorType.Conflict`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Conflict;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Conflict`](#overload-errortype-conflict-on-errortype) | A state or concurrency conflict. |
+
+##### Overload: `ErrorType Conflict` on `ErrorType`
+
+A state or concurrency conflict.
+
+#### Member: `ErrorType.Custom`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Custom;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Custom`](#overload-errortype-custom-on-errortype) | A consumer-defined category identified by `NumericType`. |
+
+##### Overload: `ErrorType Custom` on `ErrorType`
+
+A consumer-defined category identified by `NumericType`.
+
+#### Member: `ErrorType.Failure`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Failure;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Failure`](#overload-errortype-failure-on-errortype) | A general expected operational failure. |
+
+##### Overload: `ErrorType Failure` on `ErrorType`
+
+A general expected operational failure.
+
+#### Member: `ErrorType.Forbidden`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Forbidden;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Forbidden`](#overload-errortype-forbidden-on-errortype) | The authenticated caller lacks permission. |
+
+##### Overload: `ErrorType Forbidden` on `ErrorType`
+
+The authenticated caller lacks permission.
+
+#### Member: `ErrorType.NotFound`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.NotFound;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType NotFound`](#overload-errortype-notfound-on-errortype) | A requested resource does not exist. |
+
+##### Overload: `ErrorType NotFound` on `ErrorType`
+
+A requested resource does not exist.
+
+#### Member: `ErrorType.RateLimited`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.RateLimited;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType RateLimited`](#overload-errortype-ratelimited-on-errortype) | A caller exceeded a rate or quota limit. |
+
+##### Overload: `ErrorType RateLimited` on `ErrorType`
+
+A caller exceeded a rate or quota limit.
+
+#### Member: `ErrorType.Timeout`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Timeout;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Timeout`](#overload-errortype-timeout-on-errortype) | An operation exceeded its time budget. |
+
+##### Overload: `ErrorType Timeout` on `ErrorType`
+
+An operation exceeded its time budget.
+
+#### Member: `ErrorType.Unauthorized`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Unauthorized;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Unauthorized`](#overload-errortype-unauthorized-on-errortype) | Authentication is absent or invalid. |
+
+##### Overload: `ErrorType Unauthorized` on `ErrorType`
+
+Authentication is absent or invalid.
+
+#### Member: `ErrorType.Unavailable`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Unavailable;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Unavailable`](#overload-errortype-unavailable-on-errortype) | A dependency or service is temporarily unavailable. |
+
+##### Overload: `ErrorType Unavailable` on `ErrorType`
+
+A dependency or service is temporarily unavailable.
+
+#### Member: `ErrorType.Unexpected`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Unexpected;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Unexpected`](#overload-errortype-unexpected-on-errortype) | An unexpected or internal failure. |
+
+##### Overload: `ErrorType Unexpected` on `ErrorType`
+
+An unexpected or internal failure.
+
+#### Member: `ErrorType.Uninitialized`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Uninitialized;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Uninitialized`](#overload-errortype-uninitialized-on-errortype) | An invalid default value that no constructed error may use. |
+
+##### Overload: `ErrorType Uninitialized` on `ErrorType`
+
+An invalid default value that no constructed error may use.
+
+#### Member: `ErrorType.Validation`
+
+**Example**
+
+```csharp
+ErrorType category = ErrorType.Validation;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Validation`](#overload-errortype-validation-on-errortype) | Invalid input or business-rule validation. |
+
+##### Overload: `ErrorType Validation` on `ErrorType`
+
+Invalid input or business-rule validation.
+
+### Type: `IErrorConvertible<TError>`
+
+Converts a domain-specific error into a wider error representation.
+
+| Member | Description |
+| --- | --- |
+| [`ToError`](#member-ierrorconvertibleterrortoerror) | Creates the wider error representation. |
+
+#### Member: `IErrorConvertible<TError>.ToError`
+
+**Example**
+
+```csharp
+ApplicationError error = domainError.ToError();
+```
+
+| Overload | Description |
+| --- | --- |
+| [`TError ToError()`](#overload-terror-toerror-on-ierrorconvertibleterror) | Creates the wider error representation. |
+
+##### Overload: `TError ToError()` on `IErrorConvertible<TError>`
+
+Creates the wider error representation.
+
+**Returns:** The converted error.
+
+### Type: `ResultErrorExtensions`
+
+Provides composition helpers for errors with compile-time widening conversions.
+
+| Member | Description |
+| --- | --- |
+| [`BindWidened`](#member-resulterrorextensionsbindwidened) | Composes a successful result and widens the continuation's domain error without boxing or requiring a conversion on the already-wide failure branch. |
+
+#### Member: `ResultErrorExtensions.BindWidened`
+
+**Example**
+
+```csharp
+Result<Receipt, ApplicationError> receipt = order.BindWidened(CreateReceipt);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Result<TResult, TError> BindWidened<T, TError, TResult, TDomainError>(in Result<T, TError> result, Func<T, Result<TResult, TDomainError>> next)`](#overload-resulttresult-terror-bindwidenedt-terror-tresult-tdomainerrorin-resultt-terror-result-funct-resulttresult-tdomainerror-next-on-resulterrorextensions) | Composes a successful result and widens the continuation's domain error without boxing or requiring a conversion on the already-wide failure branch. |
+
+##### Overload: `Result<TResult, TError> BindWidened<T, TError, TResult, TDomainError>(in Result<T, TError> result, Func<T, Result<TResult, TDomainError>> next)` on `ResultErrorExtensions`
+
+Composes a successful result and widens the continuation's domain error without boxing or requiring a conversion on the already-wide failure branch.
+
+**Type parameters**
+
+- `TResult`: Continuation success type.
+- `TDomainError`: Convertible domain error type.
+
+**Parameters**
+
+- `next`: Continuation invoked only for success.
+
+**Returns:** The continuation result widened to `TError`.
+
+### Type: `ValidationErrors`
+
+Owns one or more validation issues. Allocation is confined to the failure path; successful `Result` values do not construct it.
+
+| Member | Description |
+| --- | --- |
+| [`ValidationErrors`](#member-validationerrorsvalidationerrors) | Copies a non-empty array of validation issues. |
+| [`AsSpan`](#member-validationerrorsasspan) | Returns a zero-allocation readonly view over the owned issues. |
+| [`Count`](#member-validationerrorscount) | Gets the number of validation issues. |
+| [`Create`](#member-validationerrorscreate) | Maps a third-party validation list without coupling to its assembly. |
+| [`GetEnumerator`](#member-validationerrorsgetenumerator) | Returns an enumerator over the owned issues. |
+| [`this[]`](#member-validationerrorsthis) | Gets the issue at `index`. |
+
+#### Member: `ValidationErrors.ValidationErrors`
+
+**Example**
+
+```csharp
+ValidationErrors errors = new(issues);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationErrors(ValidationIssue[] issues)`](#overload-validationerrorsvalidationissue-issues-on-validationerrors) | Copies a non-empty array of validation issues. |
+| [`ValidationErrors(IEnumerable<ValidationIssue> issues)`](#overload-validationerrorsienumerablevalidationissue-issues-on-validationerrors) | Copies a non-empty sequence of validation issues. |
+
+##### Overload: `ValidationErrors(ValidationIssue[] issues)` on `ValidationErrors`
+
+Copies a non-empty array of validation issues.
+
+##### Overload: `ValidationErrors(IEnumerable<ValidationIssue> issues)` on `ValidationErrors`
+
+Copies a non-empty sequence of validation issues.
+
+#### Member: `ValidationErrors.AsSpan`
+
+**Example**
+
+```csharp
+foreach (ref readonly ValidationIssue issue in errors.AsSpan()) Consume(issue);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ReadOnlySpan<ValidationIssue> AsSpan()`](#overload-readonlyspanvalidationissue-asspan-on-validationerrors) | Returns a zero-allocation readonly view over the owned issues. |
+
+##### Overload: `ReadOnlySpan<ValidationIssue> AsSpan()` on `ValidationErrors`
+
+Returns a zero-allocation readonly view over the owned issues.
+
+#### Member: `ValidationErrors.Count`
+
+**Example**
+
+```csharp
+int count = errors.Count;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`int Count`](#overload-int-count-on-validationerrors) | Gets the number of validation issues. |
+
+##### Overload: `int Count` on `ValidationErrors`
+
+Gets the number of validation issues.
+
+#### Member: `ValidationErrors.Create`
+
+**Example**
+
+```csharp
+ValidationErrors errors = ValidationErrors.Create(failures, MapFailure);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationErrors Create<TFailure>(IReadOnlyList<TFailure> failures, Func<TFailure, ValidationIssue> map)`](#overload-validationerrors-createtfailureireadonlylisttfailure-failures-functfailure-validationissue-map-on-validationerrors) | Maps a third-party validation list without coupling to its assembly. |
+| [`ValidationErrors Create<TFailure, TMapper>(IReadOnlyList<TFailure> failures, TMapper map)`](#overload-validationerrors-createtfailure-tmapperireadonlylisttfailure-failures-tmapper-map-on-validationerrors) | Maps a third-party validation list through an inlineable value function. |
+| [`ValidationErrors Create<TFailure, TState>(IReadOnlyList<TFailure> failures, TState state, Func<TFailure, TState, ValidationIssue> map)`](#overload-validationerrors-createtfailure-tstateireadonlylisttfailure-failures-tstate-state-functfailure-tstate-validationissue-map-on-validationerrors) | Maps a third-party validation list with caller-owned state. |
+
+##### Overload: `ValidationErrors Create<TFailure>(IReadOnlyList<TFailure> failures, Func<TFailure, ValidationIssue> map)` on `ValidationErrors`
+
+Maps a third-party validation list without coupling to its assembly.
+
+##### Overload: `ValidationErrors Create<TFailure, TMapper>(IReadOnlyList<TFailure> failures, TMapper map)` on `ValidationErrors`
+
+Maps a third-party validation list through an inlineable value function.
+
+##### Overload: `ValidationErrors Create<TFailure, TState>(IReadOnlyList<TFailure> failures, TState state, Func<TFailure, TState, ValidationIssue> map)` on `ValidationErrors`
+
+Maps a third-party validation list with caller-owned state.
+
+#### Member: `ValidationErrors.GetEnumerator`
+
+**Example**
+
+```csharp
+foreach (ValidationIssue issue in errors) Consume(issue);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`IEnumerator<ValidationIssue> GetEnumerator()`](#overload-ienumeratorvalidationissue-getenumerator-on-validationerrors) | Returns an enumerator over the owned issues. |
+
+##### Overload: `IEnumerator<ValidationIssue> GetEnumerator()` on `ValidationErrors`
+
+Returns an enumerator over the owned issues.
+
+#### Member: `ValidationErrors.this[]`
+
+**Example**
+
+```csharp
+ValidationIssue first = errors[0];
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationIssue this[int]`](#overload-validationissue-thisint-on-validationerrors) | Gets the issue at `index`. |
+
+##### Overload: `ValidationIssue this[int]` on `ValidationErrors`
+
+Gets the issue at `index`.
+
+### Type: `ValidationIssue`
+
+A public-safe validation failure associated with an input path.
+
+| Member | Description |
+| --- | --- |
+| [`ValidationIssue`](#member-validationissuevalidationissue) | Creates a validation issue with stable machine and human-readable fields. |
+| [`Code`](#member-validationissuecode) | Gets the stable machine-readable issue code. |
+| [`Message`](#member-validationissuemessage) | Gets the human-readable validation message. |
+| [`Path`](#member-validationissuepath) | Gets the input path or member associated with the issue. |
+| [`Severity`](#member-validationissueseverity) | Gets the issue severity. |
+
+#### Member: `ValidationIssue.ValidationIssue`
+
+**Example**
+
+```csharp
+ValidationIssue issue = new("email", "EMAIL_INVALID", "Email is invalid.");
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationIssue(string path, string code, string message, ValidationSeverity severity)`](#overload-validationissuestring-path-string-code-string-message-validationseverity-severity-on-validationissue) | Creates a validation issue with stable machine and human-readable fields. |
+
+##### Overload: `ValidationIssue(string path, string code, string message, ValidationSeverity severity)` on `ValidationIssue`
+
+Creates a validation issue with stable machine and human-readable fields.
+
+#### Member: `ValidationIssue.Code`
+
+**Example**
+
+```csharp
+string code = issue.Code;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string Code`](#overload-string-code-on-validationissue) | Gets the stable machine-readable issue code. |
+
+##### Overload: `string Code` on `ValidationIssue`
+
+Gets the stable machine-readable issue code.
+
+#### Member: `ValidationIssue.Message`
+
+**Example**
+
+```csharp
+string message = issue.Message;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string Message`](#overload-string-message-on-validationissue) | Gets the human-readable validation message. |
+
+##### Overload: `string Message` on `ValidationIssue`
+
+Gets the human-readable validation message.
+
+#### Member: `ValidationIssue.Path`
+
+**Example**
+
+```csharp
+string path = issue.Path;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`string Path`](#overload-string-path-on-validationissue) | Gets the input path or member associated with the issue. |
+
+##### Overload: `string Path` on `ValidationIssue`
+
+Gets the input path or member associated with the issue.
+
+#### Member: `ValidationIssue.Severity`
+
+**Example**
+
+```csharp
+ValidationSeverity severity = issue.Severity;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationSeverity Severity`](#overload-validationseverity-severity-on-validationissue) | Gets the issue severity. |
+
+##### Overload: `ValidationSeverity Severity` on `ValidationIssue`
+
+Gets the issue severity.
+
+### Type: `ValidationSeverity`
+
+Describes the diagnostic severity of a validation issue.
+
+| Member | Description |
+| --- | --- |
+| [`Error`](#member-validationseverityerror) | The input is invalid and processing cannot continue. |
+| [`Information`](#member-validationseverityinformation) | Informational validation feedback. |
+| [`Warning`](#member-validationseveritywarning) | The input is accepted but potentially problematic. |
+
+#### Member: `ValidationSeverity.Error`
+
+**Example**
+
+```csharp
+ValidationSeverity severity = ValidationSeverity.Error;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationSeverity Error`](#overload-validationseverity-error-on-validationseverity) | The input is invalid and processing cannot continue. |
+
+##### Overload: `ValidationSeverity Error` on `ValidationSeverity`
+
+The input is invalid and processing cannot continue.
+
+#### Member: `ValidationSeverity.Information`
+
+**Example**
+
+```csharp
+ValidationSeverity severity = ValidationSeverity.Information;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationSeverity Information`](#overload-validationseverity-information-on-validationseverity) | Informational validation feedback. |
+
+##### Overload: `ValidationSeverity Information` on `ValidationSeverity`
+
+Informational validation feedback.
+
+#### Member: `ValidationSeverity.Warning`
+
+**Example**
+
+```csharp
+ValidationSeverity severity = ValidationSeverity.Warning;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ValidationSeverity Warning`](#overload-validationseverity-warning-on-validationseverity) | The input is accepted but potentially problematic. |
+
+##### Overload: `ValidationSeverity Warning` on `ValidationSeverity`
+
+The input is accepted but potentially problematic.
+
+
+## Package MonadicTypes.NET.Generators
+
+**Types:** [`ValueFunctionGenerator`](#type-valuefunctiongenerator)
+
+### Type: `ValueFunctionGenerator`
+
+Generates allocation-free value-function adapters for attributed static methods.
+
+**Example**
+
+```csharp
+[GenerateValueFunction]
+public static int GetId(User value) => value.Id;
+```
+
+| Member | Description |
+| --- | --- |
+| [`ValueFunctionGenerator`](#member-valuefunctiongeneratorvaluefunctiongenerator) | Creates the generator instance used by the Roslyn compiler host. |
+| [`Initialize`](#member-valuefunctiongeneratorinitialize) | Registers attribute emission, method discovery, validation, and adapter generation. |
+
+#### Member: `ValueFunctionGenerator.ValueFunctionGenerator`
+
+| Overload | Description |
+| --- | --- |
+| [`ValueFunctionGenerator()`](#overload-valuefunctiongenerator-on-valuefunctiongenerator) | Creates the generator instance used by the Roslyn compiler host. |
+
+##### Overload: `ValueFunctionGenerator()` on `ValueFunctionGenerator`
+
+Creates the generator instance used by the Roslyn compiler host.
+
+Application code does not construct the generator; the compiler host discovers it through `GeneratorAttribute`.
+
+#### Member: `ValueFunctionGenerator.Initialize`
+
+| Overload | Description |
+| --- | --- |
+| [`void Initialize(IncrementalGeneratorInitializationContext context)`](#overload-void-initializeincrementalgeneratorinitializationcontext-context-on-valuefunctiongenerator) | Registers attribute emission, method discovery, validation, and adapter generation. |
+
+##### Overload: `void Initialize(IncrementalGeneratorInitializationContext context)` on `ValueFunctionGenerator`
+
+Registers attribute emission, method discovery, validation, and adapter generation.
+
+The Roslyn compiler host invokes this method. Application code uses the emitted attribute and callable members instead.
+
+**Parameters**
+
+- `context`: The incremental generator initialization context.
+
+
+## Package MonadicTypes.NET.Linq
+
+**Types:** [`QueryExtensions`](#type-queryextensions)
+
+### Type: `QueryExtensions`
+
+Provides opt-in C# query-expression operators for results and options.
+
+| Member | Description |
+| --- | --- |
+| [`Select`](#member-queryextensionsselect) | Projects a present option; this is query syntax's map operation. |
+| [`SelectMany`](#member-queryextensionsselectmany) | Binds and projects present options for multi-from query expressions. |
+| [`Where`](#member-queryextensionswhere) | Keeps a present option only when its predicate succeeds. |
+
+#### Member: `QueryExtensions.Select`
+
+**Example**
+
+```csharp
+Result<int, LoadError> id = from user in result select user.Id;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<TResult> Select<T, TResult>(in Option<T> source, Func<T, TResult> selector)`](#overload-optiontresult-selectt-tresultin-optiont-source-funct-tresult-selector-on-queryextensions) | Projects a present option; this is query syntax's map operation. |
+| [`Result<TResult, TError> Select<T, TError, TResult>(in Result<T, TError> source, Func<T, TResult> selector)`](#overload-resulttresult-terror-selectt-terror-tresultin-resultt-terror-source-funct-tresult-selector-on-queryextensions) | Projects a successful result; this is query syntax's map operation. |
+
+##### Overload: `Option<TResult> Select<T, TResult>(in Option<T> source, Func<T, TResult> selector)` on `QueryExtensions`
+
+Projects a present option; this is query syntax's map operation.
+
+##### Overload: `Result<TResult, TError> Select<T, TError, TResult>(in Result<T, TError> source, Func<T, TResult> selector)` on `QueryExtensions`
+
+Projects a successful result; this is query syntax's map operation.
+
+#### Member: `QueryExtensions.SelectMany`
+
+**Example**
+
+```csharp
+Result<Invoice, LoadError> invoice = from user in userResult from account in LoadAccount(user) select new Invoice(user, account);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<TResult> SelectMany<T, TIntermediate, TResult>(in Option<T> source, Func<T, Option<TIntermediate>> bind, Func<T, TIntermediate, TResult> project)`](#overload-optiontresult-selectmanyt-tintermediate-tresultin-optiont-source-funct-optiontintermediate-bind-funct-tintermediate-tresult-project-on-queryextensions) | Binds and projects present options for multi-from query expressions. |
+| [`Result<TResult, TError> SelectMany<T, TError, TIntermediate, TResult>(in Result<T, TError> source, Func<T, Result<TIntermediate, TError>> bind, Func<T, TIntermediate, TResult> project)`](#overload-resulttresult-terror-selectmanyt-terror-tintermediate-tresultin-resultt-terror-source-funct-resulttintermediate-terror-bind-funct-tintermediate-tresult-project-on-queryextensions) | Binds and projects successful results for multi-from query expressions. |
+
+##### Overload: `Option<TResult> SelectMany<T, TIntermediate, TResult>(in Option<T> source, Func<T, Option<TIntermediate>> bind, Func<T, TIntermediate, TResult> project)` on `QueryExtensions`
+
+Binds and projects present options for multi-from query expressions.
+
+##### Overload: `Result<TResult, TError> SelectMany<T, TError, TIntermediate, TResult>(in Result<T, TError> source, Func<T, Result<TIntermediate, TError>> bind, Func<T, TIntermediate, TResult> project)` on `QueryExtensions`
+
+Binds and projects successful results for multi-from query expressions.
+
+#### Member: `QueryExtensions.Where`
+
+**Example**
+
+```csharp
+Option<User> active = from user in option where user.IsActive select user;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<T> Where<T>(in Option<T> source, Func<T, bool> predicate)`](#overload-optiont-wheretin-optiont-source-funct-bool-predicate-on-queryextensions) | Keeps a present option only when its predicate succeeds. |
+
+##### Overload: `Option<T> Where<T>(in Option<T> source, Func<T, bool> predicate)` on `QueryExtensions`
+
+Keeps a present option only when its predicate succeeds.

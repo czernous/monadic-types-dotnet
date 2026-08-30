@@ -10,6 +10,7 @@ public static class OpenApiOptionsExtensions
         /// <summary>
         /// Adds the explicit endpoint error-catalog transformer without reflection or DI activation.
         /// </summary>
+        /// <example><code>builder.Services.AddOpenApi(options =&gt; options.AddErrorCatalogs());</code></example>
         /// <returns>The same options instance for continued configuration.</returns>
         public OpenApiOptions AddErrorCatalogs()
         {

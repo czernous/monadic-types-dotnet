@@ -27,10 +27,11 @@ jobs:
       has-projects: ${{ steps.affected.outputs.has-projects }}
       aot: ${{ steps.affected.outputs.aot }}
       packages: ${{ steps.affected.outputs.packages }}
+      documentation: ${{ steps.affected.outputs.documentation }}
       tooling: ${{ steps.affected.outputs.tooling }}
       tooling-projects: ${{ steps.affected.outputs.tooling-projects }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: affected
@@ -70,7 +71,7 @@ jobs:
             rid: win-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -91,7 +92,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -128,7 +129,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -183,7 +184,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -215,7 +216,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -227,9 +228,11 @@ jobs:
         run: dotnet restore MonadicTypes.slnx --locked-mode
       - name: Build and verify packages
         run: eng/tools/linux-x64/mt-pack 0.1.0-ci.${{ github.run_number }}
+      - name: Verify generated documentation
+        run: dotnet run --project eng/MonadicTypes.Docs.Tool/MonadicTypes.Docs.Tool.csproj -c Release --no-restore -- verify .
       - name: Consume packages under NativeAOT
         run: eng/tools/linux-x64/mt-test-packages 0.1.0-ci.${{ github.run_number }} linux-x64
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: packages-${{ github.sha }}
           path: |
@@ -237,12 +240,40 @@ jobs:
             artifacts/packages/*.snupkg
           if-no-files-found: error
 
+  documentation:
+    name: Verify generated documentation
+    needs: [changes, pull-request]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.documentation == 'true' && needs.changes.outputs.packages != 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.3xx
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Restore locked dependencies
+        run: dotnet restore MonadicTypes.slnx --locked-mode
+      - name: Build documentation inputs
+        run: |
+          mkdir -p artifacts/ci
+          dotnet new sln --name Documentation --format slnx --output artifacts/ci
+          mapfile -t projects < <(find src -name '*.csproj' -type f | sort)
+          projects+=(eng/MonadicTypes.Docs.Tool/MonadicTypes.Docs.Tool.csproj)
+          dotnet sln artifacts/ci/Documentation.slnx add "${projects[@]}"
+          dotnet build artifacts/ci/Documentation.slnx -c Release --no-restore
+      - name: Verify generated output and links
+        run: dotnet run --project eng/MonadicTypes.Docs.Tool/MonadicTypes.Docs.Tool.csproj -c Release --no-build --no-restore -- verify .
+
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/dependency-review-action@v5
         with:
           config-file: ./.github/dependency-review-config.yml

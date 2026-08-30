@@ -52,6 +52,14 @@ boundary; theoretical completeness alone is insufficient.
   allocation-free diagnostic formatting contracts.
 - Type-changing Result Map revalidated against an unchanged same-run control;
   the established implementation remains allocation-free and was retained.
+- Active-state Result and Option equality/hashing, including compatibility with
+  generated value objects whose default value is not reflexively equal.
+- Caller-state independent Result composition through arity six and Option
+  folding through caller-state or struct-callable dispatch.
+- Span traversal with delegate, caller-state, and struct-callable dispatch,
+  retaining one-array ownership and improving the measured NativeAOT path.
+- Direct packed OpenAPI catalog locations, removing collision-validation
+  re-enumeration without adding request-path allocation.
 
 ## Decision Matrix
 
@@ -71,6 +79,7 @@ boundary; theoretical completeness alone is insufficient.
 | More Task/ValueTask side-effect overloads | Medium | Large overload matrix and NativeAOT code-size cost | Deferred until profiling identifies a specific capture or composition gap |
 | Accumulating validation | Medium-high | New error-combination semantics and ownership allocations | Deferred until a concrete accumulating workflow defines the contract |
 | Option Tap/Zip and higher arities | Low | Convenience growth without a demonstrated missing workflow | Rejected for the initial completion boundary |
+| Generated API and package README inventories | High | Build tooling and deterministic-output maintenance | Accepted as repository tooling; no runtime package dependency |
 
 Value is not sufficient by itself. An accepted API must also have stable
 semantics, remain reflection-free, avoid request/hot-path allocation, justify

@@ -188,7 +188,7 @@ are diagnostic only because NativeAOT code layout differs.
 | BindErrorFailure | 5.5825 ns | 0 B |
 | BindErrorSuccess | 5.0950 ns | 0 B |
 | CompletedTaskBindError | 4.5926 ns | 0 B |
-| CombineTwo | 1.7180 ns | 0 B |
+| CombineTwo | 1.6077 ns | 0 B |
 | ZipTwo | 4.0470 ns | 0 B |
 | TransposePresent | 2.7478 ns | 0 B |
 | CompletedValueTaskMap | 12.1341 ns | 0 B |
@@ -200,6 +200,17 @@ are diagnostic only because NativeAOT code layout differs.
 | TypedCompletedValueTaskEffectSuccess | 17.3944 ns | 0 B |
 | TypedCompletedTaskEffectSuccess | 15.9606 ns | 0 B |
 | TypedCallerStateCompletedTaskEffectSuccess | 13.1561 ns | 0 B |
+
+On 2026-08-29, .NET 10.0.11 measured the unchanged committed `CombineTwo`
+implementation at 4.0494 ns in the full 16-method layout. Returning the
+already-validated second result and ordering the state checks around the
+dominant success case reduced the same full-layout measurement to 1.6077 ns at
+0 B. This beats the previous 1.7180 ns accepted mean by 6.4% while preserving
+first-failure and uninitialized-input behavior. A focused diagnostic measured
+1.607 ns at 0 B. The other composition rows remained allocation-free and met
+their architectural targets; unchanged sub-nanosecond-sensitive rows continue
+to be interpreted with same-run controls rather than source-unrelated absolute
+movement.
 
 The additive suite is isolated in its own executable. Re-isolating the
 primitive harness measured `Option.Map` at 2.6744 ns versus 2.7031 ns,
@@ -294,6 +305,38 @@ value access while retaining initialization and failure checks. Fluent LINQ is
 the default recommendation; query syntax remains allocation-free but measured
 12% slower for Select and 10% slower for SelectMany in this run.
 
+### 2026-08-28 Extension Recheck
+
+The 19-method NativeAOT recheck added span traversal, caller-state six-result
+composition, state-aware equality and hashing, and a stateful callable action.
+All setup remained in `GlobalSetup`. Span traversal owns exactly one output
+array, matching the manual and list-based controls; every scalar and composition
+operation allocated `0 B`.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| ManualTraverse | 46.993 ns | 88 B |
+| DelegateTraverse | 46.606 ns | 88 B |
+| StateTraverse | 51.393 ns | 88 B |
+| CallableTraverse | 37.642 ns | 88 B |
+| SpanDelegateTraverse | 25.159 ns | 88 B |
+| SpanStateTraverse | 26.082 ns | 88 B |
+| SpanCallableTraverse | 19.918 ns | 88 B |
+| DirectMapSix | 8.325 ns | 0 B |
+| CombinationMapSix | 10.132 ns | 0 B |
+| CombinationStateMapSix | 11.266 ns | 0 B |
+| OptionNoneEquality | 0.292 ns | 0 B |
+| ResultFailureEquality | 0.781 ns | 0 B |
+| OptionNoneHashCode | 0.259 ns | 0 B |
+| StatefulValueAction | 0.739 ns | 0 B |
+
+The unchanged six-result controls repeated within 0.3% of their 2026-08-16
+means. Span plus struct-callable traversal reduced wrapper time by 47.1% against
+the same-run list-callable path and by 57.6% against the manual array-producing
+loop. Sub-nanosecond equality, hashing, and action values primarily establish
+the zero-allocation/code-generation gate; their ratios are below reliable timer
+resolution and are not generalized as throughput claims.
+
 ## Positional Patterns
 
 Recorded on 2026-08-16 in a separate NativeAOT executable. Inputs and Match
@@ -354,6 +397,66 @@ The two-entry array accounts for 72 B. `ErrorCatalogMetadata` adds one 24 B
 owner object while validating initialization and duplicate codes. This is a
 cold endpoint-registration cost; request execution does not construct or read
 the catalog.
+
+### OpenAPI Catalog Validation
+
+Recorded on 2026-08-28 in the same NativeAOT executable. Setup, catalog
+construction, and metadata collection are outside measured operations. Every
+validation path measured 0 B managed allocation.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| LegacySmallCatalog | 171.022 ns | 0 B |
+| CurrentSmallCatalog | 172.694 ns | 0 B |
+| LegacyMediumCatalog | 4,788.1 ns | 0 B |
+| CurrentMediumCatalog | 928.4 ns | 0 B |
+| LegacyLargeCatalog | 48,962.7 ns | 0 B |
+| CurrentLargeCatalog | 3,082.4 ns | 0 B |
+| LegacyCollidingCatalog | 4,779.2 ns | 0 B |
+| CurrentCollidingCatalog | 5,231.4 ns | 0 B |
+| LegacySmallMetadata | 376.6 ns | 0 B |
+| CurrentSmallMetadata | 287.2 ns | 0 B |
+| LegacyLargeMetadata | 21,833.3 ns | 0 B |
+| CurrentLargeMetadata | 4,961.9 ns | 0 B |
+| LegacyCollidingMetadata | 197,684.3 ns | 0 B |
+| CurrentCollidingMetadata | 11,285.3 ns | 0 B |
+
+The current validator uses linear comparison for up to eight entries and a
+bounded open-addressed stack table for larger catalogs. A probe-length guard
+falls back to linear validation for adversarial hash distributions. This makes
+ordinary medium and large catalogs substantially faster while keeping the
+small-catalog path close to the established implementation. The collision
+case is intentionally measured because validation is a startup operation and
+must not trade correctness for an unbounded hash-table path.
+
+A focused rerun on 2026-08-29 confirmed the same allocation result. The
+following values supersede the preceding diagnostic means only for comparing
+future runs made with this benchmark layout; they do not replace the stable
+primitive baselines above.
+
+| Method | Mean | Allocated |
+|---|---:|---:|
+| LegacySmallCatalog | 171.977 ns | 0 B |
+| CurrentSmallCatalog | 173.211 ns | 0 B |
+| LegacyMediumCatalog | 4,804.6 ns | 0 B |
+| CurrentMediumCatalog | 953.4 ns | 0 B |
+| LegacyLargeCatalog | 49,283.5 ns | 0 B |
+| CurrentLargeCatalog | 3,127.9 ns | 0 B |
+| LegacyCollidingCatalog | 4,790.4 ns | 0 B |
+| CurrentCollidingCatalog | 5,242.8 ns | 0 B |
+| LegacySmallMetadata | 256.1 ns | 0 B |
+| CurrentSmallMetadata | 293.2 ns | 0 B |
+| LegacyLargeMetadata | 22,409.0 ns | 0 B |
+| CurrentLargeMetadata | 4,790.3 ns | 0 B |
+| LegacyCollidingMetadata | 198,405.0 ns | 1 B |
+| CurrentCollidingMetadata | 11,359.6 ns | 0 B |
+
+The 1 B legacy collision reading is a benchmark diagnostic artifact from the
+legacy control and is not present in the current implementation. The current
+small-metadata path is slower than its same-run control by 37.1 ns, but this is
+endpoint-document generation work, not request processing. It remains a
+tracked optimization candidate rather than a reason to complicate the public
+API or sacrifice the substantial large-catalog improvement.
 
 ## Final Type-Changing Map Disposition
 

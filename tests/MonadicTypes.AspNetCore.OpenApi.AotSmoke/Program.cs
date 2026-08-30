@@ -1,7 +1,7 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
 using MonadicTypes;
 using MonadicTypes.AspNetCore;
 using MonadicTypes.AspNetCore.OpenApi;

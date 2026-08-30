@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/eng/">
     <Project Path="eng/MonadicTypes.AffectedProjects.Tool/MonadicTypes.AffectedProjects.Tool.csproj" />
+    <Project Path="eng/MonadicTypes.Docs.Tool/MonadicTypes.Docs.Tool.csproj" />
     <Project Path="eng/MonadicTypes.Pack.Tool/MonadicTypes.Pack.Tool.csproj" />
     <Project Path="eng/MonadicTypes.TestPackages.Tool/MonadicTypes.TestPackages.Tool.csproj" />
     <Project Path="eng/MonadicTypes.VerifyLockfiles.Tool/MonadicTypes.VerifyLockfiles.Tool.csproj" />

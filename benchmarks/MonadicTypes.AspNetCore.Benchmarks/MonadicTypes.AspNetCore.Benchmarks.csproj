@@ -9,5 +9,6 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
     <ProjectReference Include="..\..\src\MonadicTypes.AspNetCore\MonadicTypes.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\src\MonadicTypes.AspNetCore.OpenApi\MonadicTypes.AspNetCore.OpenApi.csproj" />
   </ItemGroup>
 </Project>

@@ -3,9 +3,10 @@ using System.Runtime.CompilerServices;
 namespace MonadicTypes;
 
 /// <summary>Combines independent results using fail-fast semantics.</summary>
-public static class ResultCombination
+public static partial class ResultCombination
 {
     /// <summary>Combines two unit results and returns the first failure in argument order.</summary>
+    /// <example><code>Result&lt;Unit, ValidationError&gt; valid = ResultCombination.Combine(nameCheck, emailCheck);</code></example>
     /// <typeparam name="TError">Failure type.</typeparam>
     /// <param name="first">First result.</param>
     /// <param name="second">Second result.</param>
@@ -15,17 +16,13 @@ public static class ResultCombination
         in Result<Unit, TError> first,
         in Result<Unit, TError> second)
         where TError : notnull
-    {
-        if (first.IsFailure)
+        => first.IsSuccess switch
         {
-            return first;
-        }
-
-        _ = first.Value;
-        return second.IsFailure
-            ? Result<Unit, TError>.Fail(second.Error)
-            : Result<Unit, TError>.Ok(second.Value);
-    }
+            true when second.IsInitialized => second,
+            true => Result<Unit, TError>.Ok(second.Value),
+            false when first.IsFailure => first,
+            _ => Result<Unit, TError>.Ok(first.Value)
+        };
 
     /// <summary>Combines a span of unit results and returns the first failure in span order.</summary>
     /// <typeparam name="TError">Failure type.</typeparam>
@@ -48,6 +45,7 @@ public static class ResultCombination
     }
 
     /// <summary>Combines two success values into a value tuple and returns the first failure.</summary>
+    /// <example><code>Result&lt;(User First, Account Second), LoadError&gt; loaded = ResultCombination.Zip(userResult, accountResult);</code></example>
     /// <typeparam name="TFirst">First success type.</typeparam>
     /// <typeparam name="TSecond">Second success type.</typeparam>
     /// <typeparam name="TError">Shared failure type.</typeparam>
@@ -75,6 +73,7 @@ public static class ResultCombination
     }
 
     /// <summary>Projects two success values directly and returns the first failure.</summary>
+    /// <example><code>Result&lt;Invoice, LoadError&gt; invoice = ResultCombination.Map(userResult, accountResult, static (user, account) =&gt; new Invoice(user, account));</code></example>
     /// <typeparam name="TFirst">First success type.</typeparam>
     /// <typeparam name="TSecond">Second success type.</typeparam>
     /// <typeparam name="TResult">Projected success type.</typeparam>
@@ -105,6 +104,7 @@ public static class ResultCombination
     }
 
     /// <summary>Binds two independent success values and returns the first failure.</summary>
+    /// <example><code>Result&lt;Invoice, LoadError&gt; invoice = ResultCombination.Bind(userResult, accountResult, Invoice.Create);</code></example>
     /// <typeparam name="TFirst">First success type.</typeparam>
     /// <typeparam name="TSecond">Second success type.</typeparam>
     /// <typeparam name="TResult">Bound success type.</typeparam>

@@ -7,7 +7,9 @@ artifacts/
 *.user
 *.DotSettings.user
 /monadictypes-api-gaps*.md
+/docs/superpowers/
 /eng/packages.lock.json
 tests/MonadicTypes.AotSmoke/packages.lock.json
 tests/MonadicTypes.PackageSmoke/packages.lock.json
+tests/*AotSmoke/Properties/launchSettings.json
 benchmarks/*/packages.lock.json

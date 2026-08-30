@@ -43,11 +43,13 @@ int length = name.Map(static value => value.Length).ValueOr(0);
 
 - `Result<T,E>` is exactly `Ok(T)` or `Fail(E)`; its default value is invalid.
 - `Option<T>` is `Some(T)` or `None`; `default(Option<T>)` is `None`.
+- Equality and hashing inspect only the active Result or Option payload.
 - `Some(null)` is rejected.
 - `Map` transforms success, `Bind` composes dependent results, and `MapError`
   transforms failure.
 - `Result<Option<T>,E>` represents a fallible lookup where absence is expected.
-- `Combine`, `Zip`, and two-through-six-input `Map`/`Bind` compose independent results.
+- `Combine`, `Zip`, and two-through-six-input `Map`/`Bind` compose independent
+  results; caller-state forms avoid captured projection delegates.
 - `Option.Traverse` exchanges optional input with a fallible stage.
 - Explicit nullable bridges and deconstruction support application boundaries and patterns.
 
@@ -71,8 +73,16 @@ vectorized inner loops where a simpler branch or `Try*` contract is cheaper.
 
 ## Documentation
 
-See the [complete API guide](https://github.com/czernous/monadic-types-dotnet#readme),
+See the [complete API guide](https://github.com/czernous/monadic-types-dotnet),
 [API behavior reference](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/api-reference.md),
 and [benchmark policy](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/benchmarks.md).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnet)
+
+Documented public members: 141
+
+<!-- END GENERATED API INDEX -->

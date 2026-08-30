@@ -57,7 +57,9 @@ app.MapGet("/customers/{id:int}", GetCustomer)
 `ErrorCatalogEntry` rejects an uninitialized or undefined category and blank public fields.
 `ErrorCatalogMetadata` requires at least one entry, copies the input, rejects
 duplicate codes ordinally, and exposes the owned data through a zero-allocation
-readonly span. OpenAPI transformation rejects duplicate codes across all
+readonly span. Larger catalogs use a bounded validation table while small and
+collision-heavy catalogs use a bounded linear fallback. OpenAPI transformation
+rejects duplicate codes across all
 metadata attached to one endpoint, even when statuses differ. Inline Minimal API entries should use explicit
 `new ErrorCatalogEntry(...)` construction for stable package-consumer inference.
 
@@ -88,3 +90,11 @@ See [ASP.NET Core usage](https://github.com/czernous/monadic-types-dotnet#aspnet
 and the [compatibility contract](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/compatibility.md).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetaspnetcore)
+
+Documented public members: 46
+
+<!-- END GENERATED API INDEX -->

@@ -31,21 +31,30 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
         ValidateUniqueCodes(metadata);
         for (int metadataIndex = 0; metadataIndex < metadata.Count; metadataIndex++)
         {
-            switch (metadata[metadataIndex])
+            _ = metadata[metadataIndex] switch
             {
-                case ErrorCatalogMetadata catalog:
-                    AddCatalog(operation, catalog.AsSpan());
-                    break;
-                case ProducesErrorCatalogAttribute attribute:
-                    AddEntry(operation, attribute.Entry);
-                    break;
-            }
+                ErrorCatalogMetadata catalog => Apply(operation, catalog),
+                ProducesErrorCatalogAttribute attribute => Apply(operation, attribute),
+                _ => false
+            };
         }
 
         return Task.CompletedTask;
     }
 
-    private static void ValidateUniqueCodes(IList<object> metadata)
+    private static bool Apply(OpenApiOperation operation, ErrorCatalogMetadata catalog)
+    {
+        AddCatalog(operation, catalog.AsSpan());
+        return true;
+    }
+
+    private static bool Apply(OpenApiOperation operation, ProducesErrorCatalogAttribute attribute)
+    {
+        AddEntry(operation, attribute.Entry);
+        return true;
+    }
+
+    internal static void ValidateUniqueCodes(IList<object> metadata)
     {
         int entryCount = CountEntries(metadata);
         if (entryCount < 2)
@@ -54,24 +63,26 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
         }
 
         int bucketCount = GetBucketCount(entryCount);
-        int[]? rented = null;
-        Span<int> buckets = bucketCount <= MaxStackBuckets
-            ? stackalloc int[bucketCount]
-            : (rented = ArrayPool<int>.Shared.Rent(bucketCount)).AsSpan(0, bucketCount);
+        ulong[]? rented = null;
+        Span<ulong> buckets = bucketCount <= MaxStackBuckets
+            ? stackalloc ulong[bucketCount]
+            : (rented = ArrayPool<ulong>.Shared.Rent(bucketCount)).AsSpan(0, bucketCount);
         buckets.Clear();
 
         try
         {
             int bucketMask = bucketCount - 1;
-            int entryIndex = 0;
             var entries = new CatalogEntryEnumerator(metadata);
             while (entries.MoveNext())
             {
                 ErrorCatalogEntry entry = entries.Current;
                 int slot = StringComparer.Ordinal.GetHashCode(entry.Code) & bucketMask;
-                while (buckets[slot] is not 0)
+                while (buckets[slot] is not 0UL)
                 {
-                    ErrorCatalogEntry previous = GetEntryAt(metadata, buckets[slot] - 1);
+                    ulong location = buckets[slot];
+                    int metadataIndex = (int)(location >> 32) - 1;
+                    int entryIndex = (int)(uint)location;
+                    ErrorCatalogEntry previous = GetEntry(metadata[metadataIndex], entryIndex);
                     if (string.Equals(previous.Code, entry.Code, StringComparison.Ordinal))
                     {
                         throw DuplicateCode(entry.Code);
@@ -80,14 +91,14 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
                     slot = (slot + 1) & bucketMask;
                 }
 
-                buckets[slot] = ++entryIndex;
+                buckets[slot] = entries.CurrentLocation;
             }
         }
         finally
         {
             if (rented is not null)
             {
-                ArrayPool<int>.Shared.Return(rented);
+                ArrayPool<ulong>.Shared.Return(rented);
             }
         }
     }
@@ -110,20 +121,6 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
         return bucketCount is 0 or > int.MaxValue
             ? throw new InvalidOperationException("The endpoint error catalog is too large.")
             : (int)bucketCount;
-    }
-
-    private static ErrorCatalogEntry GetEntryAt(IList<object> metadata, int targetIndex)
-    {
-        var entries = new CatalogEntryEnumerator(metadata);
-        for (int index = 0; entries.MoveNext(); index++)
-        {
-            if (index == targetIndex)
-            {
-                return entries.Current;
-            }
-        }
-
-        throw new ArgumentOutOfRangeException(nameof(targetIndex));
     }
 
     private static int GetEntryCount(object metadata) => metadata switch
@@ -150,6 +147,8 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
 
         public ErrorCatalogEntry Current { get; private set; }
 
+        public ulong CurrentLocation { get; private set; }
+
         public bool MoveNext()
         {
             while (_metadataIndex < metadata.Count)
@@ -157,6 +156,7 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
                 object currentMetadata = metadata[_metadataIndex];
                 if (_entryIndex < GetEntryCount(currentMetadata))
                 {
+                    CurrentLocation = ((ulong)(uint)(_metadataIndex + 1) << 32) | (uint)_entryIndex;
                     Current = GetEntry(currentMetadata, _entryIndex++);
                     return true;
                 }

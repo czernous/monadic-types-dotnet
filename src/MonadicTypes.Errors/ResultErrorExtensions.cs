@@ -15,6 +15,7 @@ public static class ResultErrorExtensions
         /// <typeparam name="TDomainError">Convertible domain error type.</typeparam>
         /// <param name="next">Continuation invoked only for success.</param>
         /// <returns>The continuation result widened to <typeparamref name="TError"/>.</returns>
+        /// <example><code>Result&lt;Receipt, ApplicationError&gt; receipt = order.BindWidened(CreateReceipt);</code></example>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Result<TResult, TError> BindWidened<TResult, TDomainError>(
             Func<T, Result<TResult, TDomainError>> next)

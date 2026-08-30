@@ -6,5 +6,6 @@ public interface IErrorConvertible<out TError> where TError : notnull
 {
     /// <summary>Creates the wider error representation.</summary>
     /// <returns>The converted error.</returns>
+    /// <example><code>ApplicationError error = domainError.ToError();</code></example>
     TError ToError();
 }

@@ -12,6 +12,7 @@ Restore, compile, and test from the repository root:
 eng\tools\win-x64\mt-verify-locks.exe
 dotnet restore MonadicTypes.slnx
 dotnet build MonadicTypes.slnx -c Release --no-restore
+eng\tools\win-x64\mt-docs.exe verify .
 dotnet test MonadicTypes.slnx -c Release --no-build --no-restore
 ```
 
@@ -37,7 +38,7 @@ the appropriate runtime identifier and temporary path for AOT restores.
 Ordinary development and CI execute checked-in NativeAOT tools without SDK
 startup or script compilation. A tooling-source change incrementally rebuilds
 only its affected command on `win-x64` and `linux-x64`; changing
-`eng/NativeTool.props` rebuilds all four commands for both supported tooling
+`eng/NativeTool.props` rebuilds all five commands for both supported tooling
 hosts. NativeAOT requires each binary to be linked on its target operating
 system, so Windows and Docker produce the committed Windows and Linux artifacts.
 The source remains portable, but macOS tooling binaries and CI validation are
@@ -51,11 +52,13 @@ package-consumption jobs. Regenerate the committed executable whenever its
 source changes; generated binary changes intentionally trigger the same source
 compilation and behavioral gates.
 
-The four commands have deliberately separate binaries:
+The five commands have deliberately separate binaries:
 
 - `mt-affected` consumes NUL-delimited Git paths, resolves the reverse project
   graph, and writes optional CI outputs without materializing changed paths as
   managed strings.
+- `mt-docs` reads public PE metadata and compiler XML without loading package
+  assemblies, then verifies deterministic API reference and navigation output.
 - `mt-verify-locks` validates shipping lockfiles discovered from the solution
   with pooled UTF-8 parsing and a bounded JSON reader.
 - `mt-pack` performs one parallel MSBuild traversal and validates package
@@ -78,7 +81,7 @@ dotnet publish eng\MonadicTypes.AffectedProjects.Tool\MonadicTypes.AffectedProje
 ```
 
 The same project accepts `linux-x64` when run on Linux. Replace the project path
-to rebuild `mt-pack`, `mt-test-packages`, or `mt-verify-locks`.
+to rebuild `mt-docs`, `mt-pack`, `mt-test-packages`, or `mt-verify-locks`.
 
 ## Formatting
 

@@ -6,6 +6,7 @@ namespace MonadicTypes.AspNetCore;
 
 /// <summary>Adds one structured problem response to controller or endpoint metadata.</summary>
 /// <param name="errorType">The initialized error category exposed by the operation.</param>
+/// <example><code>[ProducesError(ErrorType.NotFound)]</code></example>
 [AttributeUsage(
     AttributeTargets.Class | AttributeTargets.Method,
     AllowMultiple = true,
@@ -15,19 +16,24 @@ public sealed class ProducesErrorAttribute(ErrorType errorType) : Attribute, IPr
     internal static readonly string[] ProblemContentTypes = ["application/problem+json"];
 
     /// <summary>Gets the configured error category.</summary>
+    /// <example><code>ErrorType type = metadata.ErrorType;</code></example>
     public ErrorType ErrorType { get; } = errorType is < ErrorType.Failure or > ErrorType.Custom
         ? throw new ArgumentOutOfRangeException(nameof(errorType))
         : errorType;
 
-    /// <inheritdoc />
+    /// <summary>Gets the documented RFC 9457 response body type.</summary>
+    /// <example><code>Type? bodyType = metadata.Type;</code></example>
     public Type? Type => typeof(ProblemDetails);
 
-    /// <inheritdoc />
+    /// <summary>Gets the HTTP status mapped from <see cref="ErrorType"/>.</summary>
+    /// <example><code>int status = metadata.StatusCode;</code></example>
     public int StatusCode => ErrorProblemDetails.GetStatusCode(ErrorType);
 
-    /// <inheritdoc />
+    /// <summary>Gets the optional response description; this attribute leaves it unspecified.</summary>
+    /// <example><code>string? description = metadata.Description;</code></example>
     public string? Description => null;
 
-    /// <inheritdoc />
+    /// <summary>Gets the supported RFC 9457 response content type.</summary>
+    /// <example><code>IEnumerable&lt;string&gt; contentTypes = metadata.ContentTypes;</code></example>
     public IEnumerable<string> ContentTypes => ProblemContentTypes;
 }

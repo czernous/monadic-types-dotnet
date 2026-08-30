@@ -123,221 +123,227 @@ has identical branch semantics.
 
 | Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| [`Result<T,E>.Ok`](docs/api-reference.md#result-ok) | `Ok(T)` | Construct success explicitly. |
-| [`Result<T,E>.Fail`](docs/api-reference.md#result-fail) | `Fail(E)` | Construct failure explicitly. |
-| [`Result.Ok`](docs/api-reference.md#unit-result-ok) | `Ok<E>()` | Construct `Result<Unit,E>` success. |
-| [`Result.Fail`](docs/api-reference.md#unit-result-fail) | `Fail<E>(E)` | Construct `Result<Unit,E>` failure. |
-| [`Result<T,E>.IsInitialized`](docs/api-reference.md#result-state) | `bool` | Distinguish a constructed Result from `default`. |
-| [`Result<T,E>.IsSuccess`](docs/api-reference.md#result-state) | `bool` | Test for the success branch without reading it. |
-| [`Result<T,E>.IsFailure`](docs/api-reference.md#result-state) | `bool` | Test for the failure branch without reading it. |
-| [`Result<T,E>.Value`](docs/api-reference.md#result-value) | `T` | Read success or throw for failure/uninitialized state. |
-| [`Result<T,E>.Error`](docs/api-reference.md#result-error) | `E` | Read failure or throw for success/uninitialized state. |
-| [`Result<T,E>.TryGetValue`](docs/api-reference.md#result-try-get) | `out T` | Read success at an imperative boundary. |
-| [`Result<T,E>.TryGetError`](docs/api-reference.md#result-try-get) | `out E` | Read failure at an imperative boundary. |
-| [`Result<T,E>.Deconstruct`](docs/api-reference.md#result-deconstruct) | `out bool`, `out T`, `out E` | Expose the active case to positional patterns. |
-| [`Result<T,E>.Map`](docs/api-reference.md#result-map) | same-type delegate; type-changing delegate; caller-state; struct callable; generated token | Transform success without changing failure. |
-| [`Result<T,E>.Bind`](docs/api-reference.md#result-bind) | same/type-changing delegate; caller-state; struct callable; generated token; convertible error | Continue success with another Result. |
-| [`Result<T,E>.MapError`](docs/api-reference.md#result-map-error) | delegate; caller-state | Transform failure without changing success. |
-| [`Result<T,E>.BindError`](docs/api-reference.md#result-bind-error) | delegate; caller-state; struct callable | Continue failure and optionally change its type. |
-| [`Result<T,E>.BiMap`](docs/api-reference.md#result-bimap) | success and failure delegates | Transform both branch types in one operation. |
-| [`Result<T,E>.Recover`](docs/api-reference.md#result-recover) | Result-returning failure delegate | Recover while retaining the same error type. |
-| [`Result<T,E>.Ensure`](docs/api-reference.md#result-ensure) | predicate/error factory; caller-state | Turn success into failure when a guard is false. |
-| [`Result<T,E>.Tap`](docs/api-reference.md#result-tap) | action; caller-state; struct action; generated token | Observe success and return the original Result. |
-| [`Result<T,E>.TapAsync`](docs/api-reference.md#result-tap-async) | `Func<T,ValueTask>` | Await a success observation and return the original Result. |
-| [`Result<T,E>.TapError`](docs/api-reference.md#result-tap-error) | action; caller-state; struct action; generated token | Observe failure and return the original Result. |
-| [`Result<T,E>.Finally`](docs/api-reference.md#result-finally) | caller-state action | Run one action for either initialized branch. |
-| [`Result<T,E>.FinallyAsync`](docs/api-reference.md#result-finally-async) | caller-state `ValueTask` callback | Await one action for either initialized branch. |
-| [`Result<T,E>.Match`](docs/api-reference.md#result-match) | delegates; caller-state; two struct callables | Exhaustively reduce both branches to one type. |
-| [`Result<T,E>.Switch`](docs/api-reference.md#result-switch) | two actions | Execute exactly one terminal branch action. |
-| [`Result<T,E>.ValueOr`](docs/api-reference.md#result-value-or) | eager fallback | Discard failure and return a fallback value. |
-| [`Result<T,E>.ValueOrElse`](docs/api-reference.md#result-value-or-else) | lazy failure callback | Lazily derive a fallback from the error. |
-| [`Result<T,E>.ToString`](docs/api-reference.md#result-string) | diagnostic representation | Format `Ok(...)`, `Fail(...)`, or `Uninitialized`. |
-| [`Result<T,E>` implicit conversions](docs/api-reference.md#result-conversions) | from `T`; from `E` | Construct a typed Result where target context is unambiguous. |
-| [`Result<T,E>.Flatten`](docs/api-reference.md#result-flatten) | nested Result | Remove one same-error Result layer. |
-| [`Result<Option<T>,E>.Transpose`](docs/api-reference.md#result-option-transpose) | Result to Option | Convert to `Option<Result<T,E>>`. |
-| [`Result<Option<T>,E>.RequireSome`](docs/api-reference.md#require-some) | lazy error factory | Require a present success value. |
-| [`Option<Result<T,E>>.Transpose`](docs/api-reference.md#option-result-transpose) | Option to Result | Convert to `Result<Option<T>,E>`. |
-| [`ResultCombination.Combine`](docs/api-reference.md#combine) | two Results; `ReadOnlySpan<Result<Unit,E>>` | Return the first existing failure or `Unit` success. |
-| [`ResultCombination.Zip`](docs/api-reference.md#zip) | two heterogeneous Results | Combine successes into a named tuple. |
-| [`ResultCombination.Map`](docs/api-reference.md#combination-map) | two through six Results plus projection | Combine and project without an intermediate tuple API. |
-| [`ResultCombination.Bind`](docs/api-reference.md#combination-bind) | two through six Results plus Result projection | Combine and flatten a fallible projection. |
-| [`Unit.Value`](docs/api-reference.md#unit) | singleton value | Represent a successful operation with no payload. |
-| [`Unit.ToString`](docs/api-reference.md#unit) | `()` | Produce the conventional unit representation. |
+| [`Result<T,E>.Ok`](docs/api-reference.md#member-resultt-eok) | `Ok(T)` | Construct success explicitly. |
+| [`Result<T,E>.Fail`](docs/api-reference.md#member-resultt-efail) | `Fail(E)` | Construct failure explicitly. |
+| [`Result.Ok`](docs/api-reference.md#member-resultok) | `Ok<E>()` | Construct `Result<Unit,E>` success. |
+| [`Result.Fail`](docs/api-reference.md#member-resultfail) | `Fail<E>(E)` | Construct `Result<Unit,E>` failure. |
+| [`Result<T,E>.IsInitialized`](docs/api-reference.md#member-resultt-eisinitialized) | `bool` | Distinguish a constructed Result from `default`. |
+| [`Result<T,E>.IsSuccess`](docs/api-reference.md#member-resultt-eissuccess) | `bool` | Test for the success branch without reading it. |
+| [`Result<T,E>.IsFailure`](docs/api-reference.md#member-resultt-eisfailure) | `bool` | Test for the failure branch without reading it. |
+| [`Result<T,E>.Value`](docs/api-reference.md#member-resultt-evalue) | `T` | Read success or throw for failure/uninitialized state. |
+| [`Result<T,E>.Error`](docs/api-reference.md#member-resultt-eerror) | `E` | Read failure or throw for success/uninitialized state. |
+| [`Result<T,E>.TryGetValue`](docs/api-reference.md#member-resultt-etrygetvalue) | `out T` | Read success at an imperative boundary. |
+| [`Result<T,E>.TryGetError`](docs/api-reference.md#member-resultt-etrygeterror) | `out E` | Read failure at an imperative boundary. |
+| [`Result<T,E>.Deconstruct`](docs/api-reference.md#member-resultt-edeconstruct) | `out bool`, `out T`, `out E` | Expose the active case to positional patterns. |
+| [`Result<T,E>.Map`](docs/api-reference.md#member-resultt-emap) | same-type delegate; type-changing delegate; caller-state; struct callable; generated token | Transform success without changing failure. |
+| [`Result<T,E>.Bind`](docs/api-reference.md#member-resultt-ebind) | same/type-changing delegate; caller-state; struct callable; generated token; convertible error | Continue success with another Result. |
+| [`Result<T,E>.MapError`](docs/api-reference.md#member-resultt-emaperror) | delegate; caller-state | Transform failure without changing success. |
+| [`Result<T,E>.BindError`](docs/api-reference.md#member-resultt-ebinderror) | delegate; caller-state; struct callable | Continue failure and optionally change its type. |
+| [`Result<T,E>.BiMap`](docs/api-reference.md#member-resultt-ebimap) | success and failure delegates | Transform both branch types in one operation. |
+| [`Result<T,E>.Recover`](docs/api-reference.md#member-resultt-erecover) | Result-returning failure delegate | Recover while retaining the same error type. |
+| [`Result<T,E>.Ensure`](docs/api-reference.md#member-resultt-eensure) | predicate/error factory; caller-state | Turn success into failure when a guard is false. |
+| [`Result<T,E>.Tap`](docs/api-reference.md#member-resultt-etap) | action; caller-state; struct action; generated token | Observe success and return the original Result. |
+| [`Result<T,E>.TapAsync`](docs/api-reference.md#member-resultt-etapasync) | `Func<T,ValueTask>` | Await a success observation and return the original Result. |
+| [`Result<T,E>.TapError`](docs/api-reference.md#member-resultt-etaperror) | action; caller-state; struct action; generated token | Observe failure and return the original Result. |
+| [`Result<T,E>.Finally`](docs/api-reference.md#member-resultt-efinally) | caller-state action | Run one action for either initialized branch. |
+| [`Result<T,E>.FinallyAsync`](docs/api-reference.md#member-resultt-efinallyasync) | caller-state `ValueTask` callback | Await one action for either initialized branch. |
+| [`Result<T,E>.Match`](docs/api-reference.md#member-resultt-ematch) | delegates; caller-state; two struct callables | Exhaustively reduce both branches to one type. |
+| [`Result<T,E>.Switch`](docs/api-reference.md#member-resultt-eswitch) | two actions | Execute exactly one terminal branch action. |
+| [`Result<T,E>.ValueOr`](docs/api-reference.md#member-resultt-evalueor) | eager fallback | Discard failure and return a fallback value. |
+| [`Result<T,E>.ValueOrElse`](docs/api-reference.md#member-resultt-evalueorelse) | lazy failure callback | Lazily derive a fallback from the error. |
+| [`Result<T,E>.ToString`](docs/api-reference.md#member-resultt-etostring) | diagnostic representation | Format `Ok(...)`, `Fail(...)`, or `Uninitialized`. |
+| [`Result<T,E>.Equals`](docs/api-reference.md#member-resultt-eequals) | another Result | Compare state and only the active payload. |
+| [`Result<T,E>.GetHashCode`](docs/api-reference.md#member-resultt-egethashcode) | none | Hash state and only the active payload. |
+| [`Result<T,E>` implicit conversions](docs/api-reference.md#member-resultt-eimplicit-operator) | from `T`; from `E` | Construct a typed Result where target context is unambiguous. |
+| [`Result<T,E>.Flatten`](docs/api-reference.md#member-resultcompositionextensionsflatten) | nested Result | Remove one same-error Result layer. |
+| [`Result<Option<T>,E>.Transpose`](docs/api-reference.md#member-resultcompositionextensionstranspose) | Result to Option | Convert to `Option<Result<T,E>>`. |
+| [`Result<Option<T>,E>.RequireSome`](docs/api-reference.md#member-resultcompositionextensionsrequiresome) | lazy error factory | Require a present success value. |
+| [`Option<Result<T,E>>.Transpose`](docs/api-reference.md#member-resultcompositionextensionstranspose) | Option to Result | Convert to `Result<Option<T>,E>`. |
+| [`ResultCombination.Combine`](docs/api-reference.md#member-resultcombinationcombine) | two Results; `ReadOnlySpan<Result<Unit,E>>` | Return the first existing failure or `Unit` success. |
+| [`ResultCombination.Zip`](docs/api-reference.md#member-resultcombinationzip) | two heterogeneous Results | Combine successes into a named tuple. |
+| [`ResultCombination.Map`](docs/api-reference.md#member-resultcombinationmap) | two through six Results; delegate or caller-state projection | Combine and project without an intermediate tuple API or captured state. |
+| [`ResultCombination.Bind`](docs/api-reference.md#member-resultcombinationbind) | two through six Results; delegate or caller-state Result projection | Combine and flatten a fallible projection. |
+| [`Unit.Value`](docs/api-reference.md#member-unitvalue) | singleton value | Represent a successful operation with no payload. |
+| [`Unit.ToString`](docs/api-reference.md#member-unittostring) | `()` | Produce the conventional unit representation. |
 
 ### Core Option And Callable API
 
 | Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| [`Option<T>.Some`](docs/api-reference.md#option-some) | `Some(T)` | Construct guaranteed non-null presence. |
-| [`Option<T>.None`](docs/api-reference.md#option-none) | static value | Construct absence; equivalent to `default`. |
-| [`Option<T>.HasValue`](docs/api-reference.md#option-state) | `bool` | Test presence. |
-| [`Option<T>.IsSome`](docs/api-reference.md#option-state) | `bool` | Functional alias for presence. |
-| [`Option<T>.IsNone`](docs/api-reference.md#option-state) | `bool` | Test absence. |
-| [`Option<T>.Value`](docs/api-reference.md#option-value) | `T` | Read presence or throw for `None`. |
-| [`Option<T>.TryGetValue`](docs/api-reference.md#option-try-get) | `out T` | Read presence at an imperative boundary. |
-| [`Option<T>.Deconstruct`](docs/api-reference.md#option-deconstruct) | `out bool`, `out T` | Expose presence to positional patterns. |
-| [`Option<T>.Map`](docs/api-reference.md#option-map) | delegate; caller-state; struct callable; generated token | Transform a present value. |
-| [`Option<T>.Bind`](docs/api-reference.md#option-bind) | delegate; caller-state; struct callable; generated token | Continue presence without nesting Options. |
-| [`Option<T>.Filter`](docs/api-reference.md#option-filter) | predicate; caller-state | Retain presence only when a predicate is true. |
-| [`Option<T>.Match`](docs/api-reference.md#option-match) | some/none delegates | Exhaustively reduce presence and absence. |
-| [`Option<T>.Switch`](docs/api-reference.md#option-switch) | some/none actions | Execute exactly one terminal action. |
-| [`Option<T>.ValueOr`](docs/api-reference.md#option-value-or) | eager fallback | Reduce absence to a fallback. |
-| [`Option<T>.ValueOrElse`](docs/api-reference.md#option-value-or-else) | lazy fallback; caller-state | Lazily create a fallback without a closure. |
-| [`Option<T>` implicit conversion](docs/api-reference.md#option-conversion) | nullable `T` | Convert null to `None` and non-null to `Some`. |
-| [`Option.FromNullable`](docs/api-reference.md#option-nullable-bridges) | nullable reference or value | Convert an explicit nullable boundary value. |
-| [`Option<T>.ToNullable`](docs/api-reference.md#option-nullable-bridges) | reference Option | Convert Some/None to a nullable reference. |
-| [`Option<T>.ToNullableValue`](docs/api-reference.md#option-nullable-bridges) | value Option | Convert Some/None to `Nullable<T>`. |
-| [`Option<T>.ToResult`](docs/api-reference.md#option-to-result) | eager error; lazy error | Require presence and attach a typed failure. |
-| [`Option<T>.Traverse`](docs/api-reference.md#option-traverse) | delegate; caller-state; struct callable | Exchange Option and Result while mapping Some. |
-| [`IValueFunction<TIn,TOut>.Invoke`](docs/api-reference.md#ivaluefunction) | value-returning callable | Define generic, devirtualizable callback dispatch. |
-| [`IValueAction<T>.Invoke`](docs/api-reference.md#ivalueaction) | side-effect callable | Define generic, devirtualizable action dispatch. |
-| [`ValueFunction<TIn,TOut,TFunction>.ValueFunction`](docs/api-reference.md#valuefunction) | callable constructor | Wrap a stateful or default struct callable. |
-| [`ValueFunction<TIn,TOut,TFunction>.Invoke`](docs/api-reference.md#valuefunction) | forwarding call | Invoke the wrapped callable. |
-| [`ValueAction<T,TAction>.Invoke`](docs/api-reference.md#valueaction) | forwarding call | Invoke the wrapped action. |
+| [`Option<T>.Some`](docs/api-reference.md#member-optiontsome) | `Some(T)` | Construct guaranteed non-null presence. |
+| [`Option<T>.None`](docs/api-reference.md#member-optiontnone) | static value | Construct absence; equivalent to `default`. |
+| [`Option<T>.HasValue`](docs/api-reference.md#member-optionthasvalue) | `bool` | Test presence. |
+| [`Option<T>.IsSome`](docs/api-reference.md#member-optiontissome) | `bool` | Functional alias for presence. |
+| [`Option<T>.IsNone`](docs/api-reference.md#member-optiontisnone) | `bool` | Test absence. |
+| [`Option<T>.Value`](docs/api-reference.md#member-optiontvalue) | `T` | Read presence or throw for `None`. |
+| [`Option<T>.TryGetValue`](docs/api-reference.md#member-optionttrygetvalue) | `out T` | Read presence at an imperative boundary. |
+| [`Option<T>.Deconstruct`](docs/api-reference.md#member-optiontdeconstruct) | `out bool`, `out T` | Expose presence to positional patterns. |
+| [`Option<T>.Map`](docs/api-reference.md#member-optiontmap) | delegate; caller-state; struct callable; generated token | Transform a present value. |
+| [`Option<T>.Bind`](docs/api-reference.md#member-optiontbind) | delegate; caller-state; struct callable; generated token | Continue presence without nesting Options. |
+| [`Option<T>.Filter`](docs/api-reference.md#member-optiontfilter) | predicate; caller-state | Retain presence only when a predicate is true. |
+| [`Option<T>.Match`](docs/api-reference.md#member-optiontmatch) | delegates; caller-state; two struct callables | Exhaustively reduce presence and absence. |
+| [`Option<T>.Equals`](docs/api-reference.md#member-optiontequals) | another Option | Compare presence and only the active value. |
+| [`Option<T>.GetHashCode`](docs/api-reference.md#member-optiontgethashcode) | none | Hash presence and only the active value. |
+| [`Option<T>.Switch`](docs/api-reference.md#member-optiontswitch) | some/none actions | Execute exactly one terminal action. |
+| [`Option<T>.ValueOr`](docs/api-reference.md#member-optiontvalueor) | eager fallback | Reduce absence to a fallback. |
+| [`Option<T>.ValueOrElse`](docs/api-reference.md#member-optiontvalueorelse) | lazy fallback; caller-state | Lazily create a fallback without a closure. |
+| [`Option<T>` implicit conversion](docs/api-reference.md#member-optiontimplicit-operator) | nullable `T` | Convert null to `None` and non-null to `Some`. |
+| [`Option.FromNullable`](docs/api-reference.md#member-optionfromnullable) | nullable reference or value | Convert an explicit nullable boundary value. |
+| [`Option<T>.ToNullable`](docs/api-reference.md#member-optionnullableextensionstonullable) | reference Option | Convert Some/None to a nullable reference. |
+| [`Option<T>.ToNullableValue`](docs/api-reference.md#member-optionnullableextensionstonullablevalue) | value Option | Convert Some/None to `Nullable<T>`. |
+| [`Option<T>.ToResult`](docs/api-reference.md#member-resultcompositionextensionstoresult) | eager error; lazy error | Require presence and attach a typed failure. |
+| [`Option<T>.Traverse`](docs/api-reference.md#member-resultcompositionextensionstraverse) | delegate; caller-state; struct callable | Exchange Option and Result while mapping Some. |
+| [`IValueFunction<TIn,TOut>.Invoke`](docs/api-reference.md#member-ivaluefunctiontin-toutinvoke) | value-returning callable | Define generic, devirtualizable callback dispatch. |
+| [`IValueAction<T>.Invoke`](docs/api-reference.md#member-ivalueactiontinvoke) | side-effect callable | Define generic, devirtualizable action dispatch. |
+| [`ValueFunction<TIn,TOut,TFunction>.ValueFunction`](docs/api-reference.md#member-valuefunctiontin-tout-tfunctionvaluefunction) | callable constructor | Wrap a stateful or default struct callable. |
+| [`ValueFunction<TIn,TOut,TFunction>.Invoke`](docs/api-reference.md#member-valuefunctiontin-tout-tfunctioninvoke) | forwarding call | Invoke the wrapped callable. |
+| [`ValueAction<T,TAction>.Invoke`](docs/api-reference.md#member-valueactiont-tactioninvoke) | forwarding call | Invoke the wrapped action. |
+| [`ValueAction<T,TAction>.ValueAction`](docs/api-reference.md#member-valueactiont-tactionvalueaction) | action value | Wrap a stateful or default struct action. |
 
 ### Collection And LINQ API
 
 | Member | Package | Purpose |
 | --- | --- | --- |
-| [`IReadOnlyList<T>.TraverseToArray`](docs/api-reference.md#traverse-to-array) | `MonadicTypes.NET.Collections` | Fail-fast indexed traversal with one explicit output-array allocation. |
-| [`ReadOnlySpan<Result<T,E>>.SequenceToArray`](docs/api-reference.md#sequence-to-array) | `MonadicTypes.NET.Collections` | Convert ordered Results into one owned array. |
-| [`Result<T,E>.Select`](docs/api-reference.md#linq-select) | `MonadicTypes.NET.Linq` | Opt-in conventional name for Result Map. |
-| [`Result<T,E>.SelectMany`](docs/api-reference.md#linq-select-many) | `MonadicTypes.NET.Linq` | Bind and project Result values. |
-| [`Option<T>.Select`](docs/api-reference.md#linq-select) | `MonadicTypes.NET.Linq` | Opt-in conventional name for Option Map. |
-| [`Option<T>.SelectMany`](docs/api-reference.md#linq-select-many) | `MonadicTypes.NET.Linq` | Bind and project Option values. |
-| [`Option<T>.Where`](docs/api-reference.md#linq-where) | `MonadicTypes.NET.Linq` | Conventional name for Option Filter. |
+| [`IReadOnlyList<T>.TraverseToArray`](docs/api-reference.md#member-resultcollectionextensionstraversetoarray) | `MonadicTypes.NET.Collections` | Fail-fast indexed traversal with one explicit output-array allocation. |
+| [`ReadOnlySpan<T>.TraverseToArray`](docs/api-reference.md#member-resultcollectionextensionstraversetoarray) | `MonadicTypes.NET.Collections` | Fail-fast contiguous traversal with one explicit output-array allocation. |
+| [`ReadOnlySpan<Result<T,E>>.SequenceToArray`](docs/api-reference.md#member-resultcollectionextensionssequencetoarray) | `MonadicTypes.NET.Collections` | Convert ordered Results into one owned array. |
+| [`Result<T,E>.Select`](docs/api-reference.md#member-queryextensionsselect) | `MonadicTypes.NET.Linq` | Opt-in conventional name for Result Map. |
+| [`Result<T,E>.SelectMany`](docs/api-reference.md#member-queryextensionsselectmany) | `MonadicTypes.NET.Linq` | Bind and project Result values. |
+| [`Option<T>.Select`](docs/api-reference.md#member-queryextensionsselect) | `MonadicTypes.NET.Linq` | Opt-in conventional name for Option Map. |
+| [`Option<T>.SelectMany`](docs/api-reference.md#member-queryextensionsselectmany) | `MonadicTypes.NET.Linq` | Bind and project Option values. |
+| [`Option<T>.Where`](docs/api-reference.md#member-queryextensionswhere) | `MonadicTypes.NET.Linq` | Conventional name for Option Filter. |
 
 ### Async And Effect API
 
 | Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| [`MapAsync`](docs/api-reference.md#map-async) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Map success with a `ValueTask<T>` callback. |
-| [`MapTaskAsync`](docs/api-reference.md#map-task-async) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Map success with a `Task<T>` callback. |
-| [`BindAsync`](docs/api-reference.md#bind-async) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind success with a `ValueTask<Result<T,E>>` callback. |
-| [`BindTaskAsync`](docs/api-reference.md#bind-task-async) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind success with a `Task<Result<T,E>>` callback. |
-| [`BindErrorAsync`](docs/api-reference.md#bind-error-async) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind failure with a `ValueTask<Result<T,E>>` callback. |
-| [`BindErrorTaskAsync`](docs/api-reference.md#bind-error-task-async) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind failure with a `Task<Result<T,E>>` callback. |
-| [`Map` on awaitable Result](docs/api-reference.md#awaitable-sync) | ValueTask/Task receiver | Continue an async pipeline with synchronous success mapping. |
-| [`Bind` on awaitable Result](docs/api-reference.md#awaitable-sync) | ValueTask/Task receiver | Continue an async pipeline with synchronous success binding. |
-| [`BindError` on awaitable Result](docs/api-reference.md#awaitable-sync) | ValueTask/Task receiver | Continue an async pipeline with synchronous failure binding. |
-| [`Effect.Try`](docs/api-reference.md#effect-try) | broad exception; selected `TException` | Convert a synchronous thrown exception to failure. |
-| [`Effect.TryAsync`](docs/api-reference.md#effect-try-async) | broad exception; selected `TException` | Convert a ValueTask operation's exception to failure. |
-| [`Effect.TryTaskAsync`](docs/api-reference.md#effect-try-task-async) | broad/typed exception; with/without caller state | Convert a Task operation's exception to failure. |
-| [`Result<T,E>.TryMap`](docs/api-reference.md#try-map) | broad exception | Map success through throwing synchronous code. |
-| [`Result<T,E>.TryBind`](docs/api-reference.md#try-bind) | broad exception | Bind success through throwing synchronous code. |
-| [`Result<T,E>.TryTap`](docs/api-reference.md#try-tap) | broad exception | Observe success and convert a thrown exception. |
-| [`Result<T,E>.TryMapAsync`](docs/api-reference.md#try-map-async) | broad exception | Map success through throwing ValueTask code. |
-| [`Result<T,E>.TryTapAsync`](docs/api-reference.md#try-tap-async) | broad exception | Observe success asynchronously and convert a thrown exception. |
+| [`MapAsync`](docs/api-reference.md#member-asyncresultextensionsmapasync) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Map success with a `ValueTask<T>` callback. |
+| [`MapTaskAsync`](docs/api-reference.md#member-asyncresultextensionsmaptaskasync) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Map success with a `Task<T>` callback. |
+| [`BindAsync`](docs/api-reference.md#member-asyncresultextensionsbindasync) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind success with a `ValueTask<Result<T,E>>` callback. |
+| [`BindTaskAsync`](docs/api-reference.md#member-asyncresultextensionsbindtaskasync) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind success with a `Task<Result<T,E>>` callback. |
+| [`BindErrorAsync`](docs/api-reference.md#member-asyncresultextensionsbinderrorasync) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind failure with a `ValueTask<Result<T,E>>` callback. |
+| [`BindErrorTaskAsync`](docs/api-reference.md#member-asyncresultextensionsbinderrortaskasync) | delegate or generated `ValueFunction`; Result/ValueTask/Task receiver | Bind failure with a `Task<Result<T,E>>` callback. |
+| [`Map` on awaitable Result](#async-pipelines) | ValueTask/Task receiver | Continue an async pipeline with synchronous success mapping. |
+| [`Bind` on awaitable Result](#async-pipelines) | ValueTask/Task receiver | Continue an async pipeline with synchronous success binding. |
+| [`BindError` on awaitable Result](#async-pipelines) | ValueTask/Task receiver | Continue an async pipeline with synchronous failure binding. |
+| [`Effect.Try`](docs/api-reference.md#member-effecttry) | broad exception; selected `TException` | Convert a synchronous thrown exception to failure. |
+| [`Effect.TryAsync`](docs/api-reference.md#member-effecttryasync) | broad exception; selected `TException` | Convert a ValueTask operation's exception to failure. |
+| [`Effect.TryTaskAsync`](docs/api-reference.md#member-effecttrytaskasync) | broad/typed exception; with/without caller state | Convert a Task operation's exception to failure. |
+| [`Result<T,E>.TryMap`](docs/api-reference.md#member-resulteffectextensionstrymap) | broad exception | Map success through throwing synchronous code. |
+| [`Result<T,E>.TryBind`](docs/api-reference.md#member-resulteffectextensionstrybind) | broad exception | Bind success through throwing synchronous code. |
+| [`Result<T,E>.TryTap`](docs/api-reference.md#member-resulteffectextensionstrytap) | broad exception | Observe success and convert a thrown exception. |
+| [`Result<T,E>.TryMapAsync`](docs/api-reference.md#member-resulteffectextensionstrymapasync) | broad exception | Map success through throwing ValueTask code. |
+| [`Result<T,E>.TryTapAsync`](docs/api-reference.md#member-resulteffectextensionstrytapasync) | broad exception | Observe success asynchronously and convert a thrown exception. |
 
 ### Error And Validation API
 
 | Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| [`Error.Error`](docs/api-reference.md#error-construction) | category constructor; code/message constructor | Construct a structured built-in error. |
-| [`Error.Type`](docs/api-reference.md#error-properties) | `ErrorType` | Read the bounded built-in category. |
-| [`Error.NumericType`](docs/api-reference.md#error-properties) | `int` | Read built-in or custom numeric category. |
-| [`Error.Code`](docs/api-reference.md#error-properties) | `string` | Read stable machine identity. |
-| [`Error.Message`](docs/api-reference.md#error-properties) | `string` | Read diagnostic/display text. |
-| [`Error.IsMessagePublic`](docs/api-reference.md#error-properties) | `bool` | Control default transport disclosure. |
-| [`Error.Cause`](docs/api-reference.md#error-properties) | `Exception?` | Read a retained exception with its original stack. |
-| [`Error.ThrowCause`](docs/api-reference.md#error-throw-cause) | method | Rethrow the retained exception without resetting its stack. |
-| [`Error.Failure`](docs/api-reference.md#error-factories) | message; code/message/cause/visibility | Construct a general expected failure. |
-| [`Error.Unexpected`](docs/api-reference.md#error-factories) | message; exception/code | Construct a private unexpected failure. |
-| [`Error.Validation`](docs/api-reference.md#error-factories) | message; code/message/cause | Construct invalid-input failure. |
-| [`Error.Conflict`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct state-conflict failure. |
-| [`Error.NotFound`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct missing-resource failure. |
-| [`Error.Unauthorized`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct authentication failure. |
-| [`Error.Forbidden`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct authorization failure. |
-| [`Error.Unavailable`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct temporary-service failure. |
-| [`Error.Timeout`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct timeout failure. |
-| [`Error.RateLimited`](docs/api-reference.md#error-factories) | code/message/cause/visibility | Construct quota/rate failure. |
-| [`Error.Cancelled`](docs/api-reference.md#error-factories) | code/message/cause | Construct cancellation failure. |
-| [`Error.Custom`](docs/api-reference.md#error-custom) | numeric type/code/message/cause/visibility | Construct an application-defined category. |
-| [`Error.IO`](docs/api-reference.md#error-factories) | message | Construct the general I/O convenience error. |
-| [`Error.System`](docs/api-reference.md#error-factories) | message | Construct the general system convenience error. |
-| [`Error.Equals`](docs/api-reference.md#error-equality) | another error | Compare semantic fields and retained-cause identity. |
-| [`Error.GetHashCode`](docs/api-reference.md#error-equality) | none | Hash the same semantic fields used by equality. |
-| [`Error.ToString`](docs/api-reference.md#error-format) | default; format/provider | Allocate `[CODE] message` text. |
-| [`Error.TryFormat`](docs/api-reference.md#error-format) | destination span | Format without allocating a string. |
-| [`IErrorConvertible<TError>.ToError`](docs/api-reference.md#error-convertible) | conversion method | Convert compact domain error only at a boundary/failure. |
-| [`Result<T,E>.BindWidened`](docs/api-reference.md#result-bind-widened) | convertible continuation error | Keep compact inner errors until the failing branch is used. |
-| [`ErrorType.Uninitialized`](docs/api-reference.md#error-type) | enum value | Represent an invalid default category; public APIs reject it. |
-| [`ErrorType.Failure`](docs/api-reference.md#error-type) | enum value | Categorize a general expected failure. |
-| [`ErrorType.Unexpected`](docs/api-reference.md#error-type) | enum value | Categorize an unclassified fault. |
-| [`ErrorType.Validation`](docs/api-reference.md#error-type) | enum value | Categorize invalid input. |
-| [`ErrorType.Conflict`](docs/api-reference.md#error-type) | enum value | Categorize a state conflict. |
-| [`ErrorType.NotFound`](docs/api-reference.md#error-type) | enum value | Categorize a missing resource. |
-| [`ErrorType.Unauthorized`](docs/api-reference.md#error-type) | enum value | Categorize missing or invalid authentication. |
-| [`ErrorType.Forbidden`](docs/api-reference.md#error-type) | enum value | Categorize denied authorization. |
-| [`ErrorType.Unavailable`](docs/api-reference.md#error-type) | enum value | Categorize temporary unavailability. |
-| [`ErrorType.Timeout`](docs/api-reference.md#error-type) | enum value | Categorize a time-budget failure. |
-| [`ErrorType.RateLimited`](docs/api-reference.md#error-type) | enum value | Categorize quota or rate exhaustion. |
-| [`ErrorType.Cancelled`](docs/api-reference.md#error-type) | enum value | Categorize cancellation. |
-| [`ErrorType.Custom`](docs/api-reference.md#error-type) | enum value | Categorize an application-defined numeric type. |
-| [`ValidationIssue.ValidationIssue`](docs/api-reference.md#validation-issue) | path/code/message/severity | Construct one immutable validation issue. |
-| [`ValidationIssue.Path`](docs/api-reference.md#validation-issue) | `string` | Read the affected member path. |
-| [`ValidationIssue.Code`](docs/api-reference.md#validation-issue) | `string` | Read stable issue identity. |
-| [`ValidationIssue.Message`](docs/api-reference.md#validation-issue) | `string` | Read display text. |
-| [`ValidationIssue.Severity`](docs/api-reference.md#validation-issue) | enum | Read error, warning, or information severity. |
-| [`ValidationErrors.ValidationErrors`](docs/api-reference.md#validation-errors-construction) | sequence; params array | Copy issues into immutable storage. |
-| [`ValidationErrors.Create`](docs/api-reference.md#validation-errors-create) | delegate; caller-state; struct mapper | Map third-party failures without a runtime adapter dependency. |
-| [`ValidationErrors.Count`](docs/api-reference.md#validation-errors-read) | `int` | Read issue count. |
-| [`ValidationErrors.this[int]`](docs/api-reference.md#validation-errors-read) | indexer | Read one issue. |
-| [`ValidationErrors.AsSpan`](docs/api-reference.md#validation-errors-read) | `ReadOnlySpan<ValidationIssue>` | Iterate without interface/enumerator allocation. |
-| [`ValidationErrors.GetEnumerator`](docs/api-reference.md#validation-errors-read) | generic enumerator | Support standard collection iteration. |
-| [`ValidationSeverity.Error`](docs/api-reference.md#validation-severity) | enum value | Classify a blocking validation issue. |
-| [`ValidationSeverity.Warning`](docs/api-reference.md#validation-severity) | enum value | Classify a non-blocking warning. |
-| [`ValidationSeverity.Information`](docs/api-reference.md#validation-severity) | enum value | Classify an informational issue. |
+| [`Error.Error`](docs/api-reference.md#member-errorerror) | category constructor; code/message constructor | Construct a structured built-in error. |
+| [`Error.Type`](docs/api-reference.md#member-errortype) | `ErrorType` | Read the bounded built-in category. |
+| [`Error.NumericType`](docs/api-reference.md#member-errornumerictype) | `int` | Read built-in or custom numeric category. |
+| [`Error.Code`](docs/api-reference.md#member-errorcode) | `string` | Read stable machine identity. |
+| [`Error.Message`](docs/api-reference.md#member-errormessage) | `string` | Read diagnostic/display text. |
+| [`Error.IsMessagePublic`](docs/api-reference.md#member-errorismessagepublic) | `bool` | Control default transport disclosure. |
+| [`Error.Cause`](docs/api-reference.md#member-errorcause) | `Exception?` | Read a retained exception with its original stack. |
+| [`Error.ThrowCause`](docs/api-reference.md#member-errorthrowcause) | method | Rethrow the retained exception without resetting its stack. |
+| [`Error.Failure`](docs/api-reference.md#member-errorfailure) | message; code/message/cause/visibility | Construct a general expected failure. |
+| [`Error.Unexpected`](docs/api-reference.md#member-errorunexpected) | message; exception/code | Construct a private unexpected failure. |
+| [`Error.Validation`](docs/api-reference.md#member-errorvalidation) | message; code/message/cause | Construct invalid-input failure. |
+| [`Error.Conflict`](docs/api-reference.md#member-errorconflict) | code/message/cause/visibility | Construct state-conflict failure. |
+| [`Error.NotFound`](docs/api-reference.md#member-errornotfound) | code/message/cause/visibility | Construct missing-resource failure. |
+| [`Error.Unauthorized`](docs/api-reference.md#member-errorunauthorized) | code/message/cause/visibility | Construct authentication failure. |
+| [`Error.Forbidden`](docs/api-reference.md#member-errorforbidden) | code/message/cause/visibility | Construct authorization failure. |
+| [`Error.Unavailable`](docs/api-reference.md#member-errorunavailable) | code/message/cause/visibility | Construct temporary-service failure. |
+| [`Error.Timeout`](docs/api-reference.md#member-errortimeout) | code/message/cause/visibility | Construct timeout failure. |
+| [`Error.RateLimited`](docs/api-reference.md#member-errorratelimited) | code/message/cause/visibility | Construct quota/rate failure. |
+| [`Error.Cancelled`](docs/api-reference.md#member-errorcancelled) | code/message/cause | Construct cancellation failure. |
+| [`Error.Custom`](docs/api-reference.md#member-errorcustom) | numeric type/code/message/cause/visibility | Construct an application-defined category. |
+| [`Error.IO`](docs/api-reference.md#member-errorio) | message; code/message/cause/visibility | Construct a general I/O convenience error. |
+| [`Error.System`](docs/api-reference.md#member-errorsystem) | message; code/message/cause/visibility | Construct a general system convenience error. |
+| [`Error.Equals`](docs/api-reference.md#member-errorequals) | another error | Compare semantic fields and retained-cause identity. |
+| [`Error.GetHashCode`](docs/api-reference.md#member-errorgethashcode) | none | Hash the same semantic fields used by equality. |
+| [`Error.ToString`](docs/api-reference.md#member-errortostring) | default; format/provider | Allocate `[CODE] message` text. |
+| [`Error.TryFormat`](docs/api-reference.md#member-errortryformat) | destination span | Format without allocating a string. |
+| [`IErrorConvertible<TError>.ToError`](docs/api-reference.md#member-ierrorconvertibleterrortoerror) | conversion method | Convert compact domain error only at a boundary/failure. |
+| [`Result<T,E>.BindWidened`](docs/api-reference.md#member-resulterrorextensionsbindwidened) | convertible continuation error | Keep compact inner errors until the failing branch is used. |
+| [`ErrorType.Uninitialized`](docs/api-reference.md#member-errortypeuninitialized) | enum value | Represent an invalid default category; public APIs reject it. |
+| [`ErrorType.Failure`](docs/api-reference.md#member-errortypefailure) | enum value | Categorize a general expected failure. |
+| [`ErrorType.Unexpected`](docs/api-reference.md#member-errortypeunexpected) | enum value | Categorize an unclassified fault. |
+| [`ErrorType.Validation`](docs/api-reference.md#member-errortypevalidation) | enum value | Categorize invalid input. |
+| [`ErrorType.Conflict`](docs/api-reference.md#member-errortypeconflict) | enum value | Categorize a state conflict. |
+| [`ErrorType.NotFound`](docs/api-reference.md#member-errortypenotfound) | enum value | Categorize a missing resource. |
+| [`ErrorType.Unauthorized`](docs/api-reference.md#member-errortypeunauthorized) | enum value | Categorize missing or invalid authentication. |
+| [`ErrorType.Forbidden`](docs/api-reference.md#member-errortypeforbidden) | enum value | Categorize denied authorization. |
+| [`ErrorType.Unavailable`](docs/api-reference.md#member-errortypeunavailable) | enum value | Categorize temporary unavailability. |
+| [`ErrorType.Timeout`](docs/api-reference.md#member-errortypetimeout) | enum value | Categorize a time-budget failure. |
+| [`ErrorType.RateLimited`](docs/api-reference.md#member-errortyperatelimited) | enum value | Categorize quota or rate exhaustion. |
+| [`ErrorType.Cancelled`](docs/api-reference.md#member-errortypecancelled) | enum value | Categorize cancellation. |
+| [`ErrorType.Custom`](docs/api-reference.md#member-errortypecustom) | enum value | Categorize an application-defined numeric type. |
+| [`ValidationIssue.ValidationIssue`](docs/api-reference.md#member-validationissuevalidationissue) | path/code/message/severity | Construct one immutable validation issue. |
+| [`ValidationIssue.Path`](docs/api-reference.md#member-validationissuepath) | `string` | Read the affected member path. |
+| [`ValidationIssue.Code`](docs/api-reference.md#member-validationissuecode) | `string` | Read stable issue identity. |
+| [`ValidationIssue.Message`](docs/api-reference.md#member-validationissuemessage) | `string` | Read display text. |
+| [`ValidationIssue.Severity`](docs/api-reference.md#member-validationissueseverity) | enum | Read error, warning, or information severity. |
+| [`ValidationErrors.ValidationErrors`](docs/api-reference.md#member-validationerrorsvalidationerrors) | sequence; params array | Copy issues into immutable storage. |
+| [`ValidationErrors.Create`](docs/api-reference.md#member-validationerrorscreate) | delegate; caller-state; struct mapper | Map third-party failures without a runtime adapter dependency. |
+| [`ValidationErrors.Count`](docs/api-reference.md#member-validationerrorscount) | `int` | Read issue count. |
+| [`ValidationErrors.this[int]`](docs/api-reference.md#member-validationerrorsthis) | indexer | Read one issue. |
+| [`ValidationErrors.AsSpan`](docs/api-reference.md#member-validationerrorsasspan) | `ReadOnlySpan<ValidationIssue>` | Iterate without interface/enumerator allocation. |
+| [`ValidationErrors.GetEnumerator`](docs/api-reference.md#member-validationerrorsgetenumerator) | generic enumerator | Support standard collection iteration. |
+| [`ValidationSeverity.Error`](docs/api-reference.md#member-validationseverityerror) | enum value | Classify a blocking validation issue. |
+| [`ValidationSeverity.Warning`](docs/api-reference.md#member-validationseveritywarning) | enum value | Classify a non-blocking warning. |
+| [`ValidationSeverity.Information`](docs/api-reference.md#member-validationseverityinformation) | enum value | Classify an informational issue. |
 
 ### Diagnostics, HTTP, And Generation API
 
 | Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| [`ErrorTelemetry.Record`](docs/api-reference.md#telemetry-record) | activity/error/policy | Project an error into an existing BCL Activity. |
-| [`ErrorActivityStatusPolicy.Automatic`](docs/api-reference.md#activity-policy) | enum value | Mark only server-failure categories as activity errors. |
-| [`ErrorActivityStatusPolicy.Preserve`](docs/api-reference.md#activity-policy) | enum value | Preserve the caller's activity status. |
-| [`ErrorActivityStatusPolicy.MarkError`](docs/api-reference.md#activity-policy) | enum value | Mark every recorded category as an activity error. |
-| [`ErrorMetrics.ErrorMetrics`](docs/api-reference.md#metrics-construction) | meter/code-dimension/counter-name | Create an optional caller-owned counter. |
-| [`ErrorMetrics.Disabled`](docs/api-reference.md#metrics-disabled) | static value | Select the cheapest disabled metrics path. |
-| [`ErrorMetrics.IsEnabled`](docs/api-reference.md#metrics-enabled) | `bool` | Check for a listener before expensive caller work. |
-| [`ErrorMetrics.Record`](docs/api-reference.md#metrics-record) | `Error?` | Increment the error counter with bounded tags. |
-| [`Result<T,E>.ToHttpResult`](docs/api-reference.md#to-http-result) | Error; ValidationErrors; convertible error; custom delegates; struct mappers | Convert to strongly typed Minimal API results. |
-| [`IHttpResultMapper<TError,TResult>.Map`](docs/api-reference.md#http-result-mapper) | error/context | Define an allocation-free caller-owned HTTP failure mapper. |
-| [`DefaultErrorHttpResultMapper.Map`](docs/api-reference.md#default-http-mapper) | error/context | Apply the default Error problem policy. |
-| [`ErrorProblemDetails.Create`](docs/api-reference.md#problem-create) | error/context | Create RFC ProblemDetails without executing it. |
-| [`ErrorProblemDetails.CreateExample`](docs/api-reference.md#problem-example) | error | Create deterministic documentation output without ambient trace data. |
-| [`ErrorProblemDetails.ToHttpResult`](docs/api-reference.md#problem-result) | error/context | Create an executable ProblemHttpResult. |
-| [`ErrorProblemDetails.GetStatusCode`](docs/api-reference.md#problem-status) | `ErrorType` | Read default category-to-status mapping. |
-| [`ValidationErrorProblemDetails.ToHttpResult`](docs/api-reference.md#validation-problem) | errors/context | Create typed validation problem output. |
-| [`ProducesErrors`](docs/api-reference.md#produces-errors) | `ReadOnlySpan<ErrorType>` | Add Minimal API response metadata without reflection. |
-| [`ErrorCatalogEntry.ErrorCatalogEntry`](docs/api-reference.md#error-catalog-entry) | type/code/description | Define one initialized public documentation entry. |
-| [`ErrorCatalogEntry.Type`](docs/api-reference.md#error-catalog-entry) | `ErrorType` | Read the documented response category. |
-| [`ErrorCatalogEntry.Code`](docs/api-reference.md#error-catalog-entry) | `string` | Read the stable documented code. |
-| [`ErrorCatalogEntry.Description`](docs/api-reference.md#error-catalog-entry) | `string` | Read the public documentation text. |
-| [`ErrorCatalogMetadata.ErrorCatalogMetadata`](docs/api-reference.md#error-catalog-metadata) | `ReadOnlySpan<ErrorCatalogEntry>` | Copy and validate endpoint-owned catalog metadata. |
-| [`ErrorCatalogMetadata.Count`](docs/api-reference.md#error-catalog-metadata) | `int` | Read the owned entry count. |
-| [`ErrorCatalogMetadata.AsSpan`](docs/api-reference.md#error-catalog-metadata) | `ReadOnlySpan<ErrorCatalogEntry>` | Read entries without allocation. |
-| [`ProducesErrorCatalog`](docs/api-reference.md#produces-error-catalog) | `ReadOnlySpan<ErrorCatalogEntry>` | Attach a copied catalog and unique status metadata to a Minimal API endpoint. |
-| [`ProducesErrorAttribute.ProducesErrorAttribute`](docs/api-reference.md#produces-error-attribute) | `ErrorType` | Add one controller response category. |
-| [`ProducesErrorAttribute.ErrorType`](docs/api-reference.md#produces-error-attribute) | enum | Read configured category. |
-| [`ProducesErrorAttribute.Type`](docs/api-reference.md#produces-error-attribute) | ProblemDetails type | Expose OpenAPI response body metadata. |
-| [`ProducesErrorAttribute.StatusCode`](docs/api-reference.md#produces-error-attribute) | `int` | Expose mapped status metadata. |
-| [`ProducesErrorAttribute.Description`](docs/api-reference.md#produces-error-attribute) | `null` | Leave description to the OpenAPI pipeline. |
-| [`ProducesErrorAttribute.ContentTypes`](docs/api-reference.md#produces-error-attribute) | problem media types | Expose supported response content types. |
-| [`ProducesErrorCatalogAttribute.ProducesErrorCatalogAttribute`](docs/api-reference.md#produces-error-catalog-attribute) | type/code/description | Attach one catalog entry to a controller or endpoint. |
-| [`ProducesErrorCatalogAttribute.Entry`](docs/api-reference.md#produces-error-catalog-attribute) | `ErrorCatalogEntry` | Read the validated documented entry. |
-| [`ProducesErrorCatalogAttribute.Type`](docs/api-reference.md#produces-error-catalog-attribute) | ProblemDetails type | Expose OpenAPI response body metadata. |
-| [`ProducesErrorCatalogAttribute.StatusCode`](docs/api-reference.md#produces-error-catalog-attribute) | `int` | Expose the category's mapped status. |
-| [`ProducesErrorCatalogAttribute.Description`](docs/api-reference.md#produces-error-catalog-attribute) | `null` | Leave response description to the document pipeline. |
-| [`ProducesErrorCatalogAttribute.ContentTypes`](docs/api-reference.md#produces-error-catalog-attribute) | problem media types | Expose supported response content types. |
-| [`IServiceCollection.AddErrorCatalogOpenApi`](docs/api-reference.md#add-error-catalog-openapi) | service extension | Register the default document transformer and package-owned `ProblemHttpResult` JSON metadata. |
-| [`OpenApiOptions.AddErrorCatalogs`](docs/api-reference.md#add-error-catalogs) | options extension | Register the singleton reflection-free operation transformer. |
-| [`MTAPI001`](docs/api-reference.md#openapi-xml-comment-diagnostic) | informational analyzer | Identify documented handlers that need explicit metadata or intentional XML projection. |
-| [`GenerateValueFunctionAttribute.GenerateValueFunctionAttribute`](docs/api-reference.md#generate-value-function) | default; generated-name constructor | Request a wrapper while retaining the original method. |
-| [`GenerateValueFunctionAttribute.Name`](docs/api-reference.md#generate-value-function) | optional name | Read the requested generated property name. |
-| [`Functions.<Method>` generated property](docs/api-reference.md#generated-functions) | `ValueFunction` or `ValueAction` | Pass an inferred zero-state token to sync or async operators. |
-| [`ValueFunctionGenerator`](docs/api-reference.md#value-function-generator) | Roslyn component | Discover attributed methods and emit callable adapters. |
-| [`ValueFunctionGenerator.Initialize`](docs/api-reference.md#value-function-generator) | generator context | Register the incremental generation pipeline; consumers do not call it. |
+| [`ErrorTelemetry.Record`](docs/api-reference.md#member-errortelemetryrecord) | activity/error/policy | Project an error into an existing BCL Activity. |
+| [`ErrorActivityStatusPolicy.Automatic`](docs/api-reference.md#member-erroractivitystatuspolicyautomatic) | enum value | Mark only server-failure categories as activity errors. |
+| [`ErrorActivityStatusPolicy.Preserve`](docs/api-reference.md#member-erroractivitystatuspolicypreserve) | enum value | Preserve the caller's activity status. |
+| [`ErrorActivityStatusPolicy.MarkError`](docs/api-reference.md#member-erroractivitystatuspolicymarkerror) | enum value | Mark every recorded category as an activity error. |
+| [`ErrorMetrics.ErrorMetrics`](docs/api-reference.md#member-errormetricserrormetrics) | meter/code-dimension/counter-name | Create an optional caller-owned counter. |
+| [`ErrorMetrics.Disabled`](docs/api-reference.md#member-errormetricsdisabled) | static value | Select the cheapest disabled metrics path. |
+| [`ErrorMetrics.IsEnabled`](docs/api-reference.md#member-errormetricsisenabled) | `bool` | Check for a listener before expensive caller work. |
+| [`ErrorMetrics.Record`](docs/api-reference.md#member-errormetricsrecord) | `Error?` | Increment the error counter with bounded tags. |
+| [`Result<T,E>.ToHttpResult`](docs/api-reference.md#member-resulthttpextensionstohttpresult) | Error; ValidationErrors; convertible error; custom delegates; struct mappers | Convert to strongly typed Minimal API results. |
+| [`IHttpResultMapper<TError,TResult>.Map`](docs/api-reference.md#member-ihttpresultmapperterror-tresultmap) | error/context | Define an allocation-free caller-owned HTTP failure mapper. |
+| [`DefaultErrorHttpResultMapper.Map`](docs/api-reference.md#member-defaulterrorhttpresultmappermap) | error/context | Apply the default Error problem policy. |
+| [`ErrorProblemDetails.Create`](docs/api-reference.md#member-errorproblemdetailscreate) | error/context | Create RFC ProblemDetails without executing it. |
+| [`ErrorProblemDetails.CreateExample`](docs/api-reference.md#member-errorproblemdetailscreateexample) | error | Create deterministic documentation output without ambient trace data. |
+| [`ErrorProblemDetails.ToHttpResult`](docs/api-reference.md#member-errorproblemdetailstohttpresult) | error/context | Create an executable ProblemHttpResult. |
+| [`ErrorProblemDetails.GetStatusCode`](docs/api-reference.md#member-errorproblemdetailsgetstatuscode) | `ErrorType` | Read default category-to-status mapping. |
+| [`ValidationErrorProblemDetails.ToHttpResult`](docs/api-reference.md#member-validationerrorproblemdetailstohttpresult) | errors/context | Create typed validation problem output. |
+| [`ProducesErrors`](docs/api-reference.md#member-errorendpointconventionextensionsproduceserrors) | `ReadOnlySpan<ErrorType>` | Add Minimal API response metadata without reflection. |
+| [`ErrorCatalogEntry.ErrorCatalogEntry`](docs/api-reference.md#member-errorcatalogentryerrorcatalogentry) | type/code/description | Define one initialized public documentation entry. |
+| [`ErrorCatalogEntry.Type`](docs/api-reference.md#member-errorcatalogentrytype) | `ErrorType` | Read the documented response category. |
+| [`ErrorCatalogEntry.Code`](docs/api-reference.md#member-errorcatalogentrycode) | `string` | Read the stable documented code. |
+| [`ErrorCatalogEntry.Description`](docs/api-reference.md#member-errorcatalogentrydescription) | `string` | Read the public documentation text. |
+| [`ErrorCatalogMetadata.ErrorCatalogMetadata`](docs/api-reference.md#member-errorcatalogmetadataerrorcatalogmetadata) | `ReadOnlySpan<ErrorCatalogEntry>` | Copy and validate endpoint-owned catalog metadata. |
+| [`ErrorCatalogMetadata.Count`](docs/api-reference.md#member-errorcatalogmetadatacount) | `int` | Read the owned entry count. |
+| [`ErrorCatalogMetadata.AsSpan`](docs/api-reference.md#member-errorcatalogmetadataasspan) | `ReadOnlySpan<ErrorCatalogEntry>` | Read entries without allocation. |
+| [`ProducesErrorCatalog`](docs/api-reference.md#member-errorendpointconventionextensionsproduceserrorcatalog) | `ReadOnlySpan<ErrorCatalogEntry>` | Attach a copied catalog and unique status metadata to a Minimal API endpoint. |
+| [`ProducesErrorAttribute.ProducesErrorAttribute`](docs/api-reference.md#member-produceserrorattributeproduceserrorattribute) | `ErrorType` | Add one controller response category. |
+| [`ProducesErrorAttribute.ErrorType`](docs/api-reference.md#member-produceserrorattributeerrortype) | enum | Read configured category. |
+| [`ProducesErrorAttribute.Type`](docs/api-reference.md#member-produceserrorattributetype) | ProblemDetails type | Expose OpenAPI response body metadata. |
+| [`ProducesErrorAttribute.StatusCode`](docs/api-reference.md#member-produceserrorattributestatuscode) | `int` | Expose mapped status metadata. |
+| [`ProducesErrorAttribute.Description`](docs/api-reference.md#member-produceserrorattributedescription) | `null` | Leave description to the OpenAPI pipeline. |
+| [`ProducesErrorAttribute.ContentTypes`](docs/api-reference.md#member-produceserrorattributecontenttypes) | problem media types | Expose supported response content types. |
+| [`ProducesErrorCatalogAttribute.ProducesErrorCatalogAttribute`](docs/api-reference.md#member-produceserrorcatalogattributeproduceserrorcatalogattribute) | type/code/description | Attach one catalog entry to a controller or endpoint. |
+| [`ProducesErrorCatalogAttribute.Entry`](docs/api-reference.md#member-produceserrorcatalogattributeentry) | `ErrorCatalogEntry` | Read the validated documented entry. |
+| [`ProducesErrorCatalogAttribute.Type`](docs/api-reference.md#member-produceserrorcatalogattributetype) | ProblemDetails type | Expose OpenAPI response body metadata. |
+| [`ProducesErrorCatalogAttribute.StatusCode`](docs/api-reference.md#member-produceserrorcatalogattributestatuscode) | `int` | Expose the category's mapped status. |
+| [`ProducesErrorCatalogAttribute.Description`](docs/api-reference.md#member-produceserrorcatalogattributedescription) | `null` | Leave response description to the document pipeline. |
+| [`ProducesErrorCatalogAttribute.ContentTypes`](docs/api-reference.md#member-produceserrorcatalogattributecontenttypes) | problem media types | Expose supported response content types. |
+| [`IServiceCollection.AddErrorCatalogOpenApi`](docs/api-reference.md#member-openapiservicecollectionextensionsadderrorcatalogopenapi) | service extension | Register the default document transformer and package-owned `ProblemHttpResult` JSON metadata. |
+| [`OpenApiOptions.AddErrorCatalogs`](docs/api-reference.md#member-openapioptionsextensionsadderrorcatalogs) | options extension | Register the singleton reflection-free operation transformer. |
+| [`MTAPI001`](#openapi-error-catalogs) | informational analyzer | Identify documented handlers that need explicit metadata or intentional XML projection. |
+| [`GenerateValueFunctionAttribute.GenerateValueFunctionAttribute`](#generated-callables) | default; generated-name constructor | Request a wrapper while retaining the original method. |
+| [`GenerateValueFunctionAttribute.Name`](#generated-callables) | optional name | Read the requested generated property name. |
+| [`Functions.<Method>` generated property](#generated-callables) | `ValueFunction` or `ValueAction` | Pass an inferred zero-state token to sync or async operators. |
+| [`ValueFunctionGenerator`](#generated-callables) | Roslyn component | Discover attributed methods and emit callable adapters. |
+| [`ValueFunctionGenerator.Initialize`](#generated-callables) | generator context | Register the incremental generation pipeline; consumers do not call it. |
 
 Prefer pipelines for ordinary flow. Reserve `TryGetValue`, `TryGetError`, and
 `Switch` for framework adapters, loops, or other explicit terminal boundaries.
@@ -758,9 +764,9 @@ checkout.Switch(
 Use `Match` when both branches produce a value:
 
 ```csharp
-IResult response = checkout.Match<IResult>(
-    static receipt => TypedResults.Ok(receipt),
-    static error => TypedResults.BadRequest(error.Code));
+string message = checkout.Match(
+    static receipt => $"Receipt {receipt.Id}",
+    static error => $"Checkout failed: {error.Code}");
 ```
 
 Use `Tap` or `TapError` instead when observation belongs inside a continuing
@@ -1968,7 +1974,8 @@ a generic instantiation to the native binary.
 
 See [benchmark policy](docs/benchmarks.md), [accepted baselines](benchmarks/baseline.md),
 [compatibility](docs/compatibility.md), [development policy](docs/development.md),
-and [dependency policy](docs/dependency-policy.md).
+[dependency policy](docs/dependency-policy.md), and the
+[documentation architecture](docs/documentation-architecture.md).
 
 ## Status And Licensing
 
@@ -1994,3 +2001,11 @@ does not grant rights to project names or trademarks.
 
 This project is AI-assisted. Architecture, acceptance decisions, performance
 criteria, and published changes remain subject to human direction and review.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](docs/api-reference.md)
+
+349 documented public members
+
+<!-- END GENERATED API INDEX -->

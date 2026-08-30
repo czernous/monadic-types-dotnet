@@ -11,6 +11,7 @@ updates:
       - dependency-name: Microsoft.AspNetCore.OpenApi
       - dependency-name: Microsoft.AspNetCore.TestHost
       - dependency-name: Microsoft.OpenApi
+      - dependency-name: Vogen
     groups:
       dotnet-tooling:
         patterns:

@@ -12,6 +12,7 @@ public static class AsyncResultExtensions
     extension<T, TError>(in Result<T, TError> result) where TError : notnull
     {
         /// <summary>Maps a successful value through an asynchronous callback.</summary>
+        /// <example><code>Result&lt;UserDto, LoadError&gt; mapped = await result.MapAsync(LoadDtoAsync);</code></example>
         /// <typeparam name="TResult">Mapped success type.</typeparam>
         /// <param name="map">Callback invoked only for success.</param>
         /// <returns>An awaitable result containing the mapped value or original failure.</returns>
@@ -31,6 +32,7 @@ public static class AsyncResultExtensions
             MapResultAsync(result, map);
 
         /// <summary>Maps a successful value through a Task-returning callback.</summary>
+        /// <example><code>Result&lt;UserDto, LoadError&gt; mapped = await result.MapTaskAsync(LoadDtoTaskAsync);</code></example>
         /// <typeparam name="TResult">Mapped success type.</typeparam>
         /// <param name="map">Callback invoked only for success.</param>
         /// <returns>An awaitable result containing the mapped value or original failure.</returns>
@@ -49,6 +51,7 @@ public static class AsyncResultExtensions
             MapResultTaskAsync(result, map);
 
         /// <summary>Binds a successful value through an asynchronous continuation.</summary>
+        /// <example><code>Result&lt;Account, LoadError&gt; account = await result.BindAsync(LoadAccountAsync);</code></example>
         /// <typeparam name="TResult">Continuation success type.</typeparam>
         /// <param name="bind">Continuation invoked only for success.</param>
         /// <returns>The asynchronous continuation result or original failure.</returns>
@@ -67,6 +70,7 @@ public static class AsyncResultExtensions
             BindResultAsync(result, bind);
 
         /// <summary>Binds a successful value through a Task-returning continuation.</summary>
+        /// <example><code>Result&lt;Account, LoadError&gt; account = await result.BindTaskAsync(LoadAccountTaskAsync);</code></example>
         /// <typeparam name="TResult">Continuation success type.</typeparam>
         /// <param name="bind">Continuation invoked only for success.</param>
         /// <returns>The asynchronous continuation result or original failure.</returns>
@@ -85,6 +89,7 @@ public static class AsyncResultExtensions
             BindResultTaskAsync(result, bind);
 
         /// <summary>Binds a failure through an asynchronous continuation.</summary>
+        /// <example><code>Result&lt;User, FinalError&gt; recovered = await result.BindErrorAsync(RetryAsync);</code></example>
         /// <typeparam name="TNextError">Continuation error type.</typeparam>
         /// <param name="bind">Continuation invoked only for failure.</param>
         /// <returns>The unchanged success or asynchronous failure continuation result.</returns>
@@ -105,6 +110,7 @@ public static class AsyncResultExtensions
             BindErrorResultAsync(result, bind);
 
         /// <summary>Binds a failure through a Task-returning continuation.</summary>
+        /// <example><code>Result&lt;User, FinalError&gt; recovered = await result.BindErrorTaskAsync(RetryTaskAsync);</code></example>
         /// <typeparam name="TNextError">Continuation error type.</typeparam>
         /// <param name="bind">Continuation invoked only for failure.</param>
         /// <returns>The unchanged success or asynchronous failure continuation result.</returns>
@@ -128,6 +134,7 @@ public static class AsyncResultExtensions
     extension<T, TError>(in ValueTask<Result<T, TError>> source) where TError : notnull
     {
         /// <summary>Maps a completed or pending result through a synchronous callback.</summary>
+        /// <example><code>Result&lt;int, LoadError&gt; id = await pending.Map(static user =&gt; user.Id);</code></example>
         /// <typeparam name="TResult">Mapped success type.</typeparam>
         /// <param name="map">Callback invoked only for success.</param>
         /// <returns>A single-consumption awaitable containing the mapped result.</returns>
@@ -136,6 +143,7 @@ public static class AsyncResultExtensions
             MapSource(source, map);
 
         /// <summary>Binds a completed or pending result through a synchronous continuation.</summary>
+        /// <example><code>Result&lt;Account, LoadError&gt; account = await pending.Bind(LoadAccount);</code></example>
         /// <typeparam name="TResult">Continuation success type.</typeparam>
         /// <param name="bind">Continuation invoked only for success.</param>
         /// <returns>A single-consumption awaitable containing the continuation result.</returns>
@@ -143,6 +151,7 @@ public static class AsyncResultExtensions
             BindSource(source, bind);
 
         /// <summary>Binds a completed or pending failure through a synchronous continuation.</summary>
+        /// <example><code>Result&lt;User, FinalError&gt; recovered = await pending.BindError(Retry);</code></example>
         /// <typeparam name="TNextError">Continuation error type.</typeparam>
         /// <param name="bind">Continuation invoked only for failure.</param>
         /// <returns>A single-consumption awaitable containing the resulting value.</returns>

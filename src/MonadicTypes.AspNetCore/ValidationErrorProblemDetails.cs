@@ -9,6 +9,7 @@ namespace MonadicTypes.AspNetCore;
 public static class ValidationErrorProblemDetails
 {
     /// <summary>Groups validation issues by path and preserves their machine-readable codes.</summary>
+    /// <example><code>ValidationProblem result = ValidationErrorProblemDetails.ToHttpResult(errors, httpContext);</code></example>
     /// <param name="validationErrors">The validation issues to convert.</param>
     /// <param name="httpContext">An optional context supplying a fallback trace identifier.</param>
     /// <returns>A strongly typed validation problem result.</returns>

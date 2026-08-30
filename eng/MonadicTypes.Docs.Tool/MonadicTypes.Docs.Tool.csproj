@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\NativeTool.props" />
+  <PropertyGroup>
+    <AssemblyName>mt-docs</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <InternalsVisibleTo Include="MonadicTypes.Tooling.Tests" />
+  </ItemGroup>
+</Project>

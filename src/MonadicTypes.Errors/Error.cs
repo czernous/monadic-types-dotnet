@@ -9,6 +9,7 @@ namespace MonadicTypes;
 /// for machines and telemetry; <see cref="Message"/> is diagnostic text and is
 /// exposed to clients only when <see cref="IsMessagePublic"/> is true.
 /// </summary>
+/// <example><code>Error error = Error.NotFound("USER_NOT_FOUND", "The user does not exist.");</code></example>
 public sealed record Error : ISpanFormattable
 {
     private readonly string? _code;
@@ -21,6 +22,7 @@ public sealed record Error : ISpanFormattable
     }
 
     /// <summary>Creates an error in a built-in category.</summary>
+    /// <example><code>Error error = new(ErrorType.NotFound, "USER_NOT_FOUND", "The user does not exist.", true);</code></example>
     public Error(
         ErrorType type,
         string code,
@@ -65,12 +67,16 @@ public sealed record Error : ISpanFormattable
     }
 
     /// <summary>Gets the broad built-in category.</summary>
+    /// <example><code>ErrorType category = error.Type;</code></example>
     public ErrorType Type { get; }
     /// <summary>Gets the stable numeric category, including custom categories.</summary>
+    /// <example><code>int category = error.NumericType;</code></example>
     public int NumericType { get; }
     /// <summary>Gets the stable machine-readable error code.</summary>
+    /// <example><code>logger.LogWarning("Failure {Code}", error.Code);</code></example>
     public string Code => _code ?? throw UninitializedError();
     /// <summary>Gets the diagnostic message.</summary>
+    /// <example><code>logger.LogWarning("{Message}", error.Message);</code></example>
     public string Message => _detail switch
     {
         string message => message,
@@ -79,11 +85,13 @@ public sealed record Error : ISpanFormattable
         _ => throw UninitializedError()
     };
     /// <summary>Gets whether adapters may safely expose <see cref="Message"/> to clients.</summary>
+    /// <example><code>string detail = error.IsMessagePublic ? error.Message : "Request failed.";</code></example>
     public bool IsMessagePublic { get; }
     /// <summary>
     /// Retained exception for telemetry. Use <see cref="ThrowCause"/> rather than
     /// throwing this property directly when exception propagation is required.
     /// </summary>
+    /// <example><code>Exception? cause = error.Cause;</code></example>
     public Exception? Cause => _detail switch
     {
         Exception cause => cause,
@@ -92,6 +100,7 @@ public sealed record Error : ISpanFormattable
     };
 
     /// <summary>Rethrows the retained cause while preserving its original stack trace.</summary>
+    /// <example><code>if (error.Cause is not null) error.ThrowCause();</code></example>
     /// <exception cref="InvalidOperationException">No cause is retained.</exception>
     [DoesNotReturn]
     public void ThrowCause()
@@ -105,6 +114,7 @@ public sealed record Error : ISpanFormattable
     }
 
     /// <summary>Creates a general failure with the default code.</summary>
+    /// <example><code>Error error = Error.Failure("Operation failed.");</code></example>
     public static Error Failure(string message) =>
         new(ErrorType.Failure, "FAILURE", message);
 
@@ -117,6 +127,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.Failure, code, message, isMessagePublic, cause);
 
     /// <summary>Creates an unexpected failure without a retained exception.</summary>
+    /// <example><code>Error error = Error.Unexpected("Unexpected failure.");</code></example>
     public static Error Unexpected(string message) =>
         new(ErrorType.Unexpected, "UNEXPECTED_FAILURE", message);
 
@@ -128,6 +139,7 @@ public sealed record Error : ISpanFormattable
     }
 
     /// <summary>Creates a public validation failure with the default code.</summary>
+    /// <example><code>Error error = Error.Validation("Email is invalid.");</code></example>
     public static Error Validation(string message) =>
         new(ErrorType.Validation, "VALIDATION_FAILURE", message, isMessagePublic: true);
 
@@ -136,6 +148,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.Validation, code, message, isMessagePublic: true, cause);
 
     /// <summary>Creates a conflict error.</summary>
+    /// <example><code>Error error = Error.Conflict("VERSION_CONFLICT", "The resource changed.");</code></example>
     public static Error Conflict(
         string code,
         string message,
@@ -144,6 +157,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.Conflict, code, message, isMessagePublic, cause);
 
     /// <summary>Creates a resource-not-found error.</summary>
+    /// <example><code>Error error = Error.NotFound("USER_NOT_FOUND", "The user does not exist.");</code></example>
     public static Error NotFound(
         string code,
         string message,
@@ -152,6 +166,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.NotFound, code, message, isMessagePublic, cause);
 
     /// <summary>Creates an authentication-required error.</summary>
+    /// <example><code>Error error = Error.Unauthorized("AUTH_REQUIRED", "Authentication is required.");</code></example>
     public static Error Unauthorized(
         string code,
         string message,
@@ -160,6 +175,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.Unauthorized, code, message, isMessagePublic, cause);
 
     /// <summary>Creates an authorization-denied error.</summary>
+    /// <example><code>Error error = Error.Forbidden("ACCESS_DENIED", "Access is denied.");</code></example>
     public static Error Forbidden(
         string code,
         string message,
@@ -168,6 +184,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.Forbidden, code, message, isMessagePublic, cause);
 
     /// <summary>Creates a service-unavailable error.</summary>
+    /// <example><code>Error error = Error.Unavailable("STORE_UNAVAILABLE", "Store unavailable.");</code></example>
     public static Error Unavailable(
         string code,
         string message,
@@ -176,6 +193,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.Unavailable, code, message, isMessagePublic, cause);
 
     /// <summary>Creates a timeout error.</summary>
+    /// <example><code>Error error = Error.Timeout("REQUEST_TIMEOUT", "The operation timed out.");</code></example>
     public static Error Timeout(
         string code,
         string message,
@@ -184,6 +202,7 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.Timeout, code, message, isMessagePublic, cause);
 
     /// <summary>Creates a rate-limit error.</summary>
+    /// <example><code>Error error = Error.RateLimited("RATE_LIMITED", "Try again later.");</code></example>
     public static Error RateLimited(
         string code,
         string message,
@@ -192,10 +211,12 @@ public sealed record Error : ISpanFormattable
         new(ErrorType.RateLimited, code, message, isMessagePublic, cause);
 
     /// <summary>Creates a cancellation error.</summary>
+    /// <example><code>Error error = Error.Cancelled("OPERATION_CANCELLED", "Operation cancelled.");</code></example>
     public static Error Cancelled(string code, string message, Exception? cause = null) =>
         new(ErrorType.Cancelled, code, message, cause: cause);
 
     /// <summary>Creates a consumer-defined error category with a positive numeric identifier.</summary>
+    /// <example><code>Error error = Error.Custom(10_001, "VENDOR_REJECTED", "The vendor rejected the request.");</code></example>
     public static Error Custom(
         int numericType,
         string code,
@@ -209,14 +230,33 @@ public sealed record Error : ISpanFormattable
     }
 
     /// <summary>Creates a general input/output failure with the standard code.</summary>
+    /// <example><code>Error error = Error.IO("Unable to read the file.");</code></example>
     public static Error IO(string message) =>
         new(ErrorType.Failure, "IO_FAILURE", message);
 
+    /// <summary>Creates an input/output failure with a caller-defined code, visibility, and optional retained cause.</summary>
+    public static Error IO(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Failure, code, message, isMessagePublic, cause);
+
     /// <summary>Creates an unexpected system failure with the standard code.</summary>
+    /// <example><code>Error error = Error.System("System operation failed.");</code></example>
     public static Error System(string message) =>
         new(ErrorType.Unexpected, "SYSTEM_FAILURE", message);
 
+    /// <summary>Creates a system failure with a caller-defined code, visibility, and optional retained cause.</summary>
+    public static Error System(
+        string code,
+        string message,
+        bool isMessagePublic = false,
+        Exception? cause = null) =>
+        new(ErrorType.Unexpected, code, message, isMessagePublic, cause);
+
     /// <summary>Compares semantic fields and retained-cause identity.</summary>
+    /// <example><code>bool equal = left.Equals(right);</code></example>
     public bool Equals(Error? other) =>
         ReferenceEquals(this, other)
         || other is not null
@@ -228,6 +268,7 @@ public sealed record Error : ISpanFormattable
         && ReferenceEquals(Cause, other.Cause);
 
     /// <summary>Hashes the same fields used by <see cref="Equals(Error?)"/>.</summary>
+    /// <example><code>int hash = error.GetHashCode();</code></example>
     public override int GetHashCode() => HashCode.Combine(
         (int)Type,
         NumericType,
@@ -236,20 +277,34 @@ public sealed record Error : ISpanFormattable
         IsMessagePublic,
         Cause is null ? 0 : RuntimeHelpers.GetHashCode(Cause));
 
-    /// <inheritdoc />
+    /// <summary>Formats the error as <c>[Code] Message</c>.</summary>
+    /// <returns>The diagnostic representation.</returns>
+    /// <example><code>string diagnostic = error.ToString();</code></example>
     public override string ToString() => string.Create(
         GetFormattedLength(),
         this,
         static (destination, error) => error.Format(destination));
 
-    /// <inheritdoc />
+    /// <summary>Formats the error using the general format.</summary>
+    /// <param name="format">Empty, null, or <c>G</c>.</param>
+    /// <param name="formatProvider">Ignored because error formatting is culture independent.</param>
+    /// <returns>The diagnostic representation.</returns>
+    /// <example><code>string diagnostic = error.ToString("G", null);</code></example>
+    /// <exception cref="FormatException"><paramref name="format"/> is not empty and is not <c>G</c>.</exception>
     public string ToString(string? format, IFormatProvider? formatProvider)
     {
         ValidateFormat(format);
         return ToString();
     }
 
-    /// <inheritdoc />
+    /// <summary>Attempts to write <c>[Code] Message</c> into caller-owned storage.</summary>
+    /// <param name="destination">Destination buffer.</param>
+    /// <param name="charsWritten">Number of characters written, or zero when the buffer is too small.</param>
+    /// <param name="format">Empty or <c>G</c>.</param>
+    /// <param name="provider">Ignored because error formatting is culture independent.</param>
+    /// <returns>True when the complete representation was written.</returns>
+    /// <example><code>Span&lt;char&gt; buffer = stackalloc char[128]; bool written = error.TryFormat(buffer, out int count, default, null);</code></example>
+    /// <exception cref="FormatException"><paramref name="format"/> is not empty and is not <c>G</c>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryFormat(
         Span<char> destination,

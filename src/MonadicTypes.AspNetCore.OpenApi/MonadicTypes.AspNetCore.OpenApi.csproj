@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MonadicTypes.AspNetCore.Benchmarks" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" ExcludeAssets="analyzers;build" GeneratePathProperty="true" />
     <PackageReference Include="Microsoft.OpenApi" />
     <ProjectReference Include="..\MonadicTypes.AspNetCore\MonadicTypes.AspNetCore.csproj" />

@@ -365,6 +365,7 @@ internal static class AffectedProjects
             (bool hasProjects, bool hasAot, bool hasPackages) =
                 WriteProjects(stream, projects, affected, utf8Buffer);
             hasPackages |= HasPackageChanges(changedFiles, changes);
+            bool hasDocumentation = hasPackages || HasDocumentationChanges(changedFiles, changes);
 
             stream.Write("\nhas-projects="u8);
             WriteBoolean(stream, hasProjects);
@@ -372,9 +373,12 @@ internal static class AffectedProjects
             WriteBoolean(stream, hasAot);
             stream.Write("\npackages="u8);
             WriteBoolean(stream, hasPackages);
+            stream.Write("\ndocumentation="u8);
+            WriteBoolean(stream, hasDocumentation);
             stream.Write("\ntooling-projects=["u8);
             bool hasPrevious = false;
             WriteTool(stream, changes, ToolChanges.Affected, "MonadicTypes.AffectedProjects.Tool"u8, ref hasPrevious);
+            WriteTool(stream, changes, ToolChanges.Docs, "MonadicTypes.Docs.Tool"u8, ref hasPrevious);
             WriteTool(stream, changes, ToolChanges.Pack, "MonadicTypes.Pack.Tool"u8, ref hasPrevious);
             WriteTool(stream, changes, ToolChanges.TestPackages, "MonadicTypes.TestPackages.Tool"u8, ref hasPrevious);
             WriteTool(stream, changes, ToolChanges.VerifyLockfiles, "MonadicTypes.VerifyLockfiles.Tool"u8, ref hasPrevious);
@@ -462,6 +466,7 @@ internal static class AffectedProjects
         _ when path.SequenceEqual("eng/VerifyLockfiles.cs"u8) => ToolChanges.VerifyLockfiles,
         _ when path.StartsWith("eng/MonadicTypes.AffectedProjects.Tool/"u8)
             || path.StartsWith("eng/MonadicTypes.Tooling/"u8) => ToolChanges.Affected,
+        _ when path.StartsWith("eng/MonadicTypes.Docs.Tool/"u8) => ToolChanges.Docs,
         _ when path.StartsWith("eng/MonadicTypes.Pack.Tool/"u8) => ToolChanges.Pack,
         _ when path.StartsWith("eng/MonadicTypes.TestPackages.Tool/"u8) =>
             ToolChanges.TestPackages,
@@ -470,6 +475,9 @@ internal static class AffectedProjects
         _ when path.StartsWith("eng/tools/"u8)
             && (path.EndsWith("/mt-affected"u8) || path.EndsWith("/mt-affected.exe"u8)) =>
             ToolChanges.Affected,
+        _ when path.StartsWith("eng/tools/"u8)
+            && (path.EndsWith("/mt-docs"u8) || path.EndsWith("/mt-docs.exe"u8)) =>
+            ToolChanges.Docs,
         _ when path.StartsWith("eng/tools/"u8)
             && (path.EndsWith("/mt-pack"u8) || path.EndsWith("/mt-pack.exe"u8)) =>
             ToolChanges.Pack,
@@ -493,6 +501,15 @@ internal static class AffectedProjects
     internal static bool RequiresToolCompilation(ReadOnlySpan<byte> path) =>
         GetToolChange(path) is not ToolChanges.None;
 
+    internal static bool IsDocumentationChange(ReadOnlySpan<byte> path) => path switch
+    {
+        _ when path.SequenceEqual("README.md"u8)
+            || path.SequenceEqual("CHANGELOG.md"u8)
+            || path.StartsWith("docs/"u8)
+            || path.StartsWith("eng/MonadicTypes.Docs.Tool/"u8) => true,
+        _ => false
+    };
+
     private static bool HasPackageChanges(PooledUtf8Paths changedFiles, ToolChanges changes)
     {
         if ((changes & (ToolChanges.Pack | ToolChanges.TestPackages)) is not ToolChanges.None)
@@ -503,6 +520,26 @@ internal static class AffectedProjects
         for (int index = 0; index < changedFiles.Count; index++)
         {
             if (IsPackageChange(changedFiles[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasDocumentationChanges(
+        PooledUtf8Paths changedFiles,
+        ToolChanges changes)
+    {
+        if ((changes & ToolChanges.Docs) is not ToolChanges.None)
+        {
+            return true;
+        }
+
+        for (int index = 0; index < changedFiles.Count; index++)
+        {
+            if (IsDocumentationChange(changedFiles[index]))
             {
                 return true;
             }
@@ -775,6 +812,7 @@ internal static class AffectedProjects
         Pack = 2,
         TestPackages = 4,
         VerifyLockfiles = 8,
-        All = Affected | Pack | TestPackages | VerifyLockfiles
+        Docs = 16,
+        All = Affected | Pack | TestPackages | VerifyLockfiles | Docs
     }
 }

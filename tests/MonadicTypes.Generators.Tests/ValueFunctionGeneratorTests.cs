@@ -50,6 +50,83 @@ public static partial class Operations
     }
 
     [Fact]
+    public void GeneratedPublicContractIncludesXmlDocumentation()
+    {
+        const string source = """
+namespace Consumer;
+
+public static partial class Operations
+{
+    [MonadicTypes.GenerateValueFunction]
+    public static long Widen(int value) => value;
+}
+""";
+
+        GeneratorDriverRunResult result = Run(source);
+        ImmutableArray<GeneratedSourceResult> sources =
+        [
+            .. result.Results.SelectMany(static generator => generator.GeneratedSources)
+        ];
+        string attribute = Assert.Single(
+            sources,
+            static generated => string.Equals(
+                generated.HintName,
+                "GenerateValueFunctionAttribute.g.cs",
+                StringComparison.Ordinal)).SourceText.ToString();
+        string callable = Assert.Single(
+            sources,
+            static generated => generated.HintName.EndsWith(
+                ".ValueFunctions.g.cs",
+                StringComparison.Ordinal)).SourceText.ToString();
+
+        Assert.Contains("/// <summary>Requests an allocation-free callable wrapper", attribute, StringComparison.Ordinal);
+        Assert.Contains("/// <example><code>[GenerateValueFunction]", attribute, StringComparison.Ordinal);
+        Assert.Contains("/// <summary>Gets the generated callable token", callable, StringComparison.Ordinal);
+        Assert.Contains(
+            "/// <example><code>var result = Operations.Functions.Widen.Invoke(value);</code></example>",
+            callable,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("language=", attribute, StringComparison.Ordinal);
+        Assert.DoesNotContain("language=", callable, StringComparison.Ordinal);
+        Assert.Contains("/// <summary>Forwards the input to", callable, StringComparison.Ordinal);
+        Assert.Contains("/// <param name=\"value\">Input value.</param>", callable, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GeneratedExamplesAreAvailableThroughRoslynSymbolDocumentation()
+    {
+        const string source = """
+namespace Consumer;
+
+public static partial class Operations
+{
+    [MonadicTypes.GenerateValueFunction]
+    public static long Widen(int value) => value;
+}
+""";
+
+        CSharpCompilation compilation = CreateCompilation(source);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new ValueFunctionGenerator());
+        _ = driver.RunGeneratorsAndUpdateCompilation(compilation, out Compilation output, out _);
+
+        INamedTypeSymbol operations = output.GetTypeByMetadataName("Consumer.Operations")!;
+        INamedTypeSymbol functions = Assert.Single(operations.GetTypeMembers("Functions"));
+        ISymbol callable = Assert.Single(functions.GetMembers("Widen"));
+        INamedTypeSymbol attribute = output.GetTypeByMetadataName(
+            "MonadicTypes.GenerateValueFunctionAttribute")!;
+
+        string callableDocumentation = callable.GetDocumentationCommentXml() ?? string.Empty;
+        string attributeDocumentation = attribute.GetDocumentationCommentXml() ?? string.Empty;
+        Assert.Contains("<example>", callableDocumentation, StringComparison.Ordinal);
+        Assert.Contains("<code>", callableDocumentation, StringComparison.Ordinal);
+        Assert.Contains("Operations.Functions.Widen.Invoke(value)", callableDocumentation, StringComparison.Ordinal);
+        Assert.DoesNotContain("language=", callableDocumentation, StringComparison.Ordinal);
+        Assert.Contains("<example>", attributeDocumentation, StringComparison.Ordinal);
+        Assert.Contains("<code>", attributeDocumentation, StringComparison.Ordinal);
+        Assert.DoesNotContain("language=", attributeDocumentation, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void InstanceMethod_ReportsMethodDiagnostic()
     {
         const string source = """
@@ -111,16 +188,21 @@ public static partial class Operations
 
     private static GeneratorDriverRunResult Run(string source)
     {
-        CSharpSyntaxTree syntaxTree = (CSharpSyntaxTree)CSharpSyntaxTree.ParseText(source);
-        CSharpCompilation compilation = CSharpCompilation.Create(
-            "GeneratorTests",
-            [syntaxTree],
-            PlatformReferences,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        CSharpCompilation compilation = CreateCompilation(source);
         GeneratorDriver driver = CSharpGeneratorDriver.Create(new ValueFunctionGenerator())
             .RunGenerators(compilation);
 
         return driver.GetRunResult();
+    }
+
+    private static CSharpCompilation CreateCompilation(string source)
+    {
+        CSharpSyntaxTree syntaxTree = (CSharpSyntaxTree)CSharpSyntaxTree.ParseText(source);
+        return CSharpCompilation.Create(
+            "GeneratorTests",
+            [syntaxTree],
+            PlatformReferences,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
     }
 
     private static readonly ImmutableArray<PortableExecutableReference> PlatformReferences =

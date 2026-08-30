@@ -40,7 +40,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.3xx
@@ -74,7 +74,7 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-dotnet@v6
@@ -118,6 +118,8 @@ jobs:
         run: dotnet format whitespace MonadicTypes.slnx --verify-no-changes --no-restore
       - name: Build
         run: dotnet build MonadicTypes.slnx -c Release --no-restore
+      - name: Verify generated documentation
+        run: dotnet run --project eng/MonadicTypes.Docs.Tool/MonadicTypes.Docs.Tool.csproj -c Release --no-build --no-restore -- verify .
       - name: Test
         run: dotnet test MonadicTypes.slnx -c Release --no-build --no-restore
       - name: Pack and inspect
@@ -130,7 +132,7 @@ jobs:
           subject-path: |
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: release-${{ steps.version.outputs.tag }}
           path: |
@@ -157,7 +159,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           name: release-${{ needs.release.outputs.tag }}
           path: artifacts/packages
@@ -186,7 +188,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           name: release-${{ needs.release.outputs.tag }}
           path: artifacts/packages
@@ -211,10 +213,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           name: release-${{ needs.release.outputs.tag }}
           path: artifacts/packages

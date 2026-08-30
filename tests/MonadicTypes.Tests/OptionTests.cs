@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Vogen;
 
 namespace MonadicTypes.Tests;
 
@@ -11,6 +12,34 @@ public class OptionTests
 
         Assert.True(option.IsNone);
         Assert.Throws<InvalidOperationException>(() => option.Value);
+    }
+
+    [Fact]
+    public void None_EqualityDoesNotInspectInactiveValue()
+    {
+        Option<GeneratedValueObjectLike> first = Option<GeneratedValueObjectLike>.None;
+        Option<GeneratedValueObjectLike> second = Option<GeneratedValueObjectLike>.None;
+
+        Assert.True(first == second);
+        Assert.True(first.Equals(second));
+        Assert.Equal(first.GetHashCode(), second.GetHashCode());
+    }
+
+    [Fact]
+    public void None_EqualitySupportsGeneratedValueObjects()
+    {
+        Option<GeneratedIdentifier> first = Option<GeneratedIdentifier>.None;
+        Option<GeneratedIdentifier> second = Option<GeneratedIdentifier>.None;
+
+        GeneratedIdentifier identifier = GeneratedIdentifier.From(42);
+        Option<GeneratedIdentifier> some = Option<GeneratedIdentifier>.Some(identifier);
+        Option<GeneratedIdentifier> equalSome = Option<GeneratedIdentifier>.Some(identifier);
+
+        Assert.True(first == second);
+        Assert.Equal(first.GetHashCode(), second.GetHashCode());
+        Assert.True(some == equalSome);
+        Assert.Equal(some.GetHashCode(), equalSome.GetHashCode());
+        Assert.NotEqual(first, some);
     }
 
     [Fact]
@@ -153,6 +182,26 @@ public class OptionTests
         Assert.Equal(5, filtered.Value);
     }
 
+    [Fact]
+    public void Match_StateAndStructCallablesAvoidCaptures()
+    {
+        int stateSome = Option<int>.Some(5).Match(
+            2,
+            static (value, increment) => value + increment,
+            static increment => -increment);
+        int stateNone = Option<int>.None.Match(
+            2,
+            static (value, increment) => value + increment,
+            static increment => -increment);
+        int callableSome = Option<int>.Some(5).Match<int, WidenInt, Missing>(default, default);
+        int callableNone = Option<int>.None.Match<int, WidenInt, Missing>(default, default);
+
+        Assert.Equal(7, stateSome);
+        Assert.Equal(-2, stateNone);
+        Assert.Equal(6, callableSome);
+        Assert.Equal(-1, callableNone);
+    }
+
     private readonly struct Widen : IValueFunction<int, long>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -165,8 +214,32 @@ public class OptionTests
         public Option<long> Invoke(int value) => Option<long>.Some(value + 1L);
     }
 
+    private readonly struct WidenInt : IValueFunction<int, int>
+    {
+        public int Invoke(int value) => value + 1;
+    }
+
+    private readonly struct Missing : IValueFunction<Unit, int>
+    {
+        public int Invoke(Unit value) => -1;
+    }
+
     private readonly struct ThrowingMap : IValueFunction<int, int>
     {
         public int Invoke(int value) => throw new InvalidOperationException();
     }
+
+    private readonly struct GeneratedValueObjectLike : IEquatable<GeneratedValueObjectLike>
+    {
+        public bool Equals(GeneratedValueObjectLike other) => false;
+
+        public override bool Equals(object? obj) => false;
+
+        public override int GetHashCode() => throw new InvalidOperationException("Uninitialized value object.");
+    }
 }
+
+#pragma warning disable MA0097 // Vogen owns the generated comparison surface.
+[ValueObject<int>(conversions: Conversions.None)]
+internal readonly partial struct GeneratedIdentifier;
+#pragma warning restore MA0097

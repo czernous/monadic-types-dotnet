@@ -45,3 +45,11 @@ were `2.095 ns` fluent versus `2.355 ns` query syntax for `Select`, and
 `4.509 ns` versus `4.952 ns` for `SelectMany`. All rows allocated `0 B`.
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetlinq)
+
+Documented public members: 6
+
+<!-- END GENERATED API INDEX -->

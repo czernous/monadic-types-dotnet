@@ -10,6 +10,7 @@ namespace MonadicTypes;
 public static class ErrorTelemetry
 {
     /// <summary>Records an error on a sampled activity without creating an activity.</summary>
+    /// <example><code>ErrorTelemetry.Record(Activity.Current, error);</code></example>
     /// <param name="activity">The caller-owned activity, or null to perform no work.</param>
     /// <param name="error">The initialized error to record.</param>
     /// <param name="statusPolicy">The policy controlling activity status mutation.</param>
@@ -18,7 +19,7 @@ public static class ErrorTelemetry
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Record(
         Activity? activity,
-        in Error? error,
+        Error? error,
         ErrorActivityStatusPolicy statusPolicy = ErrorActivityStatusPolicy.Automatic)
     {
         if (activity is null || !activity.IsAllDataRequested)

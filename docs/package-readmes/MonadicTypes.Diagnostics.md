@@ -63,3 +63,11 @@ See [diagnostics](https://github.com/czernous/monadic-types-dotnet#diagnostics)
 and the [compatibility contract](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/compatibility.md).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetdiagnostics)
+
+Documented public members: 11
+
+<!-- END GENERATED API INDEX -->

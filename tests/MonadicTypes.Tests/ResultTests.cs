@@ -5,6 +5,32 @@ namespace MonadicTypes.Tests;
 public class ResultTests
 {
     [Fact]
+    public void ValueAction_CarriesStateWithoutADelegate()
+    {
+        Counter counter = new();
+        var action = new ValueAction<int, AddToCounter>(new AddToCounter(counter));
+
+        Result<int, string> result = Result<int, string>.Ok(5).Tap(action);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(5, counter.Value);
+    }
+
+    [Fact]
+    public void Equality_OnlyInspectsTheActiveCase()
+    {
+        Result<GeneratedValueObjectLike, string> firstFailure = Result<GeneratedValueObjectLike, string>.Fail("invalid");
+        Result<GeneratedValueObjectLike, string> secondFailure = Result<GeneratedValueObjectLike, string>.Fail("invalid");
+        Result<int, GeneratedValueObjectLike> firstSuccess = Result<int, GeneratedValueObjectLike>.Ok(42);
+        Result<int, GeneratedValueObjectLike> secondSuccess = Result<int, GeneratedValueObjectLike>.Ok(42);
+
+        Assert.True(firstFailure == secondFailure);
+        Assert.True(firstSuccess == secondSuccess);
+        Assert.Equal(firstFailure.GetHashCode(), secondFailure.GetHashCode());
+        Assert.Equal(firstSuccess.GetHashCode(), secondSuccess.GetHashCode());
+    }
+
+    [Fact]
     public void Default_IsUninitializedRatherThanFailure()
     {
         Result<int, string> result = default;
@@ -274,6 +300,25 @@ public class ResultTests
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Invoke(string value) => value.Length;
+    }
+
+    private readonly struct AddToCounter(Counter counter) : IValueAction<int>
+    {
+        public void Invoke(int value) => counter.Value += value;
+    }
+
+    private readonly struct GeneratedValueObjectLike : IEquatable<GeneratedValueObjectLike>
+    {
+        public bool Equals(GeneratedValueObjectLike other) => false;
+
+        public override bool Equals(object? obj) => false;
+
+        public override int GetHashCode() => throw new InvalidOperationException("Uninitialized value object.");
+    }
+
+    private sealed class Counter
+    {
+        public int Value { get; set; }
     }
 
     private sealed record PatternError(string Code);

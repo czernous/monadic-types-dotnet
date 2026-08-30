@@ -25,6 +25,7 @@ public class ErrorTests
             new InvalidOperationException("retained cause"));
 
         Assert.Equal(first, equal);
+        Assert.True(first == equal);
         Assert.Equal(first.GetHashCode(), equal.GetHashCode());
         Assert.NotEqual(first, differentCause);
     }
@@ -125,6 +126,28 @@ public class ErrorTests
         Assert.Equal(ErrorType.Unavailable, error.Type);
         Assert.Same(cause, error.Cause);
         Assert.False(error.IsMessagePublic);
+    }
+
+    [Fact]
+    public void IoAndSystemFactoriesSupportCustomCodesAndRetainedCauses()
+    {
+        IOException ioCause = new("disk failure");
+        InvalidOperationException systemCause = new("runtime failure");
+
+        Error io = Error.IO("FILE_READ_FAILED", "Unable to read file.", cause: ioCause);
+        Error system = Error.System(
+            "SUBSYSTEM_FAILED",
+            "A subsystem failed.",
+            isMessagePublic: true,
+            cause: systemCause);
+
+        Assert.Equal(ErrorType.Failure, io.Type);
+        Assert.Equal("FILE_READ_FAILED", io.Code);
+        Assert.Same(ioCause, io.Cause);
+        Assert.Equal(ErrorType.Unexpected, system.Type);
+        Assert.Equal("SUBSYSTEM_FAILED", system.Code);
+        Assert.True(system.IsMessagePublic);
+        Assert.Same(systemCause, system.Cause);
     }
 
     [Fact]

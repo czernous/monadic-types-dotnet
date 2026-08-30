@@ -6,6 +6,7 @@ namespace MonadicTypes.Effects;
 public static class Effect
 {
     /// <summary>Executes a synchronous effect and converts recoverable exceptions to failures.</summary>
+    /// <example><code>Result&lt;Config, ReadError&gt; config = Effect.Try(ReadConfig, ReadError.FromException);</code></example>
     /// <typeparam name="T">Effect value type.</typeparam>
     /// <typeparam name="TError">Failure type.</typeparam>
     /// <param name="operation">Effect to execute exactly once.</param>
@@ -56,6 +57,7 @@ public static class Effect
     }
 
     /// <summary>Executes a ValueTask-producing effect and converts recoverable exceptions to failures.</summary>
+    /// <example><code>Result&lt;User, LoadError&gt; user = await Effect.TryAsync(LoadUserAsync, LoadError.FromException);</code></example>
     /// <typeparam name="T">Effect value type.</typeparam>
     /// <typeparam name="TError">Failure type.</typeparam>
     /// <param name="operation">Effect to execute exactly once.</param>
@@ -112,6 +114,7 @@ public static class Effect
     }
 
     /// <summary>Executes a Task-producing effect and converts recoverable exceptions to failures.</summary>
+    /// <example><code>Result&lt;User, LoadError&gt; user = await Effect.TryTaskAsync(LoadUserTaskAsync, LoadError.FromException);</code></example>
     /// <typeparam name="T">Effect value type.</typeparam>
     /// <typeparam name="TError">Failure type.</typeparam>
     /// <param name="operation">Effect to execute exactly once.</param>

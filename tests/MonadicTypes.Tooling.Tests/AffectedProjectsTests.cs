@@ -23,14 +23,28 @@ public sealed class AffectedProjectsTests
     [InlineData("eng/TestPackages.cs", true)]
     [InlineData("eng/SemanticVersion.cs", true)]
     [InlineData("eng/NativeTool.props", true)]
+    [InlineData("eng/MonadicTypes.Docs.Tool/DocumentationTool.cs", true)]
     [InlineData("eng/tools/linux-x64/mt-pack", true)]
     [InlineData("eng/tools/win-x64/mt-pack.exe", true)]
+    [InlineData("eng/tools/linux-x64/mt-docs", true)]
+    [InlineData("eng/tools/win-x64/mt-docs.exe", true)]
     [InlineData("eng/Pack.proj", false)]
     [InlineData("eng/TestPackages.proj", false)]
     public void OnlyCompiledToolInputsRebuildNativeBinaries(string path, bool expected) =>
         Assert.Equal(
             expected,
             AffectedProjects.RequiresToolCompilation(System.Text.Encoding.UTF8.GetBytes(path)));
+
+    [Theory]
+    [InlineData("README.md", true)]
+    [InlineData("CHANGELOG.md", true)]
+    [InlineData("docs/api-reference.md", true)]
+    [InlineData("eng/MonadicTypes.Docs.Tool/DocumentationOutput.cs", true)]
+    [InlineData("tests/MonadicTypes.Tests/ResultTests.cs", false)]
+    public void DocumentationInputsRunDocumentationValidation(string path, bool expected) =>
+        Assert.Equal(
+            expected,
+            AffectedProjects.IsDocumentationChange(System.Text.Encoding.UTF8.GetBytes(path)));
 
     [Theory]
     [InlineData("Directory.Build.props")]

@@ -10,6 +10,7 @@ namespace MonadicTypes.AspNetCore;
 public static class ErrorProblemDetails
 {
     /// <summary>Creates problem details using the built-in category, visibility, and trace policy.</summary>
+    /// <example><code>ProblemDetails problem = ErrorProblemDetails.Create(error, httpContext);</code></example>
     /// <param name="error">The initialized error to convert.</param>
     /// <param name="httpContext">An optional context supplying a fallback trace identifier.</param>
     /// <returns>A populated problem-details value.</returns>
@@ -24,6 +25,7 @@ public static class ErrorProblemDetails
     /// <summary>
     /// Creates deterministic problem details for documentation without request or activity data.
     /// </summary>
+    /// <example><code>ProblemDetails example = ErrorProblemDetails.CreateExample(error);</code></example>
     /// <param name="error">The initialized error to convert.</param>
     /// <returns>Problem details without a trace identifier.</returns>
     public static ProblemDetails CreateExample(in Error error)
@@ -53,6 +55,7 @@ public static class ErrorProblemDetails
     }
 
     /// <summary>Creates a strongly typed problem HTTP result for an error.</summary>
+    /// <example><code>ProblemHttpResult result = ErrorProblemDetails.ToHttpResult(error, httpContext);</code></example>
     /// <param name="error">The initialized error to convert.</param>
     /// <param name="httpContext">An optional context supplying a fallback trace identifier.</param>
     /// <returns>A strongly typed problem result.</returns>
@@ -60,6 +63,7 @@ public static class ErrorProblemDetails
         TypedResults.Problem(Create(error, httpContext));
 
     /// <summary>Gets the default HTTP status code for an error category.</summary>
+    /// <example><code>int status = ErrorProblemDetails.GetStatusCode(ErrorType.NotFound);</code></example>
     /// <param name="type">The initialized error category.</param>
     /// <returns>The corresponding HTTP status code.</returns>
     public static int GetStatusCode(ErrorType type) => type switch

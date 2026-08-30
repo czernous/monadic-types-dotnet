@@ -129,3 +129,11 @@ Microsoft OpenAPI compatibility is pinned and tested separately because its
 behavior and dependencies are third-party contracts.
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetaspnetcoreopenapi)
+
+Documented public members: 4
+
+<!-- END GENERATED API INDEX -->
