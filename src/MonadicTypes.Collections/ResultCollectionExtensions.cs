@@ -8,6 +8,7 @@ public static class ResultCollectionExtensions
     extension<TSource>(IReadOnlyList<TSource> source)
     {
         /// <summary>Traverses each item once and returns a newly allocated array of successful values.</summary>
+        /// <example><code>Result&lt;User[], LoadError&gt; users = ids.TraverseToArray(LoadUser);</code></example>
         /// <remarks>Empty input reuses <see cref="Array.Empty{T}"/>. Non-empty input allocates exactly one output array, including when a later item fails.</remarks>
         public Result<TResult[], TError> TraverseToArray<TResult, TError>(
             Func<TSource, Result<TResult, TError>> selector)
@@ -181,6 +182,7 @@ public static class ResultCollectionExtensions
     extension<T, TError>(ReadOnlySpan<Result<T, TError>> source) where TError : notnull
     {
         /// <summary>Converts a span of results to one newly allocated array using fail-fast semantics.</summary>
+        /// <example><code>Result&lt;User[], LoadError&gt; users = results.AsSpan().SequenceToArray();</code></example>
         /// <remarks>Empty input reuses <see cref="Array.Empty{T}"/>. Non-empty input allocates one array.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Result<T[], TError> SequenceToArray()

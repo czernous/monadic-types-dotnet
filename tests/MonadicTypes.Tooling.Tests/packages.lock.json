@@ -104,6 +104,9 @@
         "dependencies": {
           "xunit.extensibility.core": "[2.9.3]"
         }
+      },
+      "mt-docs": {
+        "type": "Project"
       }
     }
   }

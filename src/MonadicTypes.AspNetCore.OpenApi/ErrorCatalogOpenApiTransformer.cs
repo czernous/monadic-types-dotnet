@@ -31,18 +31,27 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
         ValidateUniqueCodes(metadata);
         for (int metadataIndex = 0; metadataIndex < metadata.Count; metadataIndex++)
         {
-            switch (metadata[metadataIndex])
+            _ = metadata[metadataIndex] switch
             {
-                case ErrorCatalogMetadata catalog:
-                    AddCatalog(operation, catalog.AsSpan());
-                    break;
-                case ProducesErrorCatalogAttribute attribute:
-                    AddEntry(operation, attribute.Entry);
-                    break;
-            }
+                ErrorCatalogMetadata catalog => Apply(operation, catalog),
+                ProducesErrorCatalogAttribute attribute => Apply(operation, attribute),
+                _ => false
+            };
         }
 
         return Task.CompletedTask;
+    }
+
+    private static bool Apply(OpenApiOperation operation, ErrorCatalogMetadata catalog)
+    {
+        AddCatalog(operation, catalog.AsSpan());
+        return true;
+    }
+
+    private static bool Apply(OpenApiOperation operation, ProducesErrorCatalogAttribute attribute)
+    {
+        AddEntry(operation, attribute.Entry);
+        return true;
     }
 
     internal static void ValidateUniqueCodes(IList<object> metadata)

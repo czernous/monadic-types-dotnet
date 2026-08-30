@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 namespace MonadicTypes;
 
 /// <summary>Represents either a successful value or a non-null error as a readonly value type.</summary>
+/// <example><code>Result&lt;User, LookupError&gt; user = Result&lt;User, LookupError&gt;.Ok(value);</code></example>
 /// <typeparam name="T">Success value type.</typeparam>
 /// <typeparam name="E">Error value type.</typeparam>
 public readonly record struct Result<T, E> where E : notnull
@@ -17,13 +18,17 @@ public readonly record struct Result<T, E> where E : notnull
     private readonly int _state;
 
     /// <summary>Gets whether this value was constructed through <see cref="Ok"/> or <see cref="Fail"/>.</summary>
+    /// <example><code>if (!result.IsInitialized) HandleInvalidState();</code></example>
     public bool IsInitialized => _state != Uninitialized;
     /// <summary>Gets whether this result contains a successful value.</summary>
+    /// <example><code>if (result.IsSuccess) Consume(result.Value);</code></example>
     public bool IsSuccess => _state == Success;
     /// <summary>Gets whether this result contains an error.</summary>
+    /// <example><code>if (result.IsFailure) Record(result.Error);</code></example>
     public bool IsFailure => _state == Failure;
 
     /// <summary>Gets the successful value.</summary>
+    /// <example><code>User user = result.Value;</code></example>
     /// <exception cref="InvalidOperationException">The result is failed or uninitialized.</exception>
     public T Value => _state switch
     {
@@ -33,6 +38,7 @@ public readonly record struct Result<T, E> where E : notnull
     };
 
     /// <summary>Gets the failure error.</summary>
+    /// <example><code>LookupError error = result.Error;</code></example>
     /// <exception cref="InvalidOperationException">The result is successful or uninitialized.</exception>
     public E Error => _state switch
     {
@@ -42,6 +48,7 @@ public readonly record struct Result<T, E> where E : notnull
     };
 
     /// <summary>Compares state and only the payload belonging to the active case.</summary>
+    /// <example><code>bool equal = left.Equals(right);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(Result<T, E> other) => _state == other._state && _state switch
     {
@@ -51,6 +58,7 @@ public readonly record struct Result<T, E> where E : notnull
     };
 
     /// <summary>Hashes state and only the payload belonging to the active case.</summary>
+    /// <example><code>int hash = result.GetHashCode();</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override int GetHashCode() => _state switch
     {
@@ -63,10 +71,12 @@ public readonly record struct Result<T, E> where E : notnull
         (_value, _error, _state) = (value, error, state);
 
     /// <summary>Creates a successful result containing <paramref name="value"/>.</summary>
+    /// <example><code>Result&lt;User, LookupError&gt; result = Result&lt;User, LookupError&gt;.Ok(user);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T, E> Ok(T value) => new(value, default, Success);
 
     /// <summary>Creates a failed result containing a non-null <paramref name="error"/>.</summary>
+    /// <example><code>Result&lt;User, LookupError&gt; result = Result&lt;User, LookupError&gt;.Fail(error);</code></example>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is null.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result<T, E> Fail(E error)
@@ -80,6 +90,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Attempts to retrieve the successful value and rejects an uninitialized result.</summary>
+    /// <example><code>if (result.TryGetValue(out User user)) Consume(user);</code></example>
     public bool TryGetValue([MaybeNullWhen(false)] out T value)
     {
         ThrowIfUninitialized();
@@ -88,6 +99,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Attempts to retrieve the failure error and rejects an uninitialized result.</summary>
+    /// <example><code>if (result.TryGetError(out LookupError error)) Record(error);</code></example>
     public bool TryGetError([MaybeNullWhen(false)] out E error)
     {
         ThrowIfUninitialized();
@@ -96,6 +108,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Folds the active case through exactly one branch function.</summary>
+    /// <example><code>string text = result.Match(static user =&gt; user.Name, static error =&gt; error.Code);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TR Match<TR>(Func<T, TR> ok, Func<E, TR> error)
     {
@@ -142,22 +155,18 @@ public readonly record struct Result<T, E> where E : notnull
         };
 
     /// <summary>Executes exactly one action for the active case.</summary>
-    public void Switch(Action<T> ok, Action<E> error)
-    {
-        switch (_state)
+    /// <example><code>result.Switch(RenderUser, RenderLookupError);</code></example>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Switch(Action<T> ok, Action<E> error) =>
+        _ = _state switch
         {
-            case Success:
-                ok(_value!);
-                return;
-            case Failure:
-                error(_error!);
-                return;
-            default:
-                throw UninitializedResult();
-        }
-    }
+            Success => InvokeAction(ok, _value!),
+            Failure => InvokeAction(error, _error!),
+            _ => throw UninitializedResult()
+        };
 
     /// <summary>Maps a successful value without changing its type and propagates failures unchanged.</summary>
+    /// <example><code>Result&lt;User, LookupError&gt; normalized = result.Map(static user =&gt; user.Normalize());</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E> Map(Func<T, T> map) => _state switch
     {
@@ -220,6 +229,7 @@ public readonly record struct Result<T, E> where E : notnull
         };
 
     /// <summary>Maps the active error to another non-null type and preserves successes.</summary>
+    /// <example><code>Result&lt;User, ApiError&gt; mapped = result.MapError(ApiError.FromLookup);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, TE> MapError<TE>(Func<E, TE> map) where TE : notnull => _state switch
     {
@@ -239,6 +249,7 @@ public readonly record struct Result<T, E> where E : notnull
         };
 
     /// <summary>Composes a success with another same-shaped result and propagates failures.</summary>
+    /// <example><code>Result&lt;User, LookupError&gt; active = result.Bind(RequireActiveUser);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E> Bind(Func<T, Result<T, E>> next) => _state switch
     {
@@ -311,6 +322,7 @@ public readonly record struct Result<T, E> where E : notnull
         };
 
     /// <summary>Composes the failure case while preserving a successful value.</summary>
+    /// <example><code>Result&lt;User, FinalError&gt; recovered = result.BindError(RetryLookup);</code></example>
     /// <typeparam name="TNextError">Error type returned by the failure continuation.</typeparam>
     /// <param name="next">Continuation invoked only when this result is a failure.</param>
     /// <returns>The unchanged success or the result returned by <paramref name="next"/>.</returns>
@@ -356,6 +368,7 @@ public readonly record struct Result<T, E> where E : notnull
         };
 
     /// <summary>Transforms both cases without invoking the inactive branch.</summary>
+    /// <example><code>Result&lt;UserDto, ProblemCode&gt; mapped = result.BiMap(UserDto.From, ProblemCode.From);</code></example>
     /// <typeparam name="TResult">Mapped success type.</typeparam>
     /// <typeparam name="TNextError">Mapped error type.</typeparam>
     /// <param name="mapValue">Success mapping function.</param>
@@ -383,6 +396,7 @@ public readonly record struct Result<T, E> where E : notnull
         };
 
     /// <summary>Recovers a failure through <paramref name="recover"/> and preserves successes.</summary>
+    /// <example><code>Result&lt;Settings, ReadError&gt; settings = primary.Recover(ReadFallback);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E> Recover(Func<E, Result<T, E>> recover) => _state switch
     {
@@ -392,6 +406,7 @@ public readonly record struct Result<T, E> where E : notnull
     };
 
     /// <summary>Returns the success value or an eagerly supplied fallback.</summary>
+    /// <example><code>User user = result.ValueOr(User.Anonymous);</code></example>
     /// <param name="fallback">Value returned for a failure.</param>
     /// <returns>The success value or <paramref name="fallback"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -403,6 +418,7 @@ public readonly record struct Result<T, E> where E : notnull
     };
 
     /// <summary>Returns the success value or lazily maps the active error to a fallback.</summary>
+    /// <example><code>User user = result.ValueOrElse(static error =&gt; User.Missing(error.Code));</code></example>
     /// <param name="fallback">Function invoked only for a failure.</param>
     /// <returns>The success value or the fallback value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -414,6 +430,7 @@ public readonly record struct Result<T, E> where E : notnull
     };
 
     /// <summary>Converts a success to failure when <paramref name="predicate"/> is false.</summary>
+    /// <example><code>Result&lt;Order, CheckoutError&gt; valid = order.Ensure(static value =&gt; value.Lines.Count &gt; 0, static _ =&gt; CheckoutError.EmptyOrder);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E> Ensure(Func<T, bool> predicate, Func<T, E> onFailure) => _state switch
     {
@@ -437,6 +454,7 @@ public readonly record struct Result<T, E> where E : notnull
         };
 
     /// <summary>Invokes <paramref name="action"/> only for success and returns this result.</summary>
+    /// <example><code>Result&lt;Order, CheckoutError&gt; observed = order.Tap(AuditOrder);</code></example>
     public Result<T, E> Tap(Action<T> action)
     {
         ThrowIfUninitialized();
@@ -487,6 +505,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Asynchronously invokes <paramref name="action"/> only for success.</summary>
+    /// <example><code>Result&lt;Order, CheckoutError&gt; observed = await order.TapAsync(AuditOrderAsync);</code></example>
     public async ValueTask<Result<T, E>> TapAsync(Func<T, ValueTask> action)
     {
         ThrowIfUninitialized();
@@ -499,6 +518,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Invokes <paramref name="action"/> only for failure and returns this result.</summary>
+    /// <example><code>Result&lt;Order, CheckoutError&gt; observed = order.TapError(RecordFailure);</code></example>
     public Result<T, E> TapError(Action<E> action)
     {
         ThrowIfUninitialized();
@@ -549,6 +569,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Invokes a synchronous finalizer for either initialized case and returns this result.</summary>
+    /// <example><code>Result&lt;Order, CheckoutError&gt; completed = order.Finally(timer, static value =&gt; value.Stop());</code></example>
     public Result<T, E> Finally<TState>(TState state, Action<TState> action)
     {
         ThrowIfUninitialized();
@@ -557,6 +578,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Invokes an asynchronous finalizer for either initialized case and returns this result.</summary>
+    /// <example><code>Result&lt;Order, CheckoutError&gt; completed = await order.FinallyAsync(scope, static value =&gt; value.DisposeAsync());</code></example>
     public async ValueTask<Result<T, E>> FinallyAsync<TState>(TState state, Func<TState, ValueTask> action)
     {
         ThrowIfUninitialized();
@@ -565,6 +587,7 @@ public readonly record struct Result<T, E> where E : notnull
     }
 
     /// <summary>Returns <c>Ok(value)</c>, <c>Fail(error)</c>, or <c>Uninitialized</c>.</summary>
+    /// <example><code>logger.LogDebug("Lookup result: {Result}", result.ToString());</code></example>
     public override string ToString() => _state switch
     {
         Success => $"Ok({_value})",
@@ -573,11 +596,13 @@ public readonly record struct Result<T, E> where E : notnull
     };
 
     /// <summary>Converts a success value into a successful result.</summary>
+    /// <example><code>Result&lt;User, LookupError&gt; result = user;</code></example>
     public static implicit operator Result<T, E>(T value) => Ok(value);
     /// <summary>Converts an error into a failed result.</summary>
     public static implicit operator Result<T, E>(E error) => Fail(error);
 
     /// <summary>Deconstructs the active case for positional pattern matching.</summary>
+    /// <example><code>string text = result switch { (true, User user, _) =&gt; user.Name, (false, _, LookupError error) =&gt; error.Code };</code></example>
     /// <param name="isSuccess">Receives true for success and false for failure.</param>
     /// <param name="value">Receives the success value, or default for failure.</param>
     /// <param name="error">Receives the failure value, or default for success.</param>
@@ -603,6 +628,13 @@ public readonly record struct Result<T, E> where E : notnull
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static InvalidOperationException UninitializedResult() =>
         new("A default Result is uninitialized. Construct it with Ok or Fail before use.");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static byte InvokeAction<TValue>(Action<TValue> action, TValue value)
+    {
+        action(value);
+        return 0;
+    }
 
     [DoesNotReturn]
     [MethodImpl(MethodImplOptions.NoInlining)]

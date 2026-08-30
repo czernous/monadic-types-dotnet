@@ -11,6 +11,7 @@ public sealed class ValidationErrors : IReadOnlyList<ValidationIssue>
     private readonly ValidationIssue[] _issues;
 
     /// <summary>Copies a non-empty sequence of validation issues.</summary>
+    /// <example><code>ValidationErrors errors = new(issues);</code></example>
     public ValidationErrors(IEnumerable<ValidationIssue> issues)
     {
         ArgumentNullException.ThrowIfNull(issues);
@@ -34,6 +35,7 @@ public sealed class ValidationErrors : IReadOnlyList<ValidationIssue>
     }
 
     /// <summary>Maps a third-party validation list without coupling to its assembly.</summary>
+    /// <example><code>ValidationErrors errors = ValidationErrors.Create(failures, MapFailure);</code></example>
     public static ValidationErrors Create<TFailure>(
         IReadOnlyList<TFailure> failures,
         Func<TFailure, ValidationIssue> map)
@@ -87,12 +89,16 @@ public sealed class ValidationErrors : IReadOnlyList<ValidationIssue>
     }
 
     /// <summary>Gets the number of validation issues.</summary>
+    /// <example><code>int count = errors.Count;</code></example>
     public int Count => _issues.Length;
     /// <summary>Gets the issue at <paramref name="index"/>.</summary>
+    /// <example><code>ValidationIssue first = errors[0];</code></example>
     public ValidationIssue this[int index] => _issues[index];
     /// <summary>Returns a zero-allocation readonly view over the owned issues.</summary>
+    /// <example><code>foreach (ref readonly ValidationIssue issue in errors.AsSpan()) Consume(issue);</code></example>
     public ReadOnlySpan<ValidationIssue> AsSpan() => _issues;
     /// <summary>Returns an enumerator over the owned issues.</summary>
+    /// <example><code>foreach (ValidationIssue issue in errors) Consume(issue);</code></example>
     public IEnumerator<ValidationIssue> GetEnumerator() =>
         ((IEnumerable<ValidationIssue>)_issues).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => _issues.GetEnumerator();

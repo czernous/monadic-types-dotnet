@@ -11,6 +11,7 @@ public static class ResultHttpExtensions
     extension<T>(in Result<T, Error> result)
     {
         /// <summary>Maps success with a delegate and structured failure with the default problem policy.</summary>
+        /// <example><code>Results&lt;Ok&lt;User&gt;, ProblemHttpResult&gt; response = result.ToHttpResult(TypedResults.Ok, httpContext);</code></example>
         public Results<TSuccess, ProblemHttpResult> ToHttpResult<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
                                         DynamicallyAccessedMemberTypes.NonPublicMethods)] TSuccess>(

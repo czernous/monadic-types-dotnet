@@ -188,7 +188,7 @@ are diagnostic only because NativeAOT code layout differs.
 | BindErrorFailure | 5.5825 ns | 0 B |
 | BindErrorSuccess | 5.0950 ns | 0 B |
 | CompletedTaskBindError | 4.5926 ns | 0 B |
-| CombineTwo | 1.7180 ns | 0 B |
+| CombineTwo | 1.6077 ns | 0 B |
 | ZipTwo | 4.0470 ns | 0 B |
 | TransposePresent | 2.7478 ns | 0 B |
 | CompletedValueTaskMap | 12.1341 ns | 0 B |
@@ -200,6 +200,17 @@ are diagnostic only because NativeAOT code layout differs.
 | TypedCompletedValueTaskEffectSuccess | 17.3944 ns | 0 B |
 | TypedCompletedTaskEffectSuccess | 15.9606 ns | 0 B |
 | TypedCallerStateCompletedTaskEffectSuccess | 13.1561 ns | 0 B |
+
+On 2026-08-29, .NET 10.0.11 measured the unchanged committed `CombineTwo`
+implementation at 4.0494 ns in the full 16-method layout. Returning the
+already-validated second result and ordering the state checks around the
+dominant success case reduced the same full-layout measurement to 1.6077 ns at
+0 B. This beats the previous 1.7180 ns accepted mean by 6.4% while preserving
+first-failure and uninitialized-input behavior. A focused diagnostic measured
+1.607 ns at 0 B. The other composition rows remained allocation-free and met
+their architectural targets; unchanged sub-nanosecond-sensitive rows continue
+to be interpreted with same-run controls rather than source-unrelated absolute
+movement.
 
 The additive suite is isolated in its own executable. Re-isolating the
 primitive harness measured `Option.Map` at 2.6744 ns versus 2.7031 ns,

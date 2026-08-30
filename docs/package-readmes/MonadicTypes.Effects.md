@@ -56,7 +56,14 @@ underlying dependency.
 
 ## Documentation
 
-See [exception boundaries](https://github.com/czernous/monadic-types-dotnet#exception-boundaries)
-and the [API behavior reference](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/api-reference.md#exception-effects).
+See [exception boundaries](https://github.com/czernous/monadic-types-dotnet#exception-boundaries).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesneteffects)
+
+Documented public members: 15
+
+<!-- END GENERATED API INDEX -->

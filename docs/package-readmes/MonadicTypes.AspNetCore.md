@@ -90,3 +90,11 @@ See [ASP.NET Core usage](https://github.com/czernous/monadic-types-dotnet#aspnet
 and the [compatibility contract](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/compatibility.md).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetaspnetcore)
+
+Documented public members: 46
+
+<!-- END GENERATED API INDEX -->

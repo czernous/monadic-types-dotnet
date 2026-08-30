@@ -148,8 +148,10 @@ public class CompositionTests
         Result<int, string> failure = Result<int, string>.Fail("later");
         Result<Unit, string> uninitializedUnit = default;
         Result<Unit, string> failedUnit = Result.Fail<string>("later");
+        Result<Unit, string> successfulUnit = Result.Ok<string>();
 
         Assert.Throws<InvalidOperationException>(() => ResultCombination.Combine(uninitializedUnit, failedUnit));
+        Assert.Throws<InvalidOperationException>(() => ResultCombination.Combine(successfulUnit, uninitializedUnit));
         Assert.Throws<InvalidOperationException>(() => ResultCombination.Zip(uninitialized, failure));
         Assert.Throws<InvalidOperationException>(() => ResultCombination.Map(uninitialized, failure, static (a, b) => a + b));
         Assert.Throws<InvalidOperationException>(() => ResultCombination.Bind(uninitialized, failure, static (a, b) => Result<int, string>.Ok(a + b)));

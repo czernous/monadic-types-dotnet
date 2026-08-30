@@ -4,6 +4,7 @@ using System.Numerics;
 namespace MonadicTypes.AspNetCore;
 
 /// <summary>Owns the immutable error catalog attached to one endpoint.</summary>
+/// <example><code>ErrorCatalogMetadata metadata = new([new(ErrorType.NotFound, "USER_NOT_FOUND", "User not found.")]);</code></example>
 public sealed class ErrorCatalogMetadata
 {
     private const int LinearScanThreshold = 8;
@@ -14,6 +15,7 @@ public sealed class ErrorCatalogMetadata
 
     /// <summary>Copies and validates a non-empty endpoint error catalog.</summary>
     /// <param name="entries">The public errors the endpoint can return.</param>
+    /// <example><code>ErrorCatalogMetadata metadata = new(entries);</code></example>
     public ErrorCatalogMetadata(ReadOnlySpan<ErrorCatalogEntry> entries)
     {
         if (entries.IsEmpty)
@@ -104,8 +106,10 @@ public sealed class ErrorCatalogMetadata
     }
 
     /// <summary>Gets the number of catalog entries.</summary>
+    /// <example><code>int count = metadata.Count;</code></example>
     public int Count => _entries.Length;
 
     /// <summary>Returns a zero-allocation view over the owned entries.</summary>
+    /// <example><code>ReadOnlySpan&lt;ErrorCatalogEntry&gt; entries = metadata.AsSpan();</code></example>
     public ReadOnlySpan<ErrorCatalogEntry> AsSpan() => _entries;
 }

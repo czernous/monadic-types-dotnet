@@ -8,6 +8,7 @@ public static class ResultEffectExtensions
     extension<T, TError>(in Result<T, TError> result) where TError : notnull
     {
         /// <summary>Maps success while converting recoverable callback exceptions to failures.</summary>
+        /// <example><code>Result&lt;Config, ReadError&gt; parsed = text.TryMap(ParseConfig, ReadError.FromException);</code></example>
         /// <typeparam name="TResult">Mapped success type.</typeparam>
         /// <param name="map">Potentially throwing callback invoked only for success.</param>
         /// <param name="mapException">Maps a caught exception to the result error type.</param>
@@ -33,6 +34,7 @@ public static class ResultEffectExtensions
         }
 
         /// <summary>Binds success while converting recoverable callback exceptions to failures.</summary>
+        /// <example><code>Result&lt;User, LoadError&gt; loaded = id.TryBind(LoadUser, LoadError.FromException);</code></example>
         /// <typeparam name="TResult">Continuation success type.</typeparam>
         /// <param name="bind">Potentially throwing continuation invoked only for success.</param>
         /// <param name="mapException">Maps a caught exception to the result error type.</param>
@@ -58,6 +60,7 @@ public static class ResultEffectExtensions
         }
 
         /// <summary>Runs a success side effect while converting recoverable callback exceptions to failures.</summary>
+        /// <example><code>Result&lt;User, LoadError&gt; observed = result.TryTap(Audit, LoadError.FromException);</code></example>
         /// <param name="action">Potentially throwing action invoked only for success.</param>
         /// <param name="mapException">Maps a caught exception to the result error type.</param>
         /// <returns>The original result or a mapped exception failure.</returns>
@@ -81,6 +84,7 @@ public static class ResultEffectExtensions
         }
 
         /// <summary>Maps success asynchronously while converting recoverable exceptions to failures.</summary>
+        /// <example><code>Result&lt;UserDto, LoadError&gt; mapped = await result.TryMapAsync(LoadDtoAsync, LoadError.FromException);</code></example>
         /// <typeparam name="TResult">Mapped success type.</typeparam>
         /// <param name="map">Potentially throwing asynchronous callback invoked only for success.</param>
         /// <param name="mapException">Maps a caught exception to the result error type.</param>
@@ -111,6 +115,7 @@ public static class ResultEffectExtensions
         }
 
         /// <summary>Runs an asynchronous success side effect and converts recoverable exceptions to failures.</summary>
+        /// <example><code>Result&lt;User, LoadError&gt; observed = await result.TryTapAsync(AuditAsync, LoadError.FromException);</code></example>
         /// <param name="action">Potentially throwing action invoked only for success.</param>
         /// <param name="mapException">Maps a caught exception to the result error type.</param>
         /// <returns>An awaitable containing the original result or mapped exception failure.</returns>

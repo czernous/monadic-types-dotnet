@@ -8,10 +8,12 @@ public static class QueryExtensions
     extension<T, TError>(in Result<T, TError> source) where TError : notnull
     {
         /// <summary>Projects a successful result; this is query syntax's map operation.</summary>
+        /// <example><code>Result&lt;int, LoadError&gt; id = from user in result select user.Id;</code></example>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Result<TResult, TError> Select<TResult>(Func<T, TResult> selector) => source.Map(selector);
 
         /// <summary>Binds and projects successful results for multi-from query expressions.</summary>
+        /// <example><code>Result&lt;Invoice, LoadError&gt; invoice = from user in userResult from account in LoadAccount(user) select new Invoice(user, account);</code></example>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Result<TResult, TError> SelectMany<TIntermediate, TResult>(
             Func<T, Result<TIntermediate, TError>> bind,
@@ -55,6 +57,7 @@ public static class QueryExtensions
         }
 
         /// <summary>Keeps a present option only when its predicate succeeds.</summary>
+        /// <example><code>Option&lt;User&gt; active = from user in option where user.IsActive select user;</code></example>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Option<T> Where(Func<T, bool> predicate) => source.Filter(predicate);
     }

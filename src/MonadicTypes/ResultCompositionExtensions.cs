@@ -8,6 +8,7 @@ public static class ResultCompositionExtensions
     extension<T, TError>(in Result<Result<T, TError>, TError> result) where TError : notnull
     {
         /// <summary>Removes one result layer while preserving the first failure encountered.</summary>
+        /// <example><code>Result&lt;User, LookupError&gt; flat = nestedResult.Flatten();</code></example>
         /// <returns>The nested success result or the outer failure.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Result<T, TError> Flatten() => result.IsSuccess
@@ -18,6 +19,7 @@ public static class ResultCompositionExtensions
     extension<T, TError>(in Result<Option<T>, TError> result) where TError : notnull
     {
         /// <summary>Exchanges the result and option layers without losing a failure.</summary>
+        /// <example><code>Option&lt;Result&lt;User, LookupError&gt;&gt; transposed = result.Transpose();</code></example>
         /// <returns>
         /// None for a successful absent value, Some containing success for a present value,
         /// or Some containing the original failure.
@@ -37,6 +39,7 @@ public static class ResultCompositionExtensions
         }
 
         /// <summary>Requires a successful option to contain a value.</summary>
+        /// <example><code>Result&lt;User, LookupError&gt; required = result.RequireSome(static () =&gt; LookupError.NotFound);</code></example>
         /// <param name="whenNone">Error factory invoked only for a successful absent option.</param>
         /// <returns>The contained value, the original failure, or the generated absence failure.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -57,6 +60,7 @@ public static class ResultCompositionExtensions
     extension<T, TError>(in Option<Result<T, TError>> option) where TError : notnull
     {
         /// <summary>Exchanges the option and result layers while treating absence as a successful absence.</summary>
+        /// <example><code>Result&lt;Option&lt;User&gt;, LookupError&gt; transposed = option.Transpose();</code></example>
         /// <returns>The contained result with its success wrapped in an option, or a successful None.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Result<Option<T>, TError> Transpose()
@@ -76,6 +80,7 @@ public static class ResultCompositionExtensions
     extension<TSource>(in Option<TSource> option)
     {
         /// <summary>Traverses a present value through a fallible selector and preserves absence.</summary>
+        /// <example><code>Result&lt;Option&lt;Address&gt;, LookupError&gt; address = option.Traverse(LoadAddress);</code></example>
         /// <typeparam name="TResult">Selected success type.</typeparam>
         /// <typeparam name="TError">Failure type.</typeparam>
         /// <param name="selector">Selector invoked only for Some.</param>
@@ -146,6 +151,7 @@ public static class ResultCompositionExtensions
     extension<T>(in Option<T> option)
     {
         /// <summary>Converts an option to a result using an eagerly supplied absence error.</summary>
+        /// <example><code>Result&lt;User, LookupError&gt; required = option.ToResult(LookupError.NotFound);</code></example>
         /// <typeparam name="TError">Failure type.</typeparam>
         /// <param name="whenNone">Failure returned for None.</param>
         /// <returns>Success containing the present value or the supplied failure.</returns>

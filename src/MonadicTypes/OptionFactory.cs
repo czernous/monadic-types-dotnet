@@ -9,6 +9,7 @@ public static class Option
     /// <typeparam name="T">Non-null reference value type.</typeparam>
     /// <param name="value">Nullable value to convert.</param>
     /// <returns>Some for a non-null value; otherwise None.</returns>
+    /// <example><code>Option&lt;User&gt; user = Option.FromNullable(nullableUser);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Option<T> FromNullable<T>(T? value) where T : class =>
         value is null ? Option<T>.None : Option<T>.Some(value);

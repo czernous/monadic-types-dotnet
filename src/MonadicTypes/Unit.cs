@@ -7,8 +7,10 @@ namespace MonadicTypes;
 public readonly record struct Unit
 {
     /// <summary>Gets the sole unit value.</summary>
+    /// <example><code>Unit completed = Unit.Value;</code></example>
     public static Unit Value => default;
 
     /// <summary>Returns the canonical unit representation.</summary>
+    /// <example><code>string text = Unit.Value.ToString();</code></example>
     public override string ToString() => "()";
 }

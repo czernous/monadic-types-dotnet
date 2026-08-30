@@ -1,6 +1,6 @@
 # Tooling Performance
 
-The repository automation is implemented as four small NativeAOT executables.
+The repository automation is implemented as five NativeAOT executables.
 These measurements are engineering baselines for the repository tooling, not
 BenchmarkDotNet microbenchmarks. They include process startup and the work the
 command owns. Inputs were prepared outside the timed region where applicable.
@@ -16,11 +16,13 @@ No machine name, user path, processor model, or other host identifier is stored.
 | Pack and inspect ten packages | 40.10 s, ten pack hosts | 12.95 s, one parallel traversal | -27.15 s (-67.7%) |
 | Consume a changed package identity | 25.16 s, paired four-host runner | 25.09 s, one traversal host | Effectively unchanged |
 | Pack plus changed-identity consumption | 65.26 s | 38.04 s | -27.22 s (-41.7%) |
+| Documentation model, merge, and rendering | n/a | 32.04 ms; 4,569,448 B allocated | Initial NativeAOT baseline |
 
 Final `win-x64` executable sizes were 1,064,448 bytes for `mt-affected`,
 1,828,864 bytes for `mt-pack`, 1,537,024 bytes for `mt-test-packages`, and
-1,042,944 bytes for `mt-verify-locks`. These values are tracked as footprint
-observations rather than cross-SDK regression gates.
+1,042,944 bytes for `mt-verify-locks`. The documentation generator is 5,391,360
+bytes because it includes the metadata and XML processing surface. These values
+are tracked as footprint observations rather than cross-SDK regression gates.
 
 Three unique-identity consumption samples measured 23.28 s, 25.09 s, and
 26.82 s; the table uses the 25.09 s median. The final runner intentionally
@@ -39,6 +41,9 @@ the repository does not hardcode a provider price.
   graph is large enough; the scalar path remains optimal for a one-word graph.
 - Lock and Nuspec parsing use pooled byte buffers, `SearchValues`, spans, and
   fixed-width comparisons rather than JSON/XML object models.
+- Documentation metadata and XML inputs are read once per project, merged into
+  compact models, and rendered through reusable builders; only public API enters
+  the generated reference.
 - Process and filesystem APIs still require final managed strings. Path and
   argument builders create those final strings directly without intermediate
   concatenation, normalization copies, or split arrays.

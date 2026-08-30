@@ -55,7 +55,14 @@ work. Await each returned ValueTask exactly once.
 
 ## Documentation
 
-See [async pipelines](https://github.com/czernous/monadic-types-dotnet#async-pipelines)
-and the [API behavior reference](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/api-reference.md#async-result-operators).
+See [async pipelines](https://github.com/czernous/monadic-types-dotnet#async-pipelines).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetasync)
+
+Documented public members: 43
+
+<!-- END GENERATED API INDEX -->

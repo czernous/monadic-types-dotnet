@@ -11,6 +11,7 @@ public static class OpenApiServiceCollectionExtensions
         /// Adds OpenAPI error-catalog transformation and source-generated JSON metadata for
         /// the problem payload returned by <c>ProblemHttpResult</c>.
         /// </summary>
+        /// <example><code>builder.Services.AddErrorCatalogOpenApi();</code></example>
         /// <returns>The same service collection for continued configuration.</returns>
         public IServiceCollection AddErrorCatalogOpenApi()
         {

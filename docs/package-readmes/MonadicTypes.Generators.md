@@ -60,7 +60,14 @@ NativeAOT generic instantiation count and binary size.
 
 ## Documentation
 
-See [generated callables](https://github.com/czernous/monadic-types-dotnet#generated-callables)
-and the [API behavior reference](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/api-reference.md#source-generation).
+See [generated callables](https://github.com/czernous/monadic-types-dotnet#generated-callables).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetgenerators)
+
+Documented public members: 3
+
+<!-- END GENERATED API INDEX -->

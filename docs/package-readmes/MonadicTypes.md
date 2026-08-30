@@ -73,8 +73,16 @@ vectorized inner loops where a simpler branch or `Try*` contract is cheaper.
 
 ## Documentation
 
-See the [complete API guide](https://github.com/czernous/monadic-types-dotnet#readme),
+See the [complete API guide](https://github.com/czernous/monadic-types-dotnet),
 [API behavior reference](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/api-reference.md),
 and [benchmark policy](https://github.com/czernous/monadic-types-dotnet/blob/master/docs/benchmarks.md).
 
 Apache-2.0. Developed with AI assistance.
+
+<!-- BEGIN GENERATED API INDEX -->
+
+[Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnet)
+
+Documented public members: 141
+
+<!-- END GENERATED API INDEX -->

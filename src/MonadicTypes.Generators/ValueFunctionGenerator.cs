@@ -12,6 +12,12 @@ using Microsoft.CodeAnalysis.Text;
 namespace MonadicTypes.Generators;
 
 /// <summary>Generates allocation-free value-function adapters for attributed static methods.</summary>
+/// <example>
+/// <code>
+/// [GenerateValueFunction]
+/// public static int GetId(User value) =&gt; value.Id;
+/// </code>
+/// </example>
 [Generator(LanguageNames.CSharp)]
 public sealed class ValueFunctionGenerator : IIncrementalGenerator
 {
@@ -49,7 +55,14 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    /// <summary>Creates the generator instance used by the Roslyn compiler host.</summary>
+    /// <remarks>Application code does not construct the generator; the compiler host discovers it through <see cref="GeneratorAttribute"/>.</remarks>
+    public ValueFunctionGenerator()
+    {
+    }
+
     /// <summary>Registers attribute emission, method discovery, validation, and adapter generation.</summary>
+    /// <remarks>The Roslyn compiler host invokes this method. Application code uses the emitted attribute and callable members instead.</remarks>
     /// <param name="context">The incremental generator initialization context.</param>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -217,7 +230,24 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
         string output = candidate.Method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         string adapter = AdapterName(candidate);
 
-        source.Append("        ").Append(accessibility).Append(" static global::MonadicTypes.");
+        source.Append("        /// <summary>Gets the generated callable token for <c>")
+            .Append(candidate.Method.Name)
+            .Append("</c>.</summary>\n")
+            .Append("        /// <example><code>");
+        if (!candidate.Method.ReturnsVoid)
+        {
+            source.Append("var result = ");
+        }
+
+        source.Append(Escape(candidate.Method.ContainingType.Name))
+            .Append(".Functions.")
+            .Append(Escape(candidate.GeneratedName))
+            .Append(".Invoke(")
+            .Append(Escape(candidate.Method.Parameters[0].Name))
+            .Append(");</code></example>\n")
+            .Append("        ")
+            .Append(accessibility)
+            .Append(" static global::MonadicTypes.");
         if (candidate.Method.ReturnsVoid)
         {
             source.Append("ValueAction<").Append(input).Append(", ").Append(adapter).Append("> ");
@@ -239,11 +269,19 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
         string adapter = AdapterName(candidate);
         string method = Escape(candidate.Method.Name);
 
-        source.Append("    ").Append(accessibility).Append(" readonly struct ").Append(adapter).Append(" : global::MonadicTypes.");
+        source.Append("    /// <summary>Forwards the input to <c>")
+            .Append(candidate.Method.Name)
+            .Append("</c> without delegate dispatch.</summary>\n    ")
+            .Append(accessibility)
+            .Append(" readonly struct ")
+            .Append(adapter)
+            .Append(" : global::MonadicTypes.");
         if (candidate.Method.ReturnsVoid)
         {
             source.Append("IValueAction<").Append(input).Append(">\n")
                 .Append("    {\n")
+                .Append("        /// <summary>Forwards <paramref name=\"value\"/> to the attributed method.</summary>\n")
+                .Append("        /// <param name=\"value\">Input value.</param>\n")
                 .Append("        [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n")
                 .Append("        public void Invoke(").Append(input).Append(" value) => ");
         }
@@ -251,6 +289,9 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
         {
             source.Append("IValueFunction<").Append(input).Append(", ").Append(output).Append(">\n")
                 .Append("    {\n")
+                .Append("        /// <summary>Forwards <paramref name=\"value\"/> to the attributed method.</summary>\n")
+                .Append("        /// <param name=\"value\">Input value.</param>\n")
+                .Append("        /// <returns>The attributed method's output.</returns>\n")
                 .Append("        [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n")
                 .Append("        public ").Append(output).Append(" Invoke(").Append(input).Append(" value) => ");
         }
@@ -289,16 +330,23 @@ public sealed class ValueFunctionGenerator : IIncrementalGenerator
 #nullable enable
 namespace MonadicTypes;
 
+/// <summary>Requests an allocation-free callable wrapper for an eligible static method.</summary>
+/// <remarks>The original method remains directly callable. The generated token is exposed through the containing type's <c>Functions</c> class.</remarks>
+/// <example><code>[GenerateValueFunction] public static long Widen(int value) =&gt; value;</code></example>
 [global::System.Diagnostics.Conditional("MONADIC_TYPES_GENERATOR_ATTRIBUTES")]
 [global::System.AttributeUsage(global::System.AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
 internal sealed class GenerateValueFunctionAttribute : global::System.Attribute
 {
+    /// <summary>Uses the attributed method name for the generated callable property.</summary>
     public GenerateValueFunctionAttribute()
     {
     }
 
+    /// <summary>Uses <paramref name="name"/> for the generated callable property.</summary>
+    /// <param name="name">Valid C# identifier for the generated property.</param>
     public GenerateValueFunctionAttribute(string name) => Name = name;
 
+    /// <summary>Gets the requested generated property name, or null to use the method name.</summary>
     public string? Name { get; }
 }
 """;
