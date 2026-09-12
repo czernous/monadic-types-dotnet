@@ -70,6 +70,41 @@ Run structured-error equality and hashing benchmarks separately:
 dotnet run -c Release --project benchmarks\MonadicTypes.Errors.Benchmarks
 ```
 
+Run consumer composition and explicit HTTP status benchmarks in their isolated
+executable:
+
+```powershell
+dotnet run -c Release --project benchmarks\MonadicTypes.Consumer.Benchmarks
+```
+
+Cold HTTP identity allocation is enforced by a separate minimal NativeAOT smoke
+executable so BenchmarkDotNet initialization cannot hide first-use cost:
+
+```powershell
+dotnet restore tests\MonadicTypes.AspNetCore.ColdAotSmoke -r win-x64 --force-evaluate -p:RestorePackagesWithLockFile=false -p:RestoreLockedMode=false -p:NuGetLockFilePath=$env:TEMP\monadic-types-cold.lock.json
+dotnet publish tests\MonadicTypes.AspNetCore.ColdAotSmoke -c Release -r win-x64 --no-restore -o artifacts\aot\win-x64\MonadicTypes.AspNetCore.ColdAotSmoke
+artifacts\aot\win-x64\MonadicTypes.AspNetCore.ColdAotSmoke\MonadicTypes.AspNetCore.ColdAotSmoke.exe
+```
+
+The first HTTP-specific identity may allocate at most 4 KiB beyond default
+problem construction. Repeated explicit responses must allocate exactly the
+same bytes as the default response.
+
+Architectural targets for this family are established against controls in the
+same executable: eager and caller-state `RequireSome` must allocate zero bytes
+and are compared with caller-state `Bind` plus `ToResult` on both presence and
+absence. Caller-state `Recover` and `ValueOrElse` must allocate zero bytes and
+are compared with direct branch and captured-delegate controls on both Result
+branches. Generated traversal is compared with the corresponding bare callable;
+Option traversal must allocate zero bytes, while an eight-element `long` list or
+span traversal may allocate only its owned output array. Explicit problem-detail
+construction must allocate no more per response than the default response and
+must not show a timing regression with non-overlapping confidence intervals
+against that same-run control. Status metadata belongs in bounded reusable
+storage; disclose its one-time initialization separately. Catalog construction
+is a cold ownership operation and must retain allocation-equivalent copy/read
+controls. New results do not replace the accepted primitive baseline.
+
 New benchmark families use separate NativeAOT executables because adding methods
 to an accepted executable can change native code layout and perturb unchanged
 controls. Setup, delegates, and input construction remain in `GlobalSetup`.

@@ -36,6 +36,11 @@
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\p\</BaseIntermediateOutputPath>
     <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.Consumer.Benchmarks'">
+    <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\u\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\u\</BaseIntermediateOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\bin\**;$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MonadicTypes.Composition.Benchmarks'">
     <BaseOutputPath>$(MSBuildThisFileDirectory)artifacts\b\c\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)artifacts\o\c\</BaseIntermediateOutputPath>

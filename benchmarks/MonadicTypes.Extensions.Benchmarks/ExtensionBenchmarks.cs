@@ -85,7 +85,7 @@ public class ExtensionBenchmarks
     /// <summary>Measures allocation-free callable dispatch; only the owned output array may allocate.</summary>
     [Benchmark]
     public Result<long[], BenchmarkError> CallableTraverse() =>
-        _source.TraverseToArray<int, long, BenchmarkError, Increment>(default);
+        _source.TraverseToArray<int, long, BenchmarkError, Increment>(default(Increment));
 
     /// <summary>Measures span traversal through a pre-created delegate.</summary>
     [Benchmark]
@@ -100,7 +100,7 @@ public class ExtensionBenchmarks
     /// <summary>Measures span traversal through a struct callable.</summary>
     [Benchmark]
     public Result<long[], BenchmarkError> SpanCallableTraverse() =>
-        _spanSource.AsSpan().TraverseToArray<int, long, BenchmarkError, Increment>(default);
+        _spanSource.AsSpan().TraverseToArray<int, long, BenchmarkError, Increment>(default(Increment));
 
     /// <summary>Measures direct six-value projection as the combination control.</summary>
     [Benchmark]

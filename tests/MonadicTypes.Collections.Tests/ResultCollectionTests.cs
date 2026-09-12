@@ -6,6 +6,19 @@ namespace MonadicTypes.Collections.Tests;
 public class ResultCollectionTests
 {
     [Fact]
+    public void GeneratedToken_InfersListAndSpanTraversal()
+    {
+        IReadOnlyList<int> list = new[] { 1, 2, 3 };
+        ReadOnlySpan<int> span = [1, 2, 3];
+
+        var listResult = list.TraverseToArray(CollectionProjections.Functions.Widen);
+        var spanResult = span.TraverseToArray(CollectionProjections.Functions.Widen);
+
+        Assert.Equal([2L, 3L, 4L], listResult.Value);
+        Assert.Equal([2L, 3L, 4L], spanResult.Value);
+    }
+
+    [Fact]
     public void TraverseToArray_MapsEverySuccessfulItemOnce()
     {
         IReadOnlyList<int> source = new[] { 1, 2, 3 };
@@ -43,7 +56,7 @@ public class ResultCollectionTests
         IReadOnlyList<int> empty = Array.Empty<int>();
 
         Result<long[], string> populated = source
-            .TraverseToArray<int, long, string, Increment>(default);
+            .TraverseToArray<int, long, string, Increment>(default(Increment));
         Result<long[], string> absent = empty
             .TraverseToArray(static value => Result<long, string>.Ok(value));
 
@@ -81,7 +94,7 @@ public class ResultCollectionTests
             2L,
             static (value, increment) => Result<long, string>.Ok(value + increment));
         Result<long[], string> callable = source.AsSpan()
-            .TraverseToArray<int, long, string, Increment>(default);
+            .TraverseToArray<int, long, string, Increment>(default(Increment));
 
         Assert.Equal([2L, 3L, 4L], delegated.Value);
         Assert.Equal([3L, 4L, 5L], state.Value);
@@ -147,4 +160,10 @@ public class ResultCollectionTests
     {
         public int Calls { get; set; }
     }
+}
+
+public static partial class CollectionProjections
+{
+    [GenerateValueFunction]
+    public static Result<long, string> Widen(int value) => Result<long, string>.Ok(value + 1L);
 }

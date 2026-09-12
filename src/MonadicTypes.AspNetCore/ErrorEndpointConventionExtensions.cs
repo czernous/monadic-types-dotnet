@@ -17,6 +17,11 @@ public static class ErrorEndpointConventionExtensions
             uint seenTypes = 0;
             foreach (ErrorType errorType in errorTypes)
             {
+                if (errorType is < ErrorType.Failure or > ErrorType.NotImplemented)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(errorTypes), errorType, "Invalid error category.");
+                }
+
                 uint bit = 1u << (int)errorType;
                 if ((seenTypes & bit) is 0)
                 {
@@ -40,15 +45,19 @@ public static class ErrorEndpointConventionExtensions
             builder.WithMetadata(catalog);
 
             ReadOnlySpan<ErrorCatalogEntry> ownedEntries = catalog.AsSpan();
-            uint seenTypes = 0;
+            Span<ulong> seenStatuses = stackalloc ulong[4];
+            seenStatuses.Clear();
             for (int index = 0; index < ownedEntries.Length; index++)
             {
-                ErrorType type = ownedEntries[index].Type;
-                uint bit = 1u << (int)type;
-                if ((seenTypes & bit) is 0)
+                ErrorCatalogEntry entry = ownedEntries[index];
+                int status = entry.StatusCode ?? ErrorProblemDetails.GetStatusCode(entry.Type);
+                int offset = status - 400;
+                ulong bit = 1UL << (offset & 63);
+                ref ulong seen = ref seenStatuses[offset >> 6];
+                if ((seen & bit) is 0)
                 {
-                    seenTypes |= bit;
-                    builder.WithMetadata(new ProducesErrorAttribute(type));
+                    seen |= bit;
+                    builder.WithMetadata(new ProducesErrorAttribute(entry.Type, status));
                 }
             }
 

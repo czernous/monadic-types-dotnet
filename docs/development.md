@@ -2,9 +2,21 @@
 
 ## Toolchain
 
-`global.json` requires the .NET 10.0.300 feature band and rolls forward only to
-the latest installed patch in that band. C# 14 is explicit rather than inherited
-from whichever newer SDK happens to be installed.
+`global.json` pins .NET SDK 10.0.401 without roll-forward. All workflows install
+that version from `global.json`. SDK patches can change implicit linker package
+versions, so floating SDK selection can invalidate otherwise unchanged lockfiles.
+C# 14 is explicit rather than inherited from whichever SDK is installed.
+
+Update the SDK and its affected portable lockfiles together. After changing
+`global.json`, restore with `--force-evaluate -p:RestoreLockedMode=false`, inspect
+the dependency changes, and verify a fresh `--locked-mode` restore. Keep CI
+locked restores enabled; do not regenerate locks during validation.
+
+Pull requests validate affected projects, including deletions and both sides of
+renames. The required `Pull request validation` check aggregates build/test,
+dependency review, and applicable native-tooling, package, and documentation
+jobs. Manual CI dispatch validates all tracked inputs and runs package consumption
+and NativeAOT checks, providing a full-validation path.
 
 Restore, compile, and test from the repository root:
 

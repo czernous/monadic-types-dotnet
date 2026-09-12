@@ -6,6 +6,84 @@ namespace MonadicTypes.Tests;
 public class OptionTests
 {
     [Fact]
+    public void Tap_InvokesOnlyForSomeAndReturnsOriginalOption()
+    {
+        int observed = 0;
+        Option<int> some = Option<int>.Some(4).Tap(value => observed = value);
+        Option<int> none = Option<int>.None.Tap(_ => observed = 99);
+
+        Assert.Equal(4, observed);
+        Assert.Equal(4, some.Value);
+        Assert.True(none.IsNone);
+    }
+
+    [Fact]
+    public void Tap_SupportsCallerStateAndStructCallable()
+    {
+        int observed = 0;
+        Option<int> result = Option<int>.Some(4)
+            .Tap(3, (value, increment) => observed = value + increment)
+            .Tap(new RecordValue());
+
+        Assert.Equal(7, observed);
+        Assert.Equal(4, result.Value);
+    }
+
+    private readonly struct RecordValue : IValueAction<int>
+    {
+        public void Invoke(int value)
+        {
+        }
+    }
+
+    [Fact]
+    public void Zip_CombinesPresentValuesAndPropagatesNone()
+    {
+        Option<(int First, string Second)> combined = Option<int>.Some(4)
+            .Zip(Option<string>.Some("value"));
+
+        Assert.Equal((4, "value"), combined.Value);
+        Assert.True(Option<int>.None.Zip(Option<string>.Some("value")).IsNone);
+        Assert.True(Option<int>.Some(4).Zip(Option<string>.None).IsNone);
+    }
+
+    [Fact]
+    public void NullableProjection_ComposesThroughBindForReferenceAndValueTypes()
+    {
+        Option<string> present = Option<string>.Some("person");
+
+        Assert.Throws<ArgumentNullException>(() => present.Map(static _ => (Guid?)null));
+        Assert.True(present.Bind(static _ => Option.FromNullable((Guid?)null)).IsNone);
+        Assert.True(present.Bind(static _ => Option.FromNullable((string?)null)).IsNone);
+        Assert.Equal(42, present.Bind(static _ => Option.FromNullable((int?)42)).Value);
+        Assert.True(Option<string>.None.Bind(static _ => Option.FromNullable((Guid?)null)).IsNone);
+    }
+
+    [Fact]
+    public void MapNullable_FoldsNullReferenceAndValueProjectionsIntoNone()
+    {
+        Option<NullableProjectionSource> source = Option<NullableProjectionSource>.Some(
+            new NullableProjectionSource("name", null, null));
+
+        Option<string> nickname = source.MapNullable(static value => value.Nickname);
+        Option<Guid> userId = source.MapNullableValue(static value => value.UserId);
+
+        Assert.True(nickname.IsNone);
+        Assert.True(userId.IsNone);
+    }
+
+    [Fact]
+    public void MapNullable_PreservesPresentReferenceAndValueProjections()
+    {
+        Guid id = Guid.NewGuid();
+        Option<NullableProjectionSource> source = Option<NullableProjectionSource>.Some(
+            new NullableProjectionSource("name", "nickname", id));
+
+        Assert.Equal("name", source.MapNullable(static value => value.Name).Value);
+        Assert.Equal(id, source.MapNullableValue(static value => value.UserId).Value);
+    }
+
+    [Fact]
     public void Default_IsNone()
     {
         Option<int> option = default;
@@ -228,6 +306,8 @@ public class OptionTests
     {
         public int Invoke(int value) => throw new InvalidOperationException();
     }
+
+    private sealed record NullableProjectionSource(string Name, string? Nickname, Guid? UserId);
 
     private readonly struct GeneratedValueObjectLike : IEquatable<GeneratedValueObjectLike>
     {

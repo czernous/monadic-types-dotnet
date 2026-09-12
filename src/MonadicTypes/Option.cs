@@ -133,27 +133,68 @@ public readonly record struct Option<T>
     }
 
     /// <summary>Maps a present value and propagates <c>None</c>.</summary>
+    /// <remarks>The projection must return a non-null value. For nullable members, use Bind with Option.FromNullable to turn null into None.</remarks>
+    /// <exception cref="ArgumentNullException">A present value's projection returns null, including an empty nullable value type.</exception>
     /// <example><code>Option&lt;int&gt; id = option.Map(static user =&gt; user.Id);</code></example>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TR> Map<TR>(Func<T, TR> map) =>
         HasValue ? Option<TR>.Some(map(_value!)) : Option<TR>.None;
 
     /// <summary>Maps a present value through an allocation-free callable and propagates <c>None</c>.</summary>
+    /// <exception cref="ArgumentNullException">A present value's projection returns null.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TR> Map<TR, TFunction>(TFunction map)
         where TFunction : struct, IValueFunction<T, TR> =>
         HasValue ? Option<TR>.Some(map.Invoke(_value!)) : Option<TR>.None;
 
     /// <summary>Maps a present value through a generated callable wrapper and propagates <c>None</c>.</summary>
+    /// <exception cref="ArgumentNullException">A present value's projection returns null.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TR> Map<TR, TFunction>(ValueFunction<T, TR, TFunction> map)
         where TFunction : struct, IValueFunction<T, TR> =>
         HasValue ? Option<TR>.Some(map.Invoke(_value!)) : Option<TR>.None;
 
     /// <summary>Maps a present value while passing caller-owned state to a non-capturing function.</summary>
+    /// <exception cref="ArgumentNullException">A present value's projection returns null.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TR> Map<TState, TR>(TState state, Func<T, TState, TR> map) =>
         HasValue ? Option<TR>.Some(map(_value!, state)) : Option<TR>.None;
+
+    /// <summary>Maps a present value through a nullable reference projection, treating null as <c>None</c>.</summary>
+    /// <example><code>Option&lt;string&gt; nickname = person.MapNullable(static value =&gt; value.Nickname);</code></example>
+    /// <typeparam name="TR">Projected reference type.</typeparam>
+    /// <param name="map">Projection invoked only for <c>Some</c>.</param>
+    /// <returns><c>Some</c> for a non-null projection, otherwise <c>None</c>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<TR> MapNullable<TR>(Func<T, TR?> map)
+        where TR : class
+    {
+        if (!HasValue)
+        {
+            return Option<TR>.None;
+        }
+
+        TR? value = map(_value!);
+        return value is null ? Option<TR>.None : Option<TR>.Some(value);
+    }
+
+    /// <summary>Maps a present value through a nullable value projection, treating no value as <c>None</c>.</summary>
+    /// <example><code>Option&lt;Guid&gt; id = person.MapNullableValue(static value =&gt; value.UserId);</code></example>
+    /// <typeparam name="TR">Projected value type.</typeparam>
+    /// <param name="map">Projection invoked only for <c>Some</c>.</param>
+    /// <returns><c>Some</c> for a present projection, otherwise <c>None</c>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<TR> MapNullableValue<TR>(Func<T, TR?> map)
+        where TR : struct
+    {
+        if (!HasValue)
+        {
+            return Option<TR>.None;
+        }
+
+        TR? value = map(_value!);
+        return value.HasValue ? Option<TR>.Some(value.Value) : Option<TR>.None;
+    }
 
     /// <summary>Composes a present value with another optional operation and propagates <c>None</c>.</summary>
     /// <example><code>Option&lt;Address&gt; address = option.Bind(static user =&gt; user.PrimaryAddress);</code></example>
@@ -177,6 +218,82 @@ public readonly record struct Option<T>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Option<TR> Bind<TState, TR>(TState state, Func<T, TState, Option<TR>> bind) =>
         HasValue ? bind(_value!, state) : Option<TR>.None;
+
+    /// <summary>Observes a present value and returns this option unchanged.</summary>
+    /// <example><code>Option&lt;User&gt; observed = option.Tap(static user =&gt; audit.Record(user));</code></example>
+    /// <param name="action">Action invoked only for <c>Some</c>.</param>
+    /// <returns>This option unchanged.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<T> Tap(Action<T> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (HasValue)
+        {
+            action(_value!);
+        }
+
+        return this;
+    }
+
+    /// <summary>Observes a present value through an allocation-free callable and returns this option unchanged.</summary>
+    /// <typeparam name="TAction">Callable action type.</typeparam>
+    /// <param name="action">Action invoked only for <c>Some</c>.</param>
+    /// <returns>This option unchanged.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<T> Tap<TAction>(TAction action)
+        where TAction : struct, IValueAction<T>
+    {
+        if (HasValue)
+        {
+            action.Invoke(_value!);
+        }
+
+        return this;
+    }
+
+    /// <summary>Observes a present value through a generated callable wrapper.</summary>
+    /// <typeparam name="TAction">Callable action type.</typeparam>
+    /// <param name="action">Action invoked only for <c>Some</c>.</param>
+    /// <returns>This option unchanged.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<T> Tap<TAction>(ValueAction<T, TAction> action)
+        where TAction : struct, IValueAction<T>
+    {
+        if (HasValue)
+        {
+            action.Invoke(_value!);
+        }
+
+        return this;
+    }
+
+    /// <summary>Observes a present value while passing caller-owned state.</summary>
+    /// <typeparam name="TState">Caller state type.</typeparam>
+    /// <param name="state">State passed unchanged to the action.</param>
+    /// <param name="action">Action invoked only for <c>Some</c>.</param>
+    /// <returns>This option unchanged.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<T> Tap<TState>(TState state, Action<T, TState> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (HasValue)
+        {
+            action(_value!, state);
+        }
+
+        return this;
+    }
+
+    /// <summary>Combines two options in argument order.</summary>
+    /// <example><code>Option&lt;(User User, Account Account)&gt; loaded = user.Zip(account);</code></example>
+    /// <typeparam name="TOther">Second option value type.</typeparam>
+    /// <param name="other">Second option.</param>
+    /// <returns><c>Some</c> containing both values when both options are present; otherwise <c>None</c>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Option<(T First, TOther Second)> Zip<TOther>(Option<TOther> other) =>
+        HasValue && other.HasValue
+            ? Option<(T First, TOther Second)>.Some((_value!, other.Value))
+            : Option<(T First, TOther Second)>.None;
 
     /// <summary>Retains a present value only when <paramref name="predicate"/> returns true.</summary>
     /// <example><code>Option&lt;User&gt; active = option.Filter(static user =&gt; user.IsActive);</code></example>

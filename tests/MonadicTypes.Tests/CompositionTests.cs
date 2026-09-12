@@ -3,6 +3,24 @@ namespace MonadicTypes.Tests;
 public class CompositionTests
 {
     [Fact]
+    public void RequireSome_EagerAndStateFormsPreserveBranches()
+    {
+        var present = Result<Option<int>, string>.Ok(Option<int>.Some(7));
+        var absent = Result<Option<int>, string>.Ok(Option<int>.None);
+        var failed = Result<Option<int>, string>.Fail("original");
+
+        Assert.Equal(7, present.RequireSome("unused").Value);
+        Assert.Equal("missing", absent.RequireSome("missing").Error);
+        Assert.Equal("original", failed.RequireSome("unused").Error);
+        Assert.Equal("missing-42", absent.RequireSome(42, static id => $"missing-{id}").Error);
+        Assert.Equal(7, present.RequireSome(42, static _ => throw new InvalidOperationException()).Value);
+        Assert.Equal("original", failed.RequireSome(42, static _ => throw new InvalidOperationException()).Error);
+        Assert.Throws<InvalidOperationException>(() => default(Result<Option<int>, string>).RequireSome("missing"));
+        Assert.Throws<InvalidOperationException>(() => default(Result<Option<int>, string>)
+            .RequireSome(42, static _ => "missing"));
+    }
+
+    [Fact]
     public void BindError_ComposesOnlyFailureBranch()
     {
         Result<int, int> recovered = Result<int, string>.Fail("missing")
@@ -236,7 +254,7 @@ public class CompositionTests
         Result<Option<long>, string> state = Option<int>.Some(5)
             .Traverse(2L, static (value, increment) => Result<long, string>.Ok(value + increment));
         Result<Option<long>, string> callable = Option<int>.Some(5)
-            .Traverse<int, long, string, TraverseIncrement>(default);
+            .Traverse<int, long, string, TraverseIncrement>(default(TraverseIncrement));
 
         Assert.Equal(7L, state.Value.Value);
         Assert.Equal(6L, callable.Value.Value);

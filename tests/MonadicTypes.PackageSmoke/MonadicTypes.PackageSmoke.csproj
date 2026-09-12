@@ -32,6 +32,8 @@
     <PackageReference Include="MonadicTypes.NET.Effects" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Errors" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Diagnostics" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Testing" Version="$(PackageVersionToTest)" />
+    <PackageReference Include="MonadicTypes.NET.Analyzers" Version="$(PackageVersionToTest)" PrivateAssets="all" />
     <PackageReference Include="MonadicTypes.NET.AspNetCore" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.AspNetCore.OpenApi" Version="$(PackageVersionToTest)" />
     <PackageReference Include="MonadicTypes.NET.Generators" Version="$(PackageVersionToTest)" />

@@ -5,6 +5,50 @@ Versioning as described in [the release policy](docs/releases.md).
 
 ## Unreleased
 
+### Added
+
+- Generated `ValueFunction` wrapper overloads for Option, list, and span traversal
+  with natural consumer type inference (#19).
+- Eager and caller-state `RequireSome` overloads that preserve existing failures
+  and evaluate the stateful factory only for successful absence (#21).
+- Caller-state `Result.Recover` and `Result.ValueOrElse` overloads complete the
+  same measured failure-path closure escape identified during the #21 sweep.
+- Explicit HTTP error-status overrides in problem responses, endpoint/controller
+  metadata, and OpenAPI error catalogs. Core error categories and custom numeric
+  identifiers retain their application meaning (#20, #22).
+- Isolated NativeAOT consumer benchmarks and repository agent/workflow guidance.
+- Framework-neutral `MonadicTypes.NET.Testing` assertions that do not pull in a
+  test framework, plus allocation-free `Option.Tap` and binary `Option.Zip`.
+- An opt-in `MonadicTypes.NET.Analyzers` rule that diagnoses ambiguous
+  `Option<T> == null` and `!= null` comparisons (#24).
+- The analyzer package also reports direct `Map`/`MapError` projections that
+  create nested `Result` or `Option` values; intentional nesting can be
+  suppressed.
+
+### Fixed
+
+- Invalid error categories cannot bypass endpoint validation through a
+  deduplication-bit collision. Catalog responses deduplicate by HTTP status.
+- CI includes deleted and moved inputs, manual dispatch runs full validation,
+  and the required PR check includes all applicable validation jobs.
+- CI and local builds use the same exact SDK, preventing floating SDK selection
+  from invalidating implicit linker-package locks.
+- Nullable Option projections can fold reference or value nulls into `None`
+  through `MapNullable` and `MapNullableValue`; null-comparison guidance points
+  to explicit presence APIs (#23, #24).
+- Error categories listed in issue #22 are available as additive enum members;
+  existing numeric values remain stable and exhaustive consumer switches should
+  include a default branch for forward compatibility.
+- Explicit HTTP identities are cached per status instead of eagerly materializing
+  the entire 400-through-599 range; a NativeAOT smoke gate now bounds cold
+  allocation while retaining allocation-equivalent steady responses.
+
+### Compatibility
+
+- Explicit generic traversal calls passing an untyped `default` may now be
+  ambiguous; pass `default(MyCallable)` instead. Existing callable types remain
+  supported. No implicit Option conversion or default error mapping was removed.
+
 ## [0.2.0-preview.2] - 2026-08-30
 
 ### Added

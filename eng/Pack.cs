@@ -7,7 +7,8 @@ namespace MonadicTypes.Tooling;
 
 internal static class Pack
 {
-    private const int PackageCount = 10;
+    private const int PackageCount = 12;
+    private const int SymbolPackageCount = 10;
     private const ulong AnalyzerLower8 = 0x72657A796C616E61;
     private const ulong AsciiLowerMask8 = 0x2020202020202020;
     private static readonly SearchValues<byte> AnalyzerStarts = SearchValues.Create("Aa"u8);
@@ -57,10 +58,10 @@ internal static class Pack
             };
         }
 
-        if (packageCount != PackageCount || symbolCount != PackageCount - 1)
+        if (packageCount != PackageCount || symbolCount != SymbolPackageCount)
         {
             return Fail(
-                $"Expected {PackageCount} packages and {PackageCount - 1} symbol packages; " +
+                $"Expected {PackageCount} packages and {SymbolPackageCount} symbol packages; " +
                 $"found {packageCount} and {symbolCount}.");
         }
 
@@ -96,6 +97,8 @@ internal static class Pack
         7 => "MonadicTypes.NET.AspNetCore",
         8 => "MonadicTypes.NET.AspNetCore.OpenApi",
         9 => "MonadicTypes.NET.Generators",
+        10 => "MonadicTypes.NET.Testing",
+        11 => "MonadicTypes.NET.Analyzers",
         _ => throw new ArgumentOutOfRangeException(nameof(index))
     };
 
@@ -148,16 +151,17 @@ internal static class Pack
 
         return packageId switch
         {
-            "MonadicTypes.NET.Generators" => VerifyGenerator(archive, packageId),
+            "MonadicTypes.NET.Generators" => VerifyAnalyzerPackage(archive, packageId, "MonadicTypes.Generators"),
+            "MonadicTypes.NET.Analyzers" => VerifyAnalyzerPackage(archive, packageId, "MonadicTypes.Analyzers"),
             "MonadicTypes.NET.AspNetCore.OpenApi" => VerifyOpenApi(archive, packageId),
             _ => VerifyRuntimeAssembly(archive, packageId)
         };
     }
 
-    private static int VerifyGenerator(ZipArchive archive, string packageId)
+    private static int VerifyAnalyzerPackage(ZipArchive archive, string packageId, string assembly)
     {
-        if (archive.GetEntry("analyzers/dotnet/cs/MonadicTypes.Generators.dll") is null
-            || archive.GetEntry("analyzers/dotnet/cs/MonadicTypes.Generators.pdb") is null)
+        if (archive.GetEntry($"analyzers/dotnet/cs/{assembly}.dll") is null
+            || archive.GetEntry($"analyzers/dotnet/cs/{assembly}.pdb") is null)
         {
             return Fail($"{packageId} does not contain its analyzer assembly and portable PDB.");
         }
@@ -338,6 +342,7 @@ internal static class Pack
             "MonadicTypes.NET.Diagnostics" => "MonadicTypes.Diagnostics",
             "MonadicTypes.NET.AspNetCore" => "MonadicTypes.AspNetCore",
             "MonadicTypes.NET.AspNetCore.OpenApi" => "MonadicTypes.AspNetCore.OpenApi",
+            "MonadicTypes.NET.Testing" => "MonadicTypes.Testing",
             _ => throw new ArgumentOutOfRangeException(nameof(packageId))
         };
         return archive.GetEntry($"lib/net10.0/{assembly}.dll") is null

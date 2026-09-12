@@ -19,6 +19,18 @@ public sealed class ProducesErrorCatalogAttribute(
     string code,
     string description) : Attribute, IProducesResponseTypeMetadata
 {
+    /// <summary>Documents a stable error code with an explicit HTTP error status.</summary>
+    /// <example><code>[ProducesErrorCatalog(ErrorType.Conflict, "STALE", "Reload the resource.", 412)]</code></example>
+    /// <param name="type">The initialized application category.</param>
+    /// <param name="code">The stable machine-readable error code.</param>
+    /// <param name="description">The public description exposed in API documentation.</param>
+    /// <param name="statusCode">HTTP error status from 400 through 599.</param>
+    public ProducesErrorCatalogAttribute(ErrorType type, string code, string description, int statusCode)
+        : this(type, code, description)
+    {
+        Entry = new(type, code, description, statusCode);
+    }
+
     /// <summary>Gets the documented error entry.</summary>
     /// <example><code>ErrorCatalogEntry entry = metadata.Entry;</code></example>
     public ErrorCatalogEntry Entry { get; } = new(type, code, description);
@@ -29,7 +41,7 @@ public sealed class ProducesErrorCatalogAttribute(
 
     /// <summary>Gets the HTTP status mapped from the catalog entry.</summary>
     /// <example><code>int status = metadata.StatusCode;</code></example>
-    public int StatusCode => ErrorProblemDetails.GetStatusCode(Entry.Type);
+    public int StatusCode => Entry.StatusCode ?? ErrorProblemDetails.GetStatusCode(Entry.Type);
 
     /// <summary>Gets the optional response description; this attribute leaves it unspecified.</summary>
     /// <example><code>string? description = metadata.Description;</code></example>

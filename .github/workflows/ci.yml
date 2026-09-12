@@ -42,16 +42,20 @@ jobs:
           EVENT_BEFORE: ${{ github.event.before }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+          chmod +x eng/tools/linux-x64/mt-affected
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            git ls-files -z | eng/tools/linux-x64/mt-affected --stdin-z \
+              --ci-output "$GITHUB_OUTPUT"
+            exit 0
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
             base="$PR_BASE"
           elif [[ -n "${EVENT_BEFORE:-}" && ! "$EVENT_BEFORE" =~ ^0+$ ]]; then
             base="$EVENT_BEFORE"
           else
-            base=$(git rev-parse HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+            base=$(git hash-object -t tree /dev/null)
           fi
 
-          chmod +x eng/tools/linux-x64/mt-affected
-          git diff --name-only --diff-filter=ACMRTUXB -z "$base" HEAD | \
+          git diff --no-renames --name-only -z "$base" HEAD | \
             eng/tools/linux-x64/mt-affected --stdin-z \
               --ci-output "$GITHUB_OUTPUT"
 
@@ -74,7 +78,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
       - name: Compile NativeAOT tools from source
         shell: bash
         run: |
@@ -84,7 +88,7 @@ jobs:
             --no-restore -o artifacts/tooling/${{ matrix.rid }}
 
   pull-request:
-    name: Pull request validation
+    name: Build and test affected projects
     needs: changes
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -95,7 +99,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
       - name: Verify portable shipping lock files
@@ -132,7 +136,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
       - name: Verify portable shipping lock files
@@ -187,7 +191,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
       - name: Restore audited NativeAOT toolchain
         run: |
           for project in tests/*AotSmoke/*.csproj; do
@@ -209,8 +213,8 @@ jobs:
 
   packages:
     name: Pack and consume NuGet artifacts
-    needs: [changes, pull-request]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.packages == 'true'
+    needs: changes
+    if: github.event_name != 'push' && needs.changes.outputs.packages == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -219,7 +223,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
       - name: Verify portable shipping lock files
@@ -242,8 +246,8 @@ jobs:
 
   documentation:
     name: Verify generated documentation
-    needs: [changes, pull-request]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.documentation == 'true' && needs.changes.outputs.packages != 'true'
+    needs: changes
+    if: github.event_name != 'push' && needs.changes.outputs.documentation == 'true' && needs.changes.outputs.packages != 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -252,7 +256,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
       - name: Restore locked dependencies
@@ -277,3 +281,22 @@ jobs:
       - uses: actions/dependency-review-action@v5
         with:
           config-file: ./.github/dependency-review-config.yml
+
+  required:
+    name: Pull request validation
+    needs: [changes, tooling, pull-request, packages, documentation, dependency-review]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every applicable validation job
+        env:
+          JOBS: ${{ toJSON(needs) }}
+        run: |
+          jq -e '
+            .changes.result == "success" and
+            .["pull-request"].result == "success" and
+            .["dependency-review"].result == "success" and
+            (if .changes.outputs.tooling == "true" then .tooling.result == "success" else .tooling.result == "skipped" end) and
+            (if .changes.outputs.packages == "true" then .packages.result == "success" else .packages.result == "skipped" end) and
+            (if .changes.outputs.documentation == "true" and .changes.outputs.packages != "true" then .documentation.result == "success" else .documentation.result == "skipped" end)
+          ' <<< "$JOBS"

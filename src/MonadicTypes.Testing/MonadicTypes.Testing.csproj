@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MonadicTypes.NET.Testing</PackageId>
+    <Title>MonadicTypes.NET Testing</Title>
+    <Description>Framework-neutral assertions and extraction helpers for MonadicTypes.NET values.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MonadicTypes\MonadicTypes.csproj" />
+  </ItemGroup>
+</Project>

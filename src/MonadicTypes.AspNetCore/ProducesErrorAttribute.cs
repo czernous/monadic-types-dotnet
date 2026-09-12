@@ -13,11 +13,23 @@ namespace MonadicTypes.AspNetCore;
     Inherited = true)]
 public sealed class ProducesErrorAttribute(ErrorType errorType) : Attribute, IProducesResponseTypeMetadata
 {
+    private readonly int? _statusCode;
+
+    /// <summary>Documents an explicit HTTP error status for an application category.</summary>
+    /// <example><code>[ProducesError(ErrorType.Validation, 422)]</code></example>
+    /// <param name="errorType">The initialized application category.</param>
+    /// <param name="statusCode">HTTP error status from 400 through 599.</param>
+    public ProducesErrorAttribute(ErrorType errorType, int statusCode) : this(errorType)
+    {
+        ErrorProblemDetails.ValidateStatusCode(statusCode);
+        _statusCode = statusCode;
+    }
+
     internal static readonly string[] ProblemContentTypes = ["application/problem+json"];
 
     /// <summary>Gets the configured error category.</summary>
     /// <example><code>ErrorType type = metadata.ErrorType;</code></example>
-    public ErrorType ErrorType { get; } = errorType is < ErrorType.Failure or > ErrorType.Custom
+    public ErrorType ErrorType { get; } = errorType is < ErrorType.Failure or > ErrorType.NotImplemented
         ? throw new ArgumentOutOfRangeException(nameof(errorType))
         : errorType;
 
@@ -25,9 +37,9 @@ public sealed class ProducesErrorAttribute(ErrorType errorType) : Attribute, IPr
     /// <example><code>Type? bodyType = metadata.Type;</code></example>
     public Type? Type => typeof(ProblemDetails);
 
-    /// <summary>Gets the HTTP status mapped from <see cref="ErrorType"/>.</summary>
+    /// <summary>Gets the explicit HTTP status, or the default mapping from <see cref="ErrorType"/>.</summary>
     /// <example><code>int status = metadata.StatusCode;</code></example>
-    public int StatusCode => ErrorProblemDetails.GetStatusCode(ErrorType);
+    public int StatusCode => _statusCode ?? ErrorProblemDetails.GetStatusCode(ErrorType);
 
     /// <summary>Gets the optional response description; this attribute leaves it unspecified.</summary>
     /// <example><code>string? description = metadata.Description;</code></example>

@@ -12,6 +12,43 @@ namespace MonadicTypes.AspNetCore.Tests;
 public sealed class OpenApiCompatibilityTests
 {
     [Fact]
+    public async Task ExplicitStatuses_KeepRuntimeAndCatalogExamplesAligned()
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddErrorCatalogOpenApi();
+        builder.Services.AddControllers().AddApplicationPart(typeof(OpenApiCompatibilityController).Assembly);
+        await using WebApplication app = builder.Build();
+        app.MapOpenApi();
+        app.MapGet("/explicit", static () => ErrorProblemDetails.ToHttpResult(
+                Error.Conflict("STALE", "Reload the resource."), 412))
+            .ProducesErrorCatalog(
+                new(ErrorType.Conflict, "STALE", "Reload the resource.", 412),
+                new(ErrorType.Conflict, "PRECONDITION_REQUIRED", "Supply If-Match.", 428));
+        app.MapControllers();
+        await app.StartAsync();
+
+        using HttpClient client = app.GetTestClient();
+        using HttpResponseMessage response = await client.GetAsync("/explicit");
+        using JsonDocument runtime = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using JsonDocument document = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
+
+        Assert.Equal(412, (int)response.StatusCode);
+        Assert.Equal("urn:problem-type:http-412", runtime.RootElement.GetProperty("type").GetString());
+        Assert.Equal("Precondition Failed", runtime.RootElement.GetProperty("title").GetString());
+        AssertCatalog(document.RootElement, "/explicit", "412", "STALE", "Reload the resource.");
+        AssertCatalog(document.RootElement, "/explicit", "428", "PRECONDITION_REQUIRED", "Supply If-Match.");
+        AssertCatalog(document.RootElement, "/compatibility/controller/explicit", "422", "INVALID_CONTENT", "Invalid content.");
+        JsonElement responses = document.RootElement.GetProperty("paths").GetProperty("/explicit")
+            .GetProperty("get").GetProperty("responses");
+        Assert.False(responses.TryGetProperty("409", out _));
+        JsonElement example = responses.GetProperty("412").GetProperty("content")
+            .GetProperty("application/problem+json").GetProperty("examples").GetProperty("STALE").GetProperty("value");
+        Assert.Equal(runtime.RootElement.GetProperty("type").GetString(), example.GetProperty("type").GetString());
+        Assert.Equal(runtime.RootElement.GetProperty("title").GetString(), example.GetProperty("title").GetString());
+    }
+
+    [Fact]
     public async Task GeneratedDocumentIncludesMinimalAndControllerProblemResponses()
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -135,6 +172,11 @@ public sealed class OpenApiCompatibilityTests
 [Route("compatibility/controller")]
 public sealed class OpenApiCompatibilityController : ControllerBase
 {
+    [HttpGet("explicit")]
+    [ProducesError(ErrorType.Validation, 422)]
+    [ProducesErrorCatalog(ErrorType.Validation, "INVALID_CONTENT", "Invalid content.", 422)]
+    public ActionResult<int> Explicit() => Ok(1);
+
     [HttpGet]
     [ProducesError(ErrorType.NotFound)]
     [ProducesErrorCatalog(

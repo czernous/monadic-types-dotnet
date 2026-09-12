@@ -20,7 +20,9 @@ app.MapGet("/items/{id:int}", static (int id) => TypedResults.Ok(id))
         new ErrorCatalogEntry(
             ErrorType.Conflict,
             "ITEM_CONFLICT",
-            "The item conflicts with existing state."));
+            "The item conflicts with existing state."),
+        new ErrorCatalogEntry(ErrorType.Conflict, "STALE", "Reload the resource.", 412),
+        new ErrorCatalogEntry(ErrorType.Conflict, "PRECONDITION_REQUIRED", "Supply If-Match.", 428));
 app.MapOpenApi();
 
 await app.StartAsync();
@@ -56,4 +58,15 @@ JsonElement notFoundCodes = operation
 
 await app.StopAsync();
 
-return notFoundCodes[0].GetString() is "ITEM_NOT_FOUND" ? 0 : 1;
+JsonElement staleExample = operation.GetProperty("responses").GetProperty("412")
+    .GetProperty("content").GetProperty("application/problem+json")
+    .GetProperty("examples").GetProperty("STALE").GetProperty("value");
+JsonElement requiredExample = operation.GetProperty("responses").GetProperty("428")
+    .GetProperty("content").GetProperty("application/problem+json")
+    .GetProperty("examples").GetProperty("PRECONDITION_REQUIRED").GetProperty("value");
+
+return notFoundCodes[0].GetString() is "ITEM_NOT_FOUND"
+    && staleExample.GetProperty("status").GetInt32() is 412
+    && staleExample.GetProperty("type").GetString() is "urn:problem-type:http-412"
+    && requiredExample.GetProperty("status").GetInt32() is 428
+    ? 0 : 1;

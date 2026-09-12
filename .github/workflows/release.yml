@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
       - name: Restore NativeAOT toolchain
         run: |
           for project in tests/*AotSmoke/*.csproj; do
@@ -79,7 +79,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.3xx
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages.lock.json'
       - name: Verify portable shipping lock files

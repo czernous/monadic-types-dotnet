@@ -31,7 +31,7 @@ public sealed record Error : ISpanFormattable
         Exception? cause = null)
         : this(type, (int)type, code, message, isMessagePublic, cause)
     {
-        if (type is < ErrorType.Failure or >= ErrorType.Custom)
+        if (type is ErrorType.Uninitialized or ErrorType.Custom or > ErrorType.NotImplemented)
         {
             throw new ArgumentOutOfRangeException(nameof(type));
         }

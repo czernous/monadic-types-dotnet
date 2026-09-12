@@ -57,6 +57,8 @@ public static class ErrorTelemetry
         ErrorActivityStatusPolicy.Automatic => type is
             ErrorType.Failure or
             ErrorType.Unexpected or
+            ErrorType.BadGateway or
+            ErrorType.NotImplemented or
             ErrorType.Unavailable or
             ErrorType.Timeout or
             ErrorType.Custom,
@@ -70,8 +72,20 @@ public static class ErrorTelemetry
         ErrorType.Validation => "validation",
         ErrorType.Conflict => "conflict",
         ErrorType.NotFound => "not_found",
+        ErrorType.PaymentRequired => "payment_required",
+        ErrorType.NotAcceptable => "not_acceptable",
+        ErrorType.RequestTimeout => "request_timeout",
+        ErrorType.Gone => "gone",
+        ErrorType.PreconditionFailed => "precondition_failed",
+        ErrorType.ContentTooLarge => "content_too_large",
+        ErrorType.UnsupportedMediaType => "unsupported_media_type",
+        ErrorType.UnprocessableContent => "unprocessable_content",
+        ErrorType.Locked => "locked",
+        ErrorType.PreconditionRequired => "precondition_required",
         ErrorType.Unauthorized => "unauthorized",
         ErrorType.Forbidden => "forbidden",
+        ErrorType.BadGateway => "bad_gateway",
+        ErrorType.NotImplemented => "not_implemented",
         ErrorType.Unavailable => "unavailable",
         ErrorType.Timeout => "timeout",
         ErrorType.RateLimited => "rate_limited",

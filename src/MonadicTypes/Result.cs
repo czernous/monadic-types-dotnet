@@ -405,6 +405,20 @@ public readonly record struct Result<T, E> where E : notnull
         _ => throw UninitializedResult()
     };
 
+    /// <summary>Recovers a failure while passing caller-owned state to a non-capturing function.</summary>
+    /// <example><code>Result&lt;Settings, ReadError&gt; settings = primary.Recover(path, static (error, value) =&gt; ReadFallback(error, value));</code></example>
+    /// <typeparam name="TState">Caller state type.</typeparam>
+    /// <param name="state">State passed unchanged to the recovery function.</param>
+    /// <param name="recover">Function invoked only for a failure.</param>
+    /// <returns>This success or the recovery result.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public Result<T, E> Recover<TState>(TState state, Func<E, TState, Result<T, E>> recover) => _state switch
+    {
+        Success => this,
+        Failure => recover(_error!, state),
+        _ => throw UninitializedResult()
+    };
+
     /// <summary>Returns the success value or an eagerly supplied fallback.</summary>
     /// <example><code>User user = result.ValueOr(User.Anonymous);</code></example>
     /// <param name="fallback">Value returned for a failure.</param>
@@ -426,6 +440,20 @@ public readonly record struct Result<T, E> where E : notnull
     {
         Success => _value!,
         Failure => fallback(_error!),
+        _ => throw UninitializedResult()
+    };
+
+    /// <summary>Returns the success value or maps the active error with caller-owned state.</summary>
+    /// <example><code>User user = result.ValueOrElse(id, static (error, key) =&gt; User.Missing(key, error.Code));</code></example>
+    /// <typeparam name="TState">Caller state type.</typeparam>
+    /// <param name="state">State passed unchanged to the fallback function.</param>
+    /// <param name="fallback">Function invoked only for a failure.</param>
+    /// <returns>The success value or the fallback value.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T ValueOrElse<TState>(TState state, Func<E, TState, T> fallback) => _state switch
+    {
+        Success => _value!,
+        Failure => fallback(_error!, state),
         _ => throw UninitializedResult()
     };
 

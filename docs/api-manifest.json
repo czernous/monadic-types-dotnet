@@ -4,7 +4,7 @@
       "id": "MonadicTypes.NET",
       "project": "MonadicTypes",
       "reference": "api-reference.md#package-monadictypesnet",
-      "memberCount": 141,
+      "memberCount": 153,
       "members": [
         {
           "kind": "type",
@@ -248,6 +248,26 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.Option`1.MapNullable``1(System.Func{`0,``0})",
+          "declaringType": "Option<T>",
+          "name": "MapNullable",
+          "signature": "Option<TR> MapNullable<TR>(Func<T, TR> map)",
+          "summary": "Maps a present value through a nullable reference projection, treating null as `None`.",
+          "familyReference": "api-reference.md#member-optiontmapnullable",
+          "reference": "api-reference.md#overload-optiontr-mapnullabletrfunct-tr-map-on-optiont"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Option`1.MapNullableValue``1(System.Func{`0,System.Nullable{``0}})",
+          "declaringType": "Option<T>",
+          "name": "MapNullableValue",
+          "signature": "Option<TR> MapNullableValue<TR>(Func<T, Nullable<TR>> map)",
+          "summary": "Maps a present value through a nullable value projection, treating no value as `None`.",
+          "familyReference": "api-reference.md#member-optiontmapnullablevalue",
+          "reference": "api-reference.md#overload-optiontr-mapnullablevaluetrfunct-nullabletr-map-on-optiont"
+        },
+        {
+          "kind": "member",
           "id": "M:MonadicTypes.Option`1.Match``1(System.Func{`0,``0},System.Func{``0})",
           "declaringType": "Option<T>",
           "name": "Match",
@@ -308,6 +328,46 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.Option`1.Tap(System.Action{`0})",
+          "declaringType": "Option<T>",
+          "name": "Tap",
+          "signature": "Option<T> Tap(Action<T> action)",
+          "summary": "Observes a present value and returns this option unchanged.",
+          "familyReference": "api-reference.md#member-optionttap",
+          "reference": "api-reference.md#overload-optiont-tapactiont-action-on-optiont"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Option`1.Tap``1(MonadicTypes.ValueAction{`0,``0})",
+          "declaringType": "Option<T>",
+          "name": "Tap",
+          "signature": "Option<T> Tap<TAction>(ValueAction<T, TAction> action)",
+          "summary": "Observes a present value through a generated callable wrapper.",
+          "familyReference": "api-reference.md#member-optionttap",
+          "reference": "api-reference.md#overload-optiont-taptactionvalueactiont-taction-action-on-optiont"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Option`1.Tap``1(``0)",
+          "declaringType": "Option<T>",
+          "name": "Tap",
+          "signature": "Option<T> Tap<TAction>(TAction action)",
+          "summary": "Observes a present value through an allocation-free callable and returns this option unchanged.",
+          "familyReference": "api-reference.md#member-optionttap",
+          "reference": "api-reference.md#overload-optiont-taptactiontaction-action-on-optiont"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Option`1.Tap``1(``0,System.Action{`0,``0})",
+          "declaringType": "Option<T>",
+          "name": "Tap",
+          "signature": "Option<T> Tap<TState>(TState state, Action<T, TState> action)",
+          "summary": "Observes a present value while passing caller-owned state.",
+          "familyReference": "api-reference.md#member-optionttap",
+          "reference": "api-reference.md#overload-optiont-taptstatetstate-state-actiont-tstate-action-on-optiont"
+        },
+        {
+          "kind": "member",
           "id": "M:MonadicTypes.Option`1.TryGetValue(`0@)",
           "declaringType": "Option<T>",
           "name": "TryGetValue",
@@ -355,6 +415,16 @@
           "summary": "Returns the present value or lazily creates a fallback with caller-owned state.",
           "familyReference": "api-reference.md#member-optiontvalueorelse",
           "reference": "api-reference.md#overload-t-valueorelsetstatetstate-state-functstate-t-fallback-on-optiont"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Option`1.Zip``1(MonadicTypes.Option{``0})",
+          "declaringType": "Option<T>",
+          "name": "Zip",
+          "signature": "Option<ValueTuple<T, TOther>> Zip<TOther>(Option<TOther> other)",
+          "summary": "Combines two options in argument order.",
+          "familyReference": "api-reference.md#member-optiontzip",
+          "reference": "api-reference.md#overload-optionvaluetuplet-tother-ziptotheroptiontother-other-on-optiont"
         },
         {
           "kind": "member",
@@ -808,6 +878,16 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.Result`2.Recover``1(``0,System.Func{`1,``0,MonadicTypes.Result{`0,`1}})",
+          "declaringType": "Result<T, E>",
+          "name": "Recover",
+          "signature": "Result<T, E> Recover<TState>(TState state, Func<E, TState, Result<T, E>> recover)",
+          "summary": "Recovers a failure while passing caller-owned state to a non-capturing function.",
+          "familyReference": "api-reference.md#member-resultt-erecover",
+          "reference": "api-reference.md#overload-resultt-e-recovertstatetstate-state-funce-tstate-resultt-e-recover-on-resultt-e"
+        },
+        {
+          "kind": "member",
           "id": "M:MonadicTypes.Result`2.Switch(System.Action{`0},System.Action{`1})",
           "declaringType": "Result<T, E>",
           "name": "Switch",
@@ -965,6 +1045,16 @@
           "summary": "Returns the success value or lazily maps the active error to a fallback.",
           "familyReference": "api-reference.md#member-resultt-evalueorelse",
           "reference": "api-reference.md#overload-t-valueorelsefunce-t-fallback-on-resultt-e"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Result`2.ValueOrElse``1(``0,System.Func{`1,``0,`0})",
+          "declaringType": "Result<T, E>",
+          "name": "ValueOrElse",
+          "signature": "T ValueOrElse<TState>(TState state, Func<E, TState, T> fallback)",
+          "summary": "Returns the success value or maps the active error with caller-owned state.",
+          "familyReference": "api-reference.md#member-resultt-evalueorelse",
+          "reference": "api-reference.md#overload-t-valueorelsetstatetstate-state-funce-tstate-t-fallback-on-resultt-e"
         },
         {
           "kind": "member",
@@ -1258,6 +1348,26 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.ResultCompositionExtensions.RequireSome``2(MonadicTypes.Result{MonadicTypes.Option{``0},``1}@,``1)",
+          "declaringType": "ResultCompositionExtensions",
+          "name": "RequireSome",
+          "signature": "Result<T, TError> RequireSome<T, TError>(in Result<Option<T>, TError> result, TError whenNone)",
+          "summary": "Requires a successful option to contain a value using an eagerly supplied error.",
+          "familyReference": "api-reference.md#member-resultcompositionextensionsrequiresome",
+          "reference": "api-reference.md#overload-resultt-terror-requiresomet-terrorin-resultoptiont-terror-result-terror-whennone-on-resultcompositionextensions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.ResultCompositionExtensions.RequireSome``3(MonadicTypes.Result{MonadicTypes.Option{``0},``1}@,``2,System.Func{``2,``1})",
+          "declaringType": "ResultCompositionExtensions",
+          "name": "RequireSome",
+          "signature": "Result<T, TError> RequireSome<T, TError, TState>(in Result<Option<T>, TError> result, TState state, Func<TState, TError> whenNone)",
+          "summary": "Requires a successful option to contain a value using a caller-state error factory.",
+          "familyReference": "api-reference.md#member-resultcompositionextensionsrequiresome",
+          "reference": "api-reference.md#overload-resultt-terror-requiresomet-terror-tstatein-resultoptiont-terror-result-tstate-state-functstate-terror-whennone-on-resultcompositionextensions"
+        },
+        {
+          "kind": "member",
           "id": "M:MonadicTypes.ResultCompositionExtensions.ToResult``2(MonadicTypes.Option{``0}@,System.Func{``1})",
           "declaringType": "ResultCompositionExtensions",
           "name": "ToResult",
@@ -1305,6 +1415,16 @@
           "summary": "Traverses a present value through a fallible selector and preserves absence.",
           "familyReference": "api-reference.md#member-resultcompositionextensionstraverse",
           "reference": "api-reference.md#overload-resultoptiontresult-terror-traversetsource-tresult-terrorin-optiontsource-option-functsource-resulttresult-terror-selector-on-resultcompositionextensions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.ResultCompositionExtensions.Traverse``4(MonadicTypes.Option{``0}@,MonadicTypes.ValueFunction{``0,MonadicTypes.Result{``1,``2},``3})",
+          "declaringType": "ResultCompositionExtensions",
+          "name": "Traverse",
+          "signature": "Result<Option<TResult>, TError> Traverse<TSource, TResult, TError, TFunction>(in Option<TSource> option, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)",
+          "summary": "Traverses Some through a generated callable wrapper and preserves None.",
+          "familyReference": "api-reference.md#member-resultcompositionextensionstraverse",
+          "reference": "api-reference.md#overload-resultoptiontresult-terror-traversetsource-tresult-terror-tfunctionin-optiontsource-option-valuefunctiontsource-resulttresult-terror-tfunction-selector-on-resultcompositionextensions"
         },
         {
           "kind": "member",
@@ -1422,7 +1542,7 @@
       "id": "MonadicTypes.NET.AspNetCore",
       "project": "MonadicTypes.AspNetCore",
       "reference": "api-reference.md#package-monadictypesnetaspnetcore",
-      "memberCount": 46,
+      "memberCount": 54,
       "members": [
         {
           "kind": "type",
@@ -1466,6 +1586,16 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.AspNetCore.ErrorCatalogEntry.#ctor(MonadicTypes.ErrorType,System.String,System.String,System.Int32)",
+          "declaringType": "ErrorCatalogEntry",
+          "name": "ErrorCatalogEntry",
+          "signature": "ErrorCatalogEntry(ErrorType type, string code, string description, int statusCode)",
+          "summary": "Creates a documented error with an explicit HTTP error status.",
+          "familyReference": "api-reference.md#member-errorcatalogentryerrorcatalogentry",
+          "reference": "api-reference.md#overload-errorcatalogentryerrortype-type-string-code-string-description-int-statuscode-on-errorcatalogentry"
+        },
+        {
+          "kind": "member",
           "id": "P:MonadicTypes.AspNetCore.ErrorCatalogEntry.Code",
           "declaringType": "ErrorCatalogEntry",
           "name": "Code",
@@ -1486,11 +1616,21 @@
         },
         {
           "kind": "member",
+          "id": "P:MonadicTypes.AspNetCore.ErrorCatalogEntry.StatusCode",
+          "declaringType": "ErrorCatalogEntry",
+          "name": "StatusCode",
+          "signature": "Nullable<int> StatusCode",
+          "summary": "Gets the explicit HTTP status override, or null to use the category's default mapping.",
+          "familyReference": "api-reference.md#member-errorcatalogentrystatuscode",
+          "reference": "api-reference.md#overload-nullableint-statuscode-on-errorcatalogentry"
+        },
+        {
+          "kind": "member",
           "id": "P:MonadicTypes.AspNetCore.ErrorCatalogEntry.Type",
           "declaringType": "ErrorCatalogEntry",
           "name": "Type",
           "signature": "ErrorType Type",
-          "summary": "Gets the category that determines the documented HTTP status.",
+          "summary": "Gets the application category used for the default HTTP mapping when no status override is supplied.",
           "familyReference": "api-reference.md#member-errorcatalogentrytype",
           "reference": "api-reference.md#overload-errortype-type-on-errorcatalogentry"
         },
@@ -1586,6 +1726,16 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.AspNetCore.ErrorProblemDetails.Create(MonadicTypes.Error@,System.Int32,Microsoft.AspNetCore.Http.HttpContext)",
+          "declaringType": "ErrorProblemDetails",
+          "name": "Create",
+          "signature": "ProblemDetails Create(in Error error, int statusCode, HttpContext? httpContext)",
+          "summary": "Creates problem details with an explicit HTTP error status and the existing visibility and trace policy.",
+          "familyReference": "api-reference.md#member-errorproblemdetailscreate",
+          "reference": "api-reference.md#overload-problemdetails-createin-error-error-int-statuscode-httpcontext-httpcontext-on-errorproblemdetails"
+        },
+        {
+          "kind": "member",
           "id": "M:MonadicTypes.AspNetCore.ErrorProblemDetails.CreateExample(MonadicTypes.Error@)",
           "declaringType": "ErrorProblemDetails",
           "name": "CreateExample",
@@ -1593,6 +1743,26 @@
           "summary": "Creates deterministic problem details for documentation without request or activity data.",
           "familyReference": "api-reference.md#member-errorproblemdetailscreateexample",
           "reference": "api-reference.md#overload-problemdetails-createexamplein-error-error-on-errorproblemdetails"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.AspNetCore.ErrorProblemDetails.CreateExample(MonadicTypes.Error@,System.Int32)",
+          "declaringType": "ErrorProblemDetails",
+          "name": "CreateExample",
+          "signature": "ProblemDetails CreateExample(in Error error, int statusCode)",
+          "summary": "Creates a deterministic example with an explicit HTTP error status and no ambient trace data.",
+          "familyReference": "api-reference.md#member-errorproblemdetailscreateexample",
+          "reference": "api-reference.md#overload-problemdetails-createexamplein-error-error-int-statuscode-on-errorproblemdetails"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.AspNetCore.ErrorProblemDetails.GetStatusCode(MonadicTypes.Error@)",
+          "declaringType": "ErrorProblemDetails",
+          "name": "GetStatusCode",
+          "signature": "int GetStatusCode(in Error error)",
+          "summary": "Gets the HTTP status for an initialized error, honoring valid HTTP numeric custom categories.",
+          "familyReference": "api-reference.md#member-errorproblemdetailsgetstatuscode",
+          "reference": "api-reference.md#overload-int-getstatuscodein-error-error-on-errorproblemdetails"
         },
         {
           "kind": "member",
@@ -1613,6 +1783,16 @@
           "summary": "Creates a strongly typed problem HTTP result for an error.",
           "familyReference": "api-reference.md#member-errorproblemdetailstohttpresult",
           "reference": "api-reference.md#overload-problemhttpresult-tohttpresultin-error-error-httpcontext-httpcontext-on-errorproblemdetails"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.AspNetCore.ErrorProblemDetails.ToHttpResult(MonadicTypes.Error@,System.Int32,Microsoft.AspNetCore.Http.HttpContext)",
+          "declaringType": "ErrorProblemDetails",
+          "name": "ToHttpResult",
+          "signature": "ProblemHttpResult ToHttpResult(in Error error, int statusCode, HttpContext? httpContext)",
+          "summary": "Creates a typed problem result with an explicit HTTP error status.",
+          "familyReference": "api-reference.md#member-errorproblemdetailstohttpresult",
+          "reference": "api-reference.md#overload-problemhttpresult-tohttpresultin-error-error-int-statuscode-httpcontext-httpcontext-on-errorproblemdetails"
         },
         {
           "kind": "type",
@@ -1656,6 +1836,16 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.AspNetCore.ProducesErrorAttribute.#ctor(MonadicTypes.ErrorType,System.Int32)",
+          "declaringType": "ProducesErrorAttribute",
+          "name": "ProducesErrorAttribute",
+          "signature": "ProducesErrorAttribute(ErrorType errorType, int statusCode)",
+          "summary": "Documents an explicit HTTP error status for an application category.",
+          "familyReference": "api-reference.md#member-produceserrorattributeproduceserrorattribute",
+          "reference": "api-reference.md#overload-produceserrorattributeerrortype-errortype-int-statuscode-on-produceserrorattribute"
+        },
+        {
+          "kind": "member",
           "id": "P:MonadicTypes.AspNetCore.ProducesErrorAttribute.ContentTypes",
           "declaringType": "ProducesErrorAttribute",
           "name": "ContentTypes",
@@ -1690,7 +1880,7 @@
           "declaringType": "ProducesErrorAttribute",
           "name": "StatusCode",
           "signature": "int StatusCode",
-          "summary": "Gets the HTTP status mapped from `ErrorType`.",
+          "summary": "Gets the explicit HTTP status, or the default mapping from `ErrorType`.",
           "familyReference": "api-reference.md#member-produceserrorattributestatuscode",
           "reference": "api-reference.md#overload-int-statuscode-on-produceserrorattribute"
         },
@@ -1723,6 +1913,16 @@
           "summary": "Adds one stable domain error and its response category to controller or endpoint metadata.",
           "familyReference": "api-reference.md#member-produceserrorcatalogattributeproduceserrorcatalogattribute",
           "reference": "api-reference.md#overload-produceserrorcatalogattributeerrortype-type-string-code-string-description-on-produceserrorcatalogattribute"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.AspNetCore.ProducesErrorCatalogAttribute.#ctor(MonadicTypes.ErrorType,System.String,System.String,System.Int32)",
+          "declaringType": "ProducesErrorCatalogAttribute",
+          "name": "ProducesErrorCatalogAttribute",
+          "signature": "ProducesErrorCatalogAttribute(ErrorType type, string code, string description, int statusCode)",
+          "summary": "Documents a stable error code with an explicit HTTP error status.",
+          "familyReference": "api-reference.md#member-produceserrorcatalogattributeproduceserrorcatalogattribute",
+          "reference": "api-reference.md#overload-produceserrorcatalogattributeerrortype-type-string-code-string-description-int-statuscode-on-produceserrorcatalogattribute"
         },
         {
           "kind": "member",
@@ -2376,7 +2576,7 @@
       "id": "MonadicTypes.NET.Collections",
       "project": "MonadicTypes.Collections",
       "reference": "api-reference.md#package-monadictypesnetcollections",
-      "memberCount": 8,
+      "memberCount": 10,
       "members": [
         {
           "kind": "type",
@@ -2420,6 +2620,16 @@
         },
         {
           "kind": "member",
+          "id": "M:MonadicTypes.Collections.ResultCollectionExtensions.TraverseToArray``4(System.Collections.Generic.IReadOnlyList{``0},MonadicTypes.ValueFunction{``0,MonadicTypes.Result{``1,``2},``3})",
+          "declaringType": "ResultCollectionExtensions",
+          "name": "TraverseToArray",
+          "signature": "Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(IReadOnlyList<TSource> source, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)",
+          "summary": "Traverses each item through a generated callable wrapper with inferred result types.",
+          "familyReference": "api-reference.md#member-resultcollectionextensionstraversetoarray",
+          "reference": "api-reference.md#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionireadonlylisttsource-source-valuefunctiontsource-resulttresult-terror-tfunction-selector-on-resultcollectionextensions"
+        },
+        {
+          "kind": "member",
           "id": "M:MonadicTypes.Collections.ResultCollectionExtensions.TraverseToArray``4(System.Collections.Generic.IReadOnlyList{``0},``1,System.Func{``0,``1,MonadicTypes.Result{``2,``3}})",
           "declaringType": "ResultCollectionExtensions",
           "name": "TraverseToArray",
@@ -2437,6 +2647,16 @@
           "summary": "Traverses each item once using an allocation-free callable and returns a new array.",
           "familyReference": "api-reference.md#member-resultcollectionextensionstraversetoarray",
           "reference": "api-reference.md#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionireadonlylisttsource-source-tfunction-selector-on-resultcollectionextensions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Collections.ResultCollectionExtensions.TraverseToArray``4(System.ReadOnlySpan{``0},MonadicTypes.ValueFunction{``0,MonadicTypes.Result{``1,``2},``3})",
+          "declaringType": "ResultCollectionExtensions",
+          "name": "TraverseToArray",
+          "signature": "Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(ReadOnlySpan<TSource> source, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)",
+          "summary": "Traverses each span item through a generated callable wrapper with inferred result types.",
+          "familyReference": "api-reference.md#member-resultcollectionextensionstraversetoarray",
+          "reference": "api-reference.md#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionreadonlyspantsource-source-valuefunctiontsource-resulttresult-terror-tfunction-selector-on-resultcollectionextensions"
         },
         {
           "kind": "member",
@@ -2740,7 +2960,7 @@
       "id": "MonadicTypes.NET.Errors",
       "project": "MonadicTypes.Errors",
       "reference": "api-reference.md#package-monadictypesneterrors",
-      "memberCount": 72,
+      "memberCount": 84,
       "members": [
         {
           "kind": "type",
@@ -3094,6 +3314,16 @@
         },
         {
           "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.BadGateway",
+          "declaringType": "ErrorType",
+          "name": "BadGateway",
+          "signature": "ErrorType BadGateway",
+          "summary": "An upstream gateway returned an unusable response.",
+          "familyReference": "api-reference.md#member-errortypebadgateway",
+          "reference": "api-reference.md#overload-errortype-badgateway-on-errortype"
+        },
+        {
+          "kind": "member",
           "id": "F:MonadicTypes.ErrorType.Cancelled",
           "declaringType": "ErrorType",
           "name": "Cancelled",
@@ -3111,6 +3341,16 @@
           "summary": "A state or concurrency conflict.",
           "familyReference": "api-reference.md#member-errortypeconflict",
           "reference": "api-reference.md#overload-errortype-conflict-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.ContentTooLarge",
+          "declaringType": "ErrorType",
+          "name": "ContentTooLarge",
+          "signature": "ErrorType ContentTooLarge",
+          "summary": "The request content exceeded the accepted limit.",
+          "familyReference": "api-reference.md#member-errortypecontenttoolarge",
+          "reference": "api-reference.md#overload-errortype-contenttoolarge-on-errortype"
         },
         {
           "kind": "member",
@@ -3144,6 +3384,36 @@
         },
         {
           "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.Gone",
+          "declaringType": "ErrorType",
+          "name": "Gone",
+          "signature": "ErrorType Gone",
+          "summary": "The requested resource was deliberately removed.",
+          "familyReference": "api-reference.md#member-errortypegone",
+          "reference": "api-reference.md#overload-errortype-gone-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.Locked",
+          "declaringType": "ErrorType",
+          "name": "Locked",
+          "signature": "ErrorType Locked",
+          "summary": "The target resource is locked.",
+          "familyReference": "api-reference.md#member-errortypelocked",
+          "reference": "api-reference.md#overload-errortype-locked-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.NotAcceptable",
+          "declaringType": "ErrorType",
+          "name": "NotAcceptable",
+          "signature": "ErrorType NotAcceptable",
+          "summary": "The requested representation is not acceptable.",
+          "familyReference": "api-reference.md#member-errortypenotacceptable",
+          "reference": "api-reference.md#overload-errortype-notacceptable-on-errortype"
+        },
+        {
+          "kind": "member",
           "id": "F:MonadicTypes.ErrorType.NotFound",
           "declaringType": "ErrorType",
           "name": "NotFound",
@@ -3154,6 +3424,46 @@
         },
         {
           "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.NotImplemented",
+          "declaringType": "ErrorType",
+          "name": "NotImplemented",
+          "signature": "ErrorType NotImplemented",
+          "summary": "The requested operation is not implemented.",
+          "familyReference": "api-reference.md#member-errortypenotimplemented",
+          "reference": "api-reference.md#overload-errortype-notimplemented-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.PaymentRequired",
+          "declaringType": "ErrorType",
+          "name": "PaymentRequired",
+          "signature": "ErrorType PaymentRequired",
+          "summary": "A payment or entitlement requirement prevented the operation.",
+          "familyReference": "api-reference.md#member-errortypepaymentrequired",
+          "reference": "api-reference.md#overload-errortype-paymentrequired-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.PreconditionFailed",
+          "declaringType": "ErrorType",
+          "name": "PreconditionFailed",
+          "signature": "ErrorType PreconditionFailed",
+          "summary": "A supplied request precondition was not met.",
+          "familyReference": "api-reference.md#member-errortypepreconditionfailed",
+          "reference": "api-reference.md#overload-errortype-preconditionfailed-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.PreconditionRequired",
+          "declaringType": "ErrorType",
+          "name": "PreconditionRequired",
+          "signature": "ErrorType PreconditionRequired",
+          "summary": "The request requires a precondition.",
+          "familyReference": "api-reference.md#member-errortypepreconditionrequired",
+          "reference": "api-reference.md#overload-errortype-preconditionrequired-on-errortype"
+        },
+        {
+          "kind": "member",
           "id": "F:MonadicTypes.ErrorType.RateLimited",
           "declaringType": "ErrorType",
           "name": "RateLimited",
@@ -3161,6 +3471,16 @@
           "summary": "A caller exceeded a rate or quota limit.",
           "familyReference": "api-reference.md#member-errortyperatelimited",
           "reference": "api-reference.md#overload-errortype-ratelimited-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.RequestTimeout",
+          "declaringType": "ErrorType",
+          "name": "RequestTimeout",
+          "signature": "ErrorType RequestTimeout",
+          "summary": "The client took too long to send the request.",
+          "familyReference": "api-reference.md#member-errortyperequesttimeout",
+          "reference": "api-reference.md#overload-errortype-requesttimeout-on-errortype"
         },
         {
           "kind": "member",
@@ -3211,6 +3531,26 @@
           "summary": "An invalid default value that no constructed error may use.",
           "familyReference": "api-reference.md#member-errortypeuninitialized",
           "reference": "api-reference.md#overload-errortype-uninitialized-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.UnprocessableContent",
+          "declaringType": "ErrorType",
+          "name": "UnprocessableContent",
+          "signature": "ErrorType UnprocessableContent",
+          "summary": "The request was valid but could not be processed semantically.",
+          "familyReference": "api-reference.md#member-errortypeunprocessablecontent",
+          "reference": "api-reference.md#overload-errortype-unprocessablecontent-on-errortype"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorType.UnsupportedMediaType",
+          "declaringType": "ErrorType",
+          "name": "UnsupportedMediaType",
+          "signature": "ErrorType UnsupportedMediaType",
+          "summary": "The request media type is not supported.",
+          "familyReference": "api-reference.md#member-errortypeunsupportedmediatype",
+          "reference": "api-reference.md#overload-errortype-unsupportedmediatype-on-errortype"
         },
         {
           "kind": "member",
@@ -3567,6 +3907,114 @@
           "summary": "Keeps a present option only when its predicate succeeds.",
           "familyReference": "api-reference.md#member-queryextensionswhere",
           "reference": "api-reference.md#overload-optiont-wheretin-optiont-source-funct-bool-predicate-on-queryextensions"
+        }
+      ]
+    },
+    {
+      "id": "MonadicTypes.NET.Testing",
+      "project": "MonadicTypes.Testing",
+      "reference": "api-reference.md#package-monadictypesnettesting",
+      "memberCount": 10,
+      "members": [
+        {
+          "kind": "type",
+          "id": "T:MonadicTypes.Testing.MonadicAssertionException",
+          "declaringType": "MonadicAssertionException",
+          "name": "MonadicAssertionException",
+          "signature": "MonadicAssertionException",
+          "summary": "Exception thrown by framework-neutral MonadicTypes.NET test assertions.",
+          "familyReference": "api-reference.md#type-monadicassertionexception",
+          "reference": "api-reference.md#type-monadicassertionexception"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertionException.#ctor(System.String)",
+          "declaringType": "MonadicAssertionException",
+          "name": "MonadicAssertionException",
+          "signature": "MonadicAssertionException(string message)",
+          "summary": "Exception thrown by framework-neutral MonadicTypes.NET test assertions.",
+          "familyReference": "api-reference.md#member-monadicassertionexceptionmonadicassertionexception",
+          "reference": "api-reference.md#overload-monadicassertionexceptionstring-message-on-monadicassertionexception"
+        },
+        {
+          "kind": "type",
+          "id": "T:MonadicTypes.Testing.MonadicAssertions",
+          "declaringType": "MonadicAssertions",
+          "name": "MonadicAssertions",
+          "signature": "MonadicAssertions",
+          "summary": "Provides framework-neutral assertions for tests of monadic values.",
+          "familyReference": "api-reference.md#type-monadicassertions",
+          "reference": "api-reference.md#type-monadicassertions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertions.ErrorOrFail``2(MonadicTypes.Result{``0,``1},System.String)",
+          "declaringType": "MonadicAssertions",
+          "name": "ErrorOrFail",
+          "signature": "TError ErrorOrFail<T, TError>(Result<T, TError> result, string? message)",
+          "summary": "Returns the failure error or throws a test assertion exception.",
+          "familyReference": "api-reference.md#member-monadicassertionserrororfail",
+          "reference": "api-reference.md#overload-terror-errororfailt-terrorresultt-terror-result-string-message-on-monadicassertions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertions.ShouldBeError``2(MonadicTypes.Result{``0,``1},System.String)",
+          "declaringType": "MonadicAssertions",
+          "name": "ShouldBeError",
+          "signature": "Result<T, TError> ShouldBeError<T, TError>(Result<T, TError> result, string? message)",
+          "summary": "Asserts that a result is failed and returns it for further checks.",
+          "familyReference": "api-reference.md#member-monadicassertionsshouldbeerror",
+          "reference": "api-reference.md#overload-resultt-terror-shouldbeerrort-terrorresultt-terror-result-string-message-on-monadicassertions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertions.ShouldBeNone``1(MonadicTypes.Option{``0},System.String)",
+          "declaringType": "MonadicAssertions",
+          "name": "ShouldBeNone",
+          "signature": "Option<T> ShouldBeNone<T>(Option<T> option, string? message)",
+          "summary": "Asserts that an option is empty and returns it for further checks.",
+          "familyReference": "api-reference.md#member-monadicassertionsshouldbenone",
+          "reference": "api-reference.md#overload-optiont-shouldbenonetoptiont-option-string-message-on-monadicassertions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertions.ShouldBeOk``2(MonadicTypes.Result{``0,``1},System.String)",
+          "declaringType": "MonadicAssertions",
+          "name": "ShouldBeOk",
+          "signature": "Result<T, TError> ShouldBeOk<T, TError>(Result<T, TError> result, string? message)",
+          "summary": "Asserts that a result is successful and returns it for further checks.",
+          "familyReference": "api-reference.md#member-monadicassertionsshouldbeok",
+          "reference": "api-reference.md#overload-resultt-terror-shouldbeokt-terrorresultt-terror-result-string-message-on-monadicassertions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertions.ShouldBeSome``1(MonadicTypes.Option{``0},System.String)",
+          "declaringType": "MonadicAssertions",
+          "name": "ShouldBeSome",
+          "signature": "Option<T> ShouldBeSome<T>(Option<T> option, string? message)",
+          "summary": "Asserts that an option is present and returns it for further checks.",
+          "familyReference": "api-reference.md#member-monadicassertionsshouldbesome",
+          "reference": "api-reference.md#overload-optiont-shouldbesometoptiont-option-string-message-on-monadicassertions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertions.ValueOrFail``1(MonadicTypes.Option{``0},System.String)",
+          "declaringType": "MonadicAssertions",
+          "name": "ValueOrFail",
+          "signature": "T ValueOrFail<T>(Option<T> option, string? message)",
+          "summary": "Returns the present value or throws a test assertion exception.",
+          "familyReference": "api-reference.md#member-monadicassertionsvalueorfail",
+          "reference": "api-reference.md#overload-t-valueorfailtoptiont-option-string-message-on-monadicassertions"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.Testing.MonadicAssertions.ValueOrFail``2(MonadicTypes.Result{``0,``1},System.String)",
+          "declaringType": "MonadicAssertions",
+          "name": "ValueOrFail",
+          "signature": "T ValueOrFail<T, TError>(Result<T, TError> result, string? message)",
+          "summary": "Returns the successful value or throws a test assertion exception.",
+          "familyReference": "api-reference.md#member-monadicassertionsvalueorfail",
+          "reference": "api-reference.md#overload-t-valueorfailt-terrorresultt-terror-result-string-message-on-monadicassertions"
         }
       ]
     }

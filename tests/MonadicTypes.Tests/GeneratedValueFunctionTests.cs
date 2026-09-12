@@ -3,6 +3,18 @@ namespace MonadicTypes.Tests;
 public class GeneratedValueFunctionTests
 {
     [Fact]
+    public void GeneratedToken_InfersOptionTraverseAndPreservesBranches()
+    {
+        var success = Option<int>.Some(42).Traverse(GeneratedOperations.Functions.Validate);
+        var failure = Option<int>.Some(-1).Traverse(GeneratedOperations.Functions.Validate);
+        var none = Option<int>.None.Traverse(GeneratedOperations.Functions.Validate);
+
+        Assert.Equal(43L, success.Value.Value);
+        Assert.Equal("negative", failure.Error);
+        Assert.True(none.Value.IsNone);
+    }
+
+    [Fact]
     public void AnnotatedMethod_RemainsDirectlyCallable()
     {
         Assert.Equal(43L, GeneratedOperations.Widen(42));
@@ -50,6 +62,11 @@ public class GeneratedValueFunctionTests
 
 public static partial class GeneratedOperations
 {
+    [GenerateValueFunction]
+    public static Result<long, string> Validate(int value) => value < 0
+        ? Result<long, string>.Fail("negative")
+        : Result<long, string>.Ok(value + 1L);
+
     public static string? LastObserved { get; set; }
 
     [GenerateValueFunction]

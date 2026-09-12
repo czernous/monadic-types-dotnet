@@ -53,7 +53,35 @@ public class ErrorTests
         Assert.Throws<ArgumentException>(() => new Error("", "message"));
         Assert.Throws<ArgumentNullException>(() => new Error("CODE", null!));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Error(ErrorType.Uninitialized, "CODE", "message"));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new Error(ErrorType.Custom, "CODE", "message"));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
             new Error((ErrorType)byte.MaxValue, "CODE", "message"));
+    }
+
+    [Theory]
+    [InlineData(ErrorType.PaymentRequired)]
+    [InlineData(ErrorType.NotAcceptable)]
+    [InlineData(ErrorType.RequestTimeout)]
+    [InlineData(ErrorType.Gone)]
+    [InlineData(ErrorType.PreconditionFailed)]
+    [InlineData(ErrorType.ContentTooLarge)]
+    [InlineData(ErrorType.UnsupportedMediaType)]
+    [InlineData(ErrorType.UnprocessableContent)]
+    [InlineData(ErrorType.Locked)]
+    [InlineData(ErrorType.PreconditionRequired)]
+    [InlineData(ErrorType.BadGateway)]
+    [InlineData(ErrorType.NotImplemented)]
+    public void Constructor_AcceptsEveryFocusedCategory(ErrorType type)
+    {
+        Error error = new(type, "TEST", "message", isMessagePublic: true);
+
+        Assert.Equal(type, error.Type);
+        Assert.Equal((int)type, error.NumericType);
+        Assert.Equal("TEST", error.Code);
+        Assert.Equal("message", error.Message);
+        Assert.True(error.IsMessagePublic);
     }
 
     [Fact]

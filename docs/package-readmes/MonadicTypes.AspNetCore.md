@@ -45,6 +45,10 @@ app.MapGet("/customers/{id:int}", GetCustomer)
 - Private messages and exception causes are not exposed by default.
 - `ValidationErrors` maps to a typed validation problem response.
 - Errors implementing `IErrorConvertible<Error>` can use the default policy.
+- `Error.Custom` values from 400 through 599 retain that status at this boundary;
+  other custom numeric categories map to the generic 500 response.
+- `Create`, `CreateExample`, `ToHttpResult`, and error metadata accept explicit
+  400-through-599 overrides without changing the application error category.
 - Two-callback and `IHttpResultMapper` overloads are escape hatches for custom
   domain errors, status policies, or ProblemDetails shapes.
 - `.ProducesErrors(...)` adds Minimal API metadata; `[ProducesError]` provides
@@ -66,6 +70,10 @@ metadata attached to one endpoint, even when statuses differ. Inline Minimal API
 `ErrorProblemDetails.CreateExample(error)` applies the normal response policy
 without reading ambient activity or request trace data. Use it for deterministic
 documentation and tests; `Create(error, context)` retains normal trace behavior.
+Registered HTTP errors receive stable titles and every status in the 400-through-
+599 range receives a deterministic `urn:problem-type:http-{status}` identity.
+Unassigned statuses use the generic `HTTP error` title. Status-specific headers
+remain application policy.
 
 Minimal API adapters return strongly typed results and are NativeAOT tested.
 Controller applications can use the metadata attribute and own their MVC result
@@ -95,6 +103,6 @@ Apache-2.0. Developed with AI assistance.
 
 [Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetaspnetcore)
 
-Documented public members: 46
+Documented public members: 54
 
 <!-- END GENERATED API INDEX -->

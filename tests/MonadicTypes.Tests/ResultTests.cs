@@ -143,6 +143,42 @@ public class ResultTests
     }
 
     [Fact]
+    public void Recover_CallerStateAvoidsCaptureAndPreservesBranches()
+    {
+        Result<int, string> success = Result<int, string>.Ok(7);
+        Result<int, string> failure = Result<int, string>.Fail("missing");
+
+        Result<int, string> recovered = failure.Recover(
+            42,
+            static (error, fallback) => Result<int, string>.Ok(error.Length + fallback));
+        Result<int, string> unchanged = success.Recover(
+            42,
+            static (_, _) => throw new InvalidOperationException());
+
+        Assert.Equal(49, recovered.Value);
+        Assert.Equal(7, unchanged.Value);
+        Assert.Throws<InvalidOperationException>(() => default(Result<int, string>).Recover(
+            42,
+            static (_, _) => Result<int, string>.Ok(0)));
+    }
+
+    [Fact]
+    public void ValueOrElse_CallerStateAvoidsCaptureAndPreservesBranches()
+    {
+        Result<int, string> success = Result<int, string>.Ok(7);
+        Result<int, string> failure = Result<int, string>.Fail("missing");
+
+        int recovered = failure.ValueOrElse(42, static (error, fallback) => error.Length + fallback);
+        int unchanged = success.ValueOrElse(42, static (_, _) => throw new InvalidOperationException());
+
+        Assert.Equal(49, recovered);
+        Assert.Equal(7, unchanged);
+        Assert.Throws<InvalidOperationException>(() => default(Result<int, string>).ValueOrElse(
+            42,
+            static (_, _) => 0));
+    }
+
+    [Fact]
     public void TryGetMethods_ReturnOnlyActiveCase()
     {
         Result<int, string> result = Result<int, string>.Ok(5);

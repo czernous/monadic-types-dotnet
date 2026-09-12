@@ -179,8 +179,7 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
 
     private static void AddEntry(OpenApiOperation operation, in ErrorCatalogEntry entry)
     {
-        string statusCode = ErrorProblemDetails
-            .GetStatusCode(entry.Type)
+        string statusCode = (entry.StatusCode ?? ErrorProblemDetails.GetStatusCode(entry.Type))
             .ToString(CultureInfo.InvariantCulture);
         if (operation.Responses is null
             || !operation.Responses.TryGetValue(statusCode, out IOpenApiResponse? response)
@@ -247,7 +246,9 @@ internal sealed class ErrorCatalogOpenApiTransformer : IOpenApiOperationTransfor
             ErrorType.Custom => Error.Custom(1, entry.Code, entry.Description, isMessagePublic: true),
             _ => new Error(entry.Type, entry.Code, entry.Description, isMessagePublic: true)
         };
-        ProblemDetails details = ErrorProblemDetails.CreateExample(error);
+        ProblemDetails details = entry.StatusCode is { } statusCode
+            ? ErrorProblemDetails.CreateExample(error, statusCode)
+            : ErrorProblemDetails.CreateExample(error);
 
         return new OpenApiExample
         {

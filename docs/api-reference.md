@@ -14,6 +14,7 @@ Generated from public PE metadata and compiler XML documentation.
 - [MonadicTypes.NET.Errors](#package-monadictypesneterrors)
 - [MonadicTypes.NET.Generators](#package-monadictypesnetgenerators)
 - [MonadicTypes.NET.Linq](#package-monadictypesnetlinq)
+- [MonadicTypes.NET.Testing](#package-monadictypesnettesting)
 
 ## Package MonadicTypes.NET
 
@@ -153,14 +154,18 @@ Option<User> user = Option<User>.Some(value);
 | [`IsNone`](#member-optiontisnone) | Gets whether this option is the `None` case. |
 | [`IsSome`](#member-optiontissome) | Gets whether this option is the `Some` case. |
 | [`Map`](#member-optiontmap) | Maps a present value and propagates `None`. |
+| [`MapNullable`](#member-optiontmapnullable) | Maps a present value through a nullable reference projection, treating null as `None`. |
+| [`MapNullableValue`](#member-optiontmapnullablevalue) | Maps a present value through a nullable value projection, treating no value as `None`. |
 | [`Match`](#member-optiontmatch) | Folds the active case into one output value. |
 | [`None`](#member-optiontnone) | Gets the empty option. |
 | [`Some`](#member-optiontsome) | Creates an option containing a non-null value. |
 | [`Switch`](#member-optiontswitch) | Executes exactly one action for the active case. |
+| [`Tap`](#member-optionttap) | Observes a present value and returns this option unchanged. |
 | [`TryGetValue`](#member-optionttrygetvalue) | Attempts to retrieve the contained value. |
 | [`Value`](#member-optiontvalue) | Gets the contained value. |
 | [`ValueOr`](#member-optiontvalueor) | Returns the present value or an eagerly supplied fallback. |
 | [`ValueOrElse`](#member-optiontvalueorelse) | Returns the present value or lazily creates a fallback. |
+| [`Zip`](#member-optiontzip) | Combines two options in argument order. |
 | [`implicit operator`](#member-optiontimplicit-operator) | Converts a value to `Some`, or null to `None`. |
 
 #### Member: `Option<T>.Bind`
@@ -335,17 +340,87 @@ Option<int> id = option.Map(static user => user.Id);
 
 Maps a present value and propagates `None`.
 
+The projection must return a non-null value. For nullable members, use Bind with Option.FromNullable to turn null into None.
+
+**Throws**
+
+- `ArgumentNullException`: A present value's projection returns null, including an empty nullable value type.
+
 ##### Overload: `Option<TR> Map<TR, TFunction>(ValueFunction<T, TR, TFunction> map)` on `Option<T>`
 
 Maps a present value through a generated callable wrapper and propagates `None`.
+
+**Throws**
+
+- `ArgumentNullException`: A present value's projection returns null.
 
 ##### Overload: `Option<TR> Map<TState, TR>(TState state, Func<T, TState, TR> map)` on `Option<T>`
 
 Maps a present value while passing caller-owned state to a non-capturing function.
 
+**Throws**
+
+- `ArgumentNullException`: A present value's projection returns null.
+
 ##### Overload: `Option<TR> Map<TR, TFunction>(TFunction map)` on `Option<T>`
 
 Maps a present value through an allocation-free callable and propagates `None`.
+
+**Throws**
+
+- `ArgumentNullException`: A present value's projection returns null.
+
+#### Member: `Option<T>.MapNullable`
+
+**Example**
+
+```csharp
+Option<string> nickname = person.MapNullable(static value => value.Nickname);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<TR> MapNullable<TR>(Func<T, TR> map)`](#overload-optiontr-mapnullabletrfunct-tr-map-on-optiont) | Maps a present value through a nullable reference projection, treating null as `None`. |
+
+##### Overload: `Option<TR> MapNullable<TR>(Func<T, TR> map)` on `Option<T>`
+
+Maps a present value through a nullable reference projection, treating null as `None`.
+
+**Type parameters**
+
+- `TR`: Projected reference type.
+
+**Parameters**
+
+- `map`: Projection invoked only for `Some`.
+
+**Returns:** `Some` for a non-null projection, otherwise `None`.
+
+#### Member: `Option<T>.MapNullableValue`
+
+**Example**
+
+```csharp
+Option<Guid> id = person.MapNullableValue(static value => value.UserId);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<TR> MapNullableValue<TR>(Func<T, Nullable<TR>> map)`](#overload-optiontr-mapnullablevaluetrfunct-nullabletr-map-on-optiont) | Maps a present value through a nullable value projection, treating no value as `None`. |
+
+##### Overload: `Option<TR> MapNullableValue<TR>(Func<T, Nullable<TR>> map)` on `Option<T>`
+
+Maps a present value through a nullable value projection, treating no value as `None`.
+
+**Type parameters**
+
+- `TR`: Projected value type.
+
+**Parameters**
+
+- `map`: Projection invoked only for `Some`.
+
+**Returns:** `Some` for a present projection, otherwise `None`.
 
 #### Member: `Option<T>.Match`
 
@@ -473,6 +548,74 @@ Executes exactly one action for the active case.
 - `some`: Action invoked for a populated option.
 - `none`: Action invoked for an empty option.
 
+#### Member: `Option<T>.Tap`
+
+**Example**
+
+```csharp
+Option<User> observed = option.Tap(static user => audit.Record(user));
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<T> Tap(Action<T> action)`](#overload-optiont-tapactiont-action-on-optiont) | Observes a present value and returns this option unchanged. |
+| [`Option<T> Tap<TAction>(ValueAction<T, TAction> action)`](#overload-optiont-taptactionvalueactiont-taction-action-on-optiont) | Observes a present value through a generated callable wrapper. |
+| [`Option<T> Tap<TAction>(TAction action)`](#overload-optiont-taptactiontaction-action-on-optiont) | Observes a present value through an allocation-free callable and returns this option unchanged. |
+| [`Option<T> Tap<TState>(TState state, Action<T, TState> action)`](#overload-optiont-taptstatetstate-state-actiont-tstate-action-on-optiont) | Observes a present value while passing caller-owned state. |
+
+##### Overload: `Option<T> Tap(Action<T> action)` on `Option<T>`
+
+Observes a present value and returns this option unchanged.
+
+**Parameters**
+
+- `action`: Action invoked only for `Some`.
+
+**Returns:** This option unchanged.
+
+##### Overload: `Option<T> Tap<TAction>(ValueAction<T, TAction> action)` on `Option<T>`
+
+Observes a present value through a generated callable wrapper.
+
+**Type parameters**
+
+- `TAction`: Callable action type.
+
+**Parameters**
+
+- `action`: Action invoked only for `Some`.
+
+**Returns:** This option unchanged.
+
+##### Overload: `Option<T> Tap<TAction>(TAction action)` on `Option<T>`
+
+Observes a present value through an allocation-free callable and returns this option unchanged.
+
+**Type parameters**
+
+- `TAction`: Callable action type.
+
+**Parameters**
+
+- `action`: Action invoked only for `Some`.
+
+**Returns:** This option unchanged.
+
+##### Overload: `Option<T> Tap<TState>(TState state, Action<T, TState> action)` on `Option<T>`
+
+Observes a present value while passing caller-owned state.
+
+**Type parameters**
+
+- `TState`: Caller state type.
+
+**Parameters**
+
+- `state`: State passed unchanged to the action.
+- `action`: Action invoked only for `Some`.
+
+**Returns:** This option unchanged.
+
 #### Member: `Option<T>.TryGetValue`
 
 **Example**
@@ -551,6 +694,32 @@ Returns the present value or lazily creates a fallback.
 ##### Overload: `T ValueOrElse<TState>(TState state, Func<TState, T> fallback)` on `Option<T>`
 
 Returns the present value or lazily creates a fallback with caller-owned state.
+
+#### Member: `Option<T>.Zip`
+
+**Example**
+
+```csharp
+Option<(User User, Account Account)> loaded = user.Zip(account);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Option<ValueTuple<T, TOther>> Zip<TOther>(Option<TOther> other)`](#overload-optionvaluetuplet-tother-ziptotheroptiontother-other-on-optiont) | Combines two options in argument order. |
+
+##### Overload: `Option<ValueTuple<T, TOther>> Zip<TOther>(Option<TOther> other)` on `Option<T>`
+
+Combines two options in argument order.
+
+**Type parameters**
+
+- `TOther`: Second option value type.
+
+**Parameters**
+
+- `other`: Second option.
+
+**Returns:** `Some` containing both values when both options are present; otherwise `None`.
 
 #### Member: `Option<T>.implicit operator`
 
@@ -1156,10 +1325,26 @@ Result<Settings, ReadError> settings = primary.Recover(ReadFallback);
 | Overload | Description |
 | --- | --- |
 | [`Result<T, E> Recover(Func<E, Result<T, E>> recover)`](#overload-resultt-e-recoverfunce-resultt-e-recover-on-resultt-e) | Recovers a failure through `recover` and preserves successes. |
+| [`Result<T, E> Recover<TState>(TState state, Func<E, TState, Result<T, E>> recover)`](#overload-resultt-e-recovertstatetstate-state-funce-tstate-resultt-e-recover-on-resultt-e) | Recovers a failure while passing caller-owned state to a non-capturing function. |
 
 ##### Overload: `Result<T, E> Recover(Func<E, Result<T, E>> recover)` on `Result<T, E>`
 
 Recovers a failure through `recover` and preserves successes.
+
+##### Overload: `Result<T, E> Recover<TState>(TState state, Func<E, TState, Result<T, E>> recover)` on `Result<T, E>`
+
+Recovers a failure while passing caller-owned state to a non-capturing function.
+
+**Type parameters**
+
+- `TState`: Caller state type.
+
+**Parameters**
+
+- `state`: State passed unchanged to the recovery function.
+- `recover`: Function invoked only for a failure.
+
+**Returns:** This success or the recovery result.
 
 #### Member: `Result<T, E>.Switch`
 
@@ -1356,6 +1541,7 @@ User user = result.ValueOrElse(static error => User.Missing(error.Code));
 | Overload | Description |
 | --- | --- |
 | [`T ValueOrElse(Func<E, T> fallback)`](#overload-t-valueorelsefunce-t-fallback-on-resultt-e) | Returns the success value or lazily maps the active error to a fallback. |
+| [`T ValueOrElse<TState>(TState state, Func<E, TState, T> fallback)`](#overload-t-valueorelsetstatetstate-state-funce-tstate-t-fallback-on-resultt-e) | Returns the success value or maps the active error with caller-owned state. |
 
 ##### Overload: `T ValueOrElse(Func<E, T> fallback)` on `Result<T, E>`
 
@@ -1363,6 +1549,21 @@ Returns the success value or lazily maps the active error to a fallback.
 
 **Parameters**
 
+- `fallback`: Function invoked only for a failure.
+
+**Returns:** The success value or the fallback value.
+
+##### Overload: `T ValueOrElse<TState>(TState state, Func<E, TState, T> fallback)` on `Result<T, E>`
+
+Returns the success value or maps the active error with caller-owned state.
+
+**Type parameters**
+
+- `TState`: Caller state type.
+
+**Parameters**
+
+- `state`: State passed unchanged to the fallback function.
 - `fallback`: Function invoked only for a failure.
 
 **Returns:** The success value or the fallback value.
@@ -1873,6 +2074,8 @@ Result<User, LookupError> required = result.RequireSome(static () => LookupError
 | Overload | Description |
 | --- | --- |
 | [`Result<T, TError> RequireSome<T, TError>(in Result<Option<T>, TError> result, Func<TError> whenNone)`](#overload-resultt-terror-requiresomet-terrorin-resultoptiont-terror-result-functerror-whennone-on-resultcompositionextensions) | Requires a successful option to contain a value. |
+| [`Result<T, TError> RequireSome<T, TError>(in Result<Option<T>, TError> result, TError whenNone)`](#overload-resultt-terror-requiresomet-terrorin-resultoptiont-terror-result-terror-whennone-on-resultcompositionextensions) | Requires a successful option to contain a value using an eagerly supplied error. |
+| [`Result<T, TError> RequireSome<T, TError, TState>(in Result<Option<T>, TError> result, TState state, Func<TState, TError> whenNone)`](#overload-resultt-terror-requiresomet-terror-tstatein-resultoptiont-terror-result-tstate-state-functstate-terror-whennone-on-resultcompositionextensions) | Requires a successful option to contain a value using a caller-state error factory. |
 
 ##### Overload: `Result<T, TError> RequireSome<T, TError>(in Result<Option<T>, TError> result, Func<TError> whenNone)` on `ResultCompositionExtensions`
 
@@ -1881,6 +2084,31 @@ Requires a successful option to contain a value.
 **Parameters**
 
 - `whenNone`: Error factory invoked only for a successful absent option.
+
+**Returns:** The contained value, the original failure, or the generated absence failure.
+
+##### Overload: `Result<T, TError> RequireSome<T, TError>(in Result<Option<T>, TError> result, TError whenNone)` on `ResultCompositionExtensions`
+
+Requires a successful option to contain a value using an eagerly supplied error.
+
+**Parameters**
+
+- `whenNone`: Failure used only for a successful absent option.
+
+**Returns:** The contained value, the original failure, or the supplied absence failure.
+
+##### Overload: `Result<T, TError> RequireSome<T, TError, TState>(in Result<Option<T>, TError> result, TState state, Func<TState, TError> whenNone)` on `ResultCompositionExtensions`
+
+Requires a successful option to contain a value using a caller-state error factory.
+
+**Type parameters**
+
+- `TState`: Caller state type.
+
+**Parameters**
+
+- `state`: State passed unchanged to the error factory.
+- `whenNone`: Factory invoked only for a successful absent option.
 
 **Returns:** The contained value, the original failure, or the generated absence failure.
 
@@ -1961,6 +2189,7 @@ Result<Option<Address>, LookupError> address = option.Traverse(LoadAddress);
 | Overload | Description |
 | --- | --- |
 | [`Result<Option<TResult>, TError> Traverse<TSource, TResult, TError>(in Option<TSource> option, Func<TSource, Result<TResult, TError>> selector)`](#overload-resultoptiontresult-terror-traversetsource-tresult-terrorin-optiontsource-option-functsource-resulttresult-terror-selector-on-resultcompositionextensions) | Traverses a present value through a fallible selector and preserves absence. |
+| [`Result<Option<TResult>, TError> Traverse<TSource, TResult, TError, TFunction>(in Option<TSource> option, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)`](#overload-resultoptiontresult-terror-traversetsource-tresult-terror-tfunctionin-optiontsource-option-valuefunctiontsource-resulttresult-terror-tfunction-selector-on-resultcompositionextensions) | Traverses Some through a generated callable wrapper and preserves None. |
 | [`Result<Option<TResult>, TError> Traverse<TSource, TState, TResult, TError>(in Option<TSource> option, TState state, Func<TSource, TState, Result<TResult, TError>> selector)`](#overload-resultoptiontresult-terror-traversetsource-tstate-tresult-terrorin-optiontsource-option-tstate-state-functsource-tstate-resulttresult-terror-selector-on-resultcompositionextensions) | Traverses Some with caller-owned state and preserves None. |
 | [`Result<Option<TResult>, TError> Traverse<TSource, TResult, TError, TFunction>(in Option<TSource> option, TFunction selector)`](#overload-resultoptiontresult-terror-traversetsource-tresult-terror-tfunctionin-optiontsource-option-tfunction-selector-on-resultcompositionextensions) | Traverses Some through an allocation-free callable and preserves None. |
 
@@ -1972,6 +2201,22 @@ Traverses a present value through a fallible selector and preserves absence.
 
 - `TResult`: Selected success type.
 - `TError`: Failure type.
+
+**Parameters**
+
+- `selector`: Selector invoked only for Some.
+
+**Returns:** A failed selector result, Some containing its success, or successful None.
+
+##### Overload: `Result<Option<TResult>, TError> Traverse<TSource, TResult, TError, TFunction>(in Option<TSource> option, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)` on `ResultCompositionExtensions`
+
+Traverses Some through a generated callable wrapper and preserves None.
+
+**Type parameters**
+
+- `TResult`: Selected success type.
+- `TError`: Failure type.
+- `TFunction`: Wrapped value-function type.
 
 **Parameters**
 
@@ -2222,7 +2467,8 @@ ErrorCatalogEntry entry = new(ErrorType.NotFound, "USER_NOT_FOUND", "User not fo
 | [`ErrorCatalogEntry`](#member-errorcatalogentryerrorcatalogentry) | Creates one documented error entry. |
 | [`Code`](#member-errorcatalogentrycode) | Gets the stable machine-readable error code. |
 | [`Description`](#member-errorcatalogentrydescription) | Gets the public description emitted into API documentation. |
-| [`Type`](#member-errorcatalogentrytype) | Gets the category that determines the documented HTTP status. |
+| [`StatusCode`](#member-errorcatalogentrystatuscode) | Gets the explicit HTTP status override, or null to use the category's default mapping. |
+| [`Type`](#member-errorcatalogentrytype) | Gets the application category used for the default HTTP mapping when no status override is supplied. |
 
 #### Member: `ErrorCatalogEntry.ErrorCatalogEntry`
 
@@ -2235,6 +2481,7 @@ ErrorCatalogEntry entry = new(ErrorType.Conflict, "VERSION_CONFLICT", "Resource 
 | Overload | Description |
 | --- | --- |
 | [`ErrorCatalogEntry(ErrorType type, string code, string description)`](#overload-errorcatalogentryerrortype-type-string-code-string-description-on-errorcatalogentry) | Creates one documented error entry. |
+| [`ErrorCatalogEntry(ErrorType type, string code, string description, int statusCode)`](#overload-errorcatalogentryerrortype-type-string-code-string-description-int-statuscode-on-errorcatalogentry) | Creates a documented error with an explicit HTTP error status. |
 
 ##### Overload: `ErrorCatalogEntry(ErrorType type, string code, string description)` on `ErrorCatalogEntry`
 
@@ -2245,6 +2492,17 @@ Creates one documented error entry.
 - `type`: The initialized category that determines the HTTP status.
 - `code`: The stable machine-readable error code.
 - `description`: The public description exposed in API documentation.
+
+##### Overload: `ErrorCatalogEntry(ErrorType type, string code, string description, int statusCode)` on `ErrorCatalogEntry`
+
+Creates a documented error with an explicit HTTP error status.
+
+**Parameters**
+
+- `type`: The initialized application error category.
+- `code`: The stable machine-readable error code.
+- `description`: The public description exposed in API documentation.
+- `statusCode`: HTTP error status from 400 through 599.
 
 #### Member: `ErrorCatalogEntry.Code`
 
@@ -2278,6 +2536,22 @@ string description = entry.Description;
 
 Gets the public description emitted into API documentation.
 
+#### Member: `ErrorCatalogEntry.StatusCode`
+
+**Example**
+
+```csharp
+int status = entry.StatusCode ?? ErrorProblemDetails.GetStatusCode(entry.Type);
+```
+
+| Overload | Description |
+| --- | --- |
+| [`Nullable<int> StatusCode`](#overload-nullableint-statuscode-on-errorcatalogentry) | Gets the explicit HTTP status override, or null to use the category's default mapping. |
+
+##### Overload: `Nullable<int> StatusCode` on `ErrorCatalogEntry`
+
+Gets the explicit HTTP status override, or null to use the category's default mapping.
+
 #### Member: `ErrorCatalogEntry.Type`
 
 **Example**
@@ -2288,11 +2562,11 @@ ErrorType type = entry.Type;
 
 | Overload | Description |
 | --- | --- |
-| [`ErrorType Type`](#overload-errortype-type-on-errorcatalogentry) | Gets the category that determines the documented HTTP status. |
+| [`ErrorType Type`](#overload-errortype-type-on-errorcatalogentry) | Gets the application category used for the default HTTP mapping when no status override is supplied. |
 
 ##### Overload: `ErrorType Type` on `ErrorCatalogEntry`
 
-Gets the category that determines the documented HTTP status.
+Gets the application category used for the default HTTP mapping when no status override is supplied.
 
 ### Type: `ErrorCatalogMetadata`
 
@@ -2423,7 +2697,7 @@ Converts structured errors to default RFC 9457 problem details.
 | --- | --- |
 | [`Create`](#member-errorproblemdetailscreate) | Creates problem details using the built-in category, visibility, and trace policy. |
 | [`CreateExample`](#member-errorproblemdetailscreateexample) | Creates deterministic problem details for documentation without request or activity data. |
-| [`GetStatusCode`](#member-errorproblemdetailsgetstatuscode) | Gets the default HTTP status code for an error category. |
+| [`GetStatusCode`](#member-errorproblemdetailsgetstatuscode) | Gets the HTTP status for an initialized error, honoring valid HTTP numeric custom categories. |
 | [`ToHttpResult`](#member-errorproblemdetailstohttpresult) | Creates a strongly typed problem HTTP result for an error. |
 
 #### Member: `ErrorProblemDetails.Create`
@@ -2437,6 +2711,7 @@ ProblemDetails problem = ErrorProblemDetails.Create(error, httpContext);
 | Overload | Description |
 | --- | --- |
 | [`ProblemDetails Create(in Error error, HttpContext? httpContext)`](#overload-problemdetails-createin-error-error-httpcontext-httpcontext-on-errorproblemdetails) | Creates problem details using the built-in category, visibility, and trace policy. |
+| [`ProblemDetails Create(in Error error, int statusCode, HttpContext? httpContext)`](#overload-problemdetails-createin-error-error-int-statuscode-httpcontext-httpcontext-on-errorproblemdetails) | Creates problem details with an explicit HTTP error status and the existing visibility and trace policy. |
 
 ##### Overload: `ProblemDetails Create(in Error error, HttpContext? httpContext)` on `ErrorProblemDetails`
 
@@ -2449,6 +2724,24 @@ Creates problem details using the built-in category, visibility, and trace polic
 
 **Returns:** A populated problem-details value.
 
+##### Overload: `ProblemDetails Create(in Error error, int statusCode, HttpContext? httpContext)` on `ErrorProblemDetails`
+
+Creates problem details with an explicit HTTP error status and the existing visibility and trace policy.
+
+Protocol-specific headers remain the endpoint's responsibility.
+
+**Parameters**
+
+- `error`: The initialized error to convert.
+- `statusCode`: HTTP error status from 400 through 599, independent of the error's numeric category.
+- `httpContext`: Optional request context supplying a fallback trace identifier.
+
+**Returns:** Problem details with a status-specific title and type URI.
+
+**Throws**
+
+- `ArgumentOutOfRangeException`: The status is outside the HTTP error range.
+
 #### Member: `ErrorProblemDetails.CreateExample`
 
 **Example**
@@ -2460,6 +2753,7 @@ ProblemDetails example = ErrorProblemDetails.CreateExample(error);
 | Overload | Description |
 | --- | --- |
 | [`ProblemDetails CreateExample(in Error error)`](#overload-problemdetails-createexamplein-error-error-on-errorproblemdetails) | Creates deterministic problem details for documentation without request or activity data. |
+| [`ProblemDetails CreateExample(in Error error, int statusCode)`](#overload-problemdetails-createexamplein-error-error-int-statuscode-on-errorproblemdetails) | Creates a deterministic example with an explicit HTTP error status and no ambient trace data. |
 
 ##### Overload: `ProblemDetails CreateExample(in Error error)` on `ErrorProblemDetails`
 
@@ -2471,17 +2765,39 @@ Creates deterministic problem details for documentation without request or activ
 
 **Returns:** Problem details without a trace identifier.
 
+##### Overload: `ProblemDetails CreateExample(in Error error, int statusCode)` on `ErrorProblemDetails`
+
+Creates a deterministic example with an explicit HTTP error status and no ambient trace data.
+
+**Parameters**
+
+- `error`: The initialized error to convert.
+- `statusCode`: HTTP error status from 400 through 599.
+
+**Returns:** Problem details without a trace identifier.
+
 #### Member: `ErrorProblemDetails.GetStatusCode`
 
 **Example**
 
 ```csharp
-int status = ErrorProblemDetails.GetStatusCode(ErrorType.NotFound);
+int status = ErrorProblemDetails.GetStatusCode(error);
 ```
 
 | Overload | Description |
 | --- | --- |
+| [`int GetStatusCode(in Error error)`](#overload-int-getstatuscodein-error-error-on-errorproblemdetails) | Gets the HTTP status for an initialized error, honoring valid HTTP numeric custom categories. |
 | [`int GetStatusCode(ErrorType type)`](#overload-int-getstatuscodeerrortype-type-on-errorproblemdetails) | Gets the default HTTP status code for an error category. |
+
+##### Overload: `int GetStatusCode(in Error error)` on `ErrorProblemDetails`
+
+Gets the HTTP status for an initialized error, honoring valid HTTP numeric custom categories.
+
+**Parameters**
+
+- `error`: The initialized error to map.
+
+**Returns:** The mapped status, or 500 for a non-HTTP custom category.
 
 ##### Overload: `int GetStatusCode(ErrorType type)` on `ErrorProblemDetails`
 
@@ -2504,6 +2820,7 @@ ProblemHttpResult result = ErrorProblemDetails.ToHttpResult(error, httpContext);
 | Overload | Description |
 | --- | --- |
 | [`ProblemHttpResult ToHttpResult(in Error error, HttpContext? httpContext)`](#overload-problemhttpresult-tohttpresultin-error-error-httpcontext-httpcontext-on-errorproblemdetails) | Creates a strongly typed problem HTTP result for an error. |
+| [`ProblemHttpResult ToHttpResult(in Error error, int statusCode, HttpContext? httpContext)`](#overload-problemhttpresult-tohttpresultin-error-error-int-statuscode-httpcontext-httpcontext-on-errorproblemdetails) | Creates a typed problem result with an explicit HTTP error status. |
 
 ##### Overload: `ProblemHttpResult ToHttpResult(in Error error, HttpContext? httpContext)` on `ErrorProblemDetails`
 
@@ -2515,6 +2832,18 @@ Creates a strongly typed problem HTTP result for an error.
 - `httpContext`: An optional context supplying a fallback trace identifier.
 
 **Returns:** A strongly typed problem result.
+
+##### Overload: `ProblemHttpResult ToHttpResult(in Error error, int statusCode, HttpContext? httpContext)` on `ErrorProblemDetails`
+
+Creates a typed problem result with an explicit HTTP error status.
+
+**Parameters**
+
+- `error`: The initialized error to convert.
+- `statusCode`: HTTP error status from 400 through 599.
+- `httpContext`: Optional request context included in the problem payload.
+
+**Returns:** A typed problem result preserving the error's code and visibility policy.
 
 ### Type: `IHttpResultMapper<TError, TResult>`
 
@@ -2563,7 +2892,7 @@ Adds one structured problem response to controller or endpoint metadata.
 | [`ContentTypes`](#member-produceserrorattributecontenttypes) | Gets the supported RFC 9457 response content type. |
 | [`Description`](#member-produceserrorattributedescription) | Gets the optional response description; this attribute leaves it unspecified. |
 | [`ErrorType`](#member-produceserrorattributeerrortype) | Gets the configured error category. |
-| [`StatusCode`](#member-produceserrorattributestatuscode) | Gets the HTTP status mapped from `ErrorType`. |
+| [`StatusCode`](#member-produceserrorattributestatuscode) | Gets the explicit HTTP status, or the default mapping from `ErrorType`. |
 | [`Type`](#member-produceserrorattributetype) | Gets the documented RFC 9457 response body type. |
 
 #### Member: `ProducesErrorAttribute.ProducesErrorAttribute`
@@ -2577,6 +2906,7 @@ Adds one structured problem response to controller or endpoint metadata.
 | Overload | Description |
 | --- | --- |
 | [`ProducesErrorAttribute(ErrorType errorType)`](#overload-produceserrorattributeerrortype-errortype-on-produceserrorattribute) | Adds one structured problem response to controller or endpoint metadata. |
+| [`ProducesErrorAttribute(ErrorType errorType, int statusCode)`](#overload-produceserrorattributeerrortype-errortype-int-statuscode-on-produceserrorattribute) | Documents an explicit HTTP error status for an application category. |
 
 ##### Overload: `ProducesErrorAttribute(ErrorType errorType)` on `ProducesErrorAttribute`
 
@@ -2585,6 +2915,15 @@ Adds one structured problem response to controller or endpoint metadata.
 **Parameters**
 
 - `errorType`: The initialized error category exposed by the operation.
+
+##### Overload: `ProducesErrorAttribute(ErrorType errorType, int statusCode)` on `ProducesErrorAttribute`
+
+Documents an explicit HTTP error status for an application category.
+
+**Parameters**
+
+- `errorType`: The initialized application category.
+- `statusCode`: HTTP error status from 400 through 599.
 
 #### Member: `ProducesErrorAttribute.ContentTypes`
 
@@ -2644,11 +2983,11 @@ int status = metadata.StatusCode;
 
 | Overload | Description |
 | --- | --- |
-| [`int StatusCode`](#overload-int-statuscode-on-produceserrorattribute) | Gets the HTTP status mapped from `ErrorType`. |
+| [`int StatusCode`](#overload-int-statuscode-on-produceserrorattribute) | Gets the explicit HTTP status, or the default mapping from `ErrorType`. |
 
 ##### Overload: `int StatusCode` on `ProducesErrorAttribute`
 
-Gets the HTTP status mapped from `ErrorType`.
+Gets the explicit HTTP status, or the default mapping from `ErrorType`.
 
 #### Member: `ProducesErrorAttribute.Type`
 
@@ -2696,6 +3035,7 @@ Adds one stable domain error and its response category to controller or endpoint
 | Overload | Description |
 | --- | --- |
 | [`ProducesErrorCatalogAttribute(ErrorType type, string code, string description)`](#overload-produceserrorcatalogattributeerrortype-type-string-code-string-description-on-produceserrorcatalogattribute) | Adds one stable domain error and its response category to controller or endpoint metadata. |
+| [`ProducesErrorCatalogAttribute(ErrorType type, string code, string description, int statusCode)`](#overload-produceserrorcatalogattributeerrortype-type-string-code-string-description-int-statuscode-on-produceserrorcatalogattribute) | Documents a stable error code with an explicit HTTP error status. |
 
 ##### Overload: `ProducesErrorCatalogAttribute(ErrorType type, string code, string description)` on `ProducesErrorCatalogAttribute`
 
@@ -2706,6 +3046,17 @@ Adds one stable domain error and its response category to controller or endpoint
 - `type`: The initialized category that determines the HTTP status.
 - `code`: The stable machine-readable error code.
 - `description`: The public description exposed in API documentation.
+
+##### Overload: `ProducesErrorCatalogAttribute(ErrorType type, string code, string description, int statusCode)` on `ProducesErrorCatalogAttribute`
+
+Documents a stable error code with an explicit HTTP error status.
+
+**Parameters**
+
+- `type`: The initialized application category.
+- `code`: The stable machine-readable error code.
+- `description`: The public description exposed in API documentation.
+- `statusCode`: HTTP error status from 400 through 599.
 
 #### Member: `ProducesErrorCatalogAttribute.ContentTypes`
 
@@ -3746,8 +4097,10 @@ Result<User[], LoadError> users = ids.TraverseToArray(LoadUser);
 | --- | --- |
 | [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError>(IReadOnlyList<TSource> source, Func<TSource, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terrorireadonlylisttsource-source-functsource-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each item once and returns a newly allocated array of successful values. |
 | [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError>(ReadOnlySpan<TSource> source, Func<TSource, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terrorreadonlyspantsource-source-functsource-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each span item once and returns a newly allocated array of successful values. |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(IReadOnlyList<TSource> source, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionireadonlylisttsource-source-valuefunctiontsource-resulttresult-terror-tfunction-selector-on-resultcollectionextensions) | Traverses each item through a generated callable wrapper with inferred result types. |
 | [`Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(IReadOnlyList<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tstate-tresult-terrorireadonlylisttsource-source-tstate-state-functsource-tstate-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each item once using caller-owned state and returns a new array. |
 | [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(IReadOnlyList<TSource> source, TFunction selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionireadonlylisttsource-source-tfunction-selector-on-resultcollectionextensions) | Traverses each item once using an allocation-free callable and returns a new array. |
+| [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(ReadOnlySpan<TSource> source, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionreadonlyspantsource-source-valuefunctiontsource-resulttresult-terror-tfunction-selector-on-resultcollectionextensions) | Traverses each span item through a generated callable wrapper with inferred result types. |
 | [`Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(ReadOnlySpan<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)`](#overload-resulttresult-terror-traversetoarraytsource-tstate-tresult-terrorreadonlyspantsource-source-tstate-state-functsource-tstate-resulttresult-terror-selector-on-resultcollectionextensions) | Traverses each span item once using caller-owned state and returns a new array. |
 | [`Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(ReadOnlySpan<TSource> source, TFunction selector)`](#overload-resulttresult-terror-traversetoarraytsource-tresult-terror-tfunctionreadonlyspantsource-source-tfunction-selector-on-resultcollectionextensions) | Traverses each span item once using an allocation-free callable and returns a new array. |
 
@@ -3763,6 +4116,12 @@ Traverses each span item once and returns a newly allocated array of successful 
 
 Empty input reuses `Empty`. Non-empty input allocates exactly one output array, including when a later item fails.
 
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(IReadOnlyList<TSource> source, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)` on `ResultCollectionExtensions`
+
+Traverses each item through a generated callable wrapper with inferred result types.
+
+Preserves fail-fast order. Empty input reuses an empty array; non-empty input allocates one output array.
+
 ##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(IReadOnlyList<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)` on `ResultCollectionExtensions`
 
 Traverses each item once using caller-owned state and returns a new array.
@@ -3770,6 +4129,12 @@ Traverses each item once using caller-owned state and returns a new array.
 ##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(IReadOnlyList<TSource> source, TFunction selector)` on `ResultCollectionExtensions`
 
 Traverses each item once using an allocation-free callable and returns a new array.
+
+##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TResult, TError, TFunction>(ReadOnlySpan<TSource> source, ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)` on `ResultCollectionExtensions`
+
+Traverses each span item through a generated callable wrapper with inferred result types.
+
+Preserves fail-fast order. Empty input reuses an empty array; non-empty input allocates one output array.
 
 ##### Overload: `Result<TResult[], TError> TraverseToArray<TSource, TState, TResult, TError>(ReadOnlySpan<TSource> source, TState state, Func<TSource, TState, Result<TResult, TError>> selector)` on `ResultCollectionExtensions`
 
@@ -4842,19 +5207,41 @@ ErrorType category = ErrorType.Validation;
 
 | Member | Description |
 | --- | --- |
+| [`BadGateway`](#member-errortypebadgateway) | An upstream gateway returned an unusable response. |
 | [`Cancelled`](#member-errortypecancelled) | An operation was cancelled. |
 | [`Conflict`](#member-errortypeconflict) | A state or concurrency conflict. |
+| [`ContentTooLarge`](#member-errortypecontenttoolarge) | The request content exceeded the accepted limit. |
 | [`Custom`](#member-errortypecustom) | A consumer-defined category identified by `NumericType`. |
 | [`Failure`](#member-errortypefailure) | A general expected operational failure. |
 | [`Forbidden`](#member-errortypeforbidden) | The authenticated caller lacks permission. |
+| [`Gone`](#member-errortypegone) | The requested resource was deliberately removed. |
+| [`Locked`](#member-errortypelocked) | The target resource is locked. |
+| [`NotAcceptable`](#member-errortypenotacceptable) | The requested representation is not acceptable. |
 | [`NotFound`](#member-errortypenotfound) | A requested resource does not exist. |
+| [`NotImplemented`](#member-errortypenotimplemented) | The requested operation is not implemented. |
+| [`PaymentRequired`](#member-errortypepaymentrequired) | A payment or entitlement requirement prevented the operation. |
+| [`PreconditionFailed`](#member-errortypepreconditionfailed) | A supplied request precondition was not met. |
+| [`PreconditionRequired`](#member-errortypepreconditionrequired) | The request requires a precondition. |
 | [`RateLimited`](#member-errortyperatelimited) | A caller exceeded a rate or quota limit. |
+| [`RequestTimeout`](#member-errortyperequesttimeout) | The client took too long to send the request. |
 | [`Timeout`](#member-errortypetimeout) | An operation exceeded its time budget. |
 | [`Unauthorized`](#member-errortypeunauthorized) | Authentication is absent or invalid. |
 | [`Unavailable`](#member-errortypeunavailable) | A dependency or service is temporarily unavailable. |
 | [`Unexpected`](#member-errortypeunexpected) | An unexpected or internal failure. |
 | [`Uninitialized`](#member-errortypeuninitialized) | An invalid default value that no constructed error may use. |
+| [`UnprocessableContent`](#member-errortypeunprocessablecontent) | The request was valid but could not be processed semantically. |
+| [`UnsupportedMediaType`](#member-errortypeunsupportedmediatype) | The request media type is not supported. |
 | [`Validation`](#member-errortypevalidation) | Invalid input or business-rule validation. |
+
+#### Member: `ErrorType.BadGateway`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType BadGateway`](#overload-errortype-badgateway-on-errortype) | An upstream gateway returned an unusable response. |
+
+##### Overload: `ErrorType BadGateway` on `ErrorType`
+
+An upstream gateway returned an unusable response.
 
 #### Member: `ErrorType.Cancelled`
 
@@ -4887,6 +5274,16 @@ ErrorType category = ErrorType.Conflict;
 ##### Overload: `ErrorType Conflict` on `ErrorType`
 
 A state or concurrency conflict.
+
+#### Member: `ErrorType.ContentTooLarge`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType ContentTooLarge`](#overload-errortype-contenttoolarge-on-errortype) | The request content exceeded the accepted limit. |
+
+##### Overload: `ErrorType ContentTooLarge` on `ErrorType`
+
+The request content exceeded the accepted limit.
 
 #### Member: `ErrorType.Custom`
 
@@ -4936,6 +5333,36 @@ ErrorType category = ErrorType.Forbidden;
 
 The authenticated caller lacks permission.
 
+#### Member: `ErrorType.Gone`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Gone`](#overload-errortype-gone-on-errortype) | The requested resource was deliberately removed. |
+
+##### Overload: `ErrorType Gone` on `ErrorType`
+
+The requested resource was deliberately removed.
+
+#### Member: `ErrorType.Locked`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType Locked`](#overload-errortype-locked-on-errortype) | The target resource is locked. |
+
+##### Overload: `ErrorType Locked` on `ErrorType`
+
+The target resource is locked.
+
+#### Member: `ErrorType.NotAcceptable`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType NotAcceptable`](#overload-errortype-notacceptable-on-errortype) | The requested representation is not acceptable. |
+
+##### Overload: `ErrorType NotAcceptable` on `ErrorType`
+
+The requested representation is not acceptable.
+
 #### Member: `ErrorType.NotFound`
 
 **Example**
@@ -4952,6 +5379,46 @@ ErrorType category = ErrorType.NotFound;
 
 A requested resource does not exist.
 
+#### Member: `ErrorType.NotImplemented`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType NotImplemented`](#overload-errortype-notimplemented-on-errortype) | The requested operation is not implemented. |
+
+##### Overload: `ErrorType NotImplemented` on `ErrorType`
+
+The requested operation is not implemented.
+
+#### Member: `ErrorType.PaymentRequired`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType PaymentRequired`](#overload-errortype-paymentrequired-on-errortype) | A payment or entitlement requirement prevented the operation. |
+
+##### Overload: `ErrorType PaymentRequired` on `ErrorType`
+
+A payment or entitlement requirement prevented the operation.
+
+#### Member: `ErrorType.PreconditionFailed`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType PreconditionFailed`](#overload-errortype-preconditionfailed-on-errortype) | A supplied request precondition was not met. |
+
+##### Overload: `ErrorType PreconditionFailed` on `ErrorType`
+
+A supplied request precondition was not met.
+
+#### Member: `ErrorType.PreconditionRequired`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType PreconditionRequired`](#overload-errortype-preconditionrequired-on-errortype) | The request requires a precondition. |
+
+##### Overload: `ErrorType PreconditionRequired` on `ErrorType`
+
+The request requires a precondition.
+
 #### Member: `ErrorType.RateLimited`
 
 **Example**
@@ -4967,6 +5434,16 @@ ErrorType category = ErrorType.RateLimited;
 ##### Overload: `ErrorType RateLimited` on `ErrorType`
 
 A caller exceeded a rate or quota limit.
+
+#### Member: `ErrorType.RequestTimeout`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType RequestTimeout`](#overload-errortype-requesttimeout-on-errortype) | The client took too long to send the request. |
+
+##### Overload: `ErrorType RequestTimeout` on `ErrorType`
+
+The client took too long to send the request.
 
 #### Member: `ErrorType.Timeout`
 
@@ -5047,6 +5524,26 @@ ErrorType category = ErrorType.Uninitialized;
 ##### Overload: `ErrorType Uninitialized` on `ErrorType`
 
 An invalid default value that no constructed error may use.
+
+#### Member: `ErrorType.UnprocessableContent`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType UnprocessableContent`](#overload-errortype-unprocessablecontent-on-errortype) | The request was valid but could not be processed semantically. |
+
+##### Overload: `ErrorType UnprocessableContent` on `ErrorType`
+
+The request was valid but could not be processed semantically.
+
+#### Member: `ErrorType.UnsupportedMediaType`
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorType UnsupportedMediaType`](#overload-errortype-unsupportedmediatype-on-errortype) | The request media type is not supported. |
+
+##### Overload: `ErrorType UnsupportedMediaType` on `ErrorType`
+
+The request media type is not supported.
 
 #### Member: `ErrorType.Validation`
 
@@ -5520,3 +6017,185 @@ Option<User> active = from user in option where user.IsActive select user;
 ##### Overload: `Option<T> Where<T>(in Option<T> source, Func<T, bool> predicate)` on `QueryExtensions`
 
 Keeps a present option only when its predicate succeeds.
+
+
+## Package MonadicTypes.NET.Testing
+
+**Types:** [`MonadicAssertionException`](#type-monadicassertionexception) · [`MonadicAssertions`](#type-monadicassertions)
+
+### Type: `MonadicAssertionException`
+
+Exception thrown by framework-neutral MonadicTypes.NET test assertions.
+
+| Member | Description |
+| --- | --- |
+| [`MonadicAssertionException`](#member-monadicassertionexceptionmonadicassertionexception) | Exception thrown by framework-neutral MonadicTypes.NET test assertions. |
+
+#### Member: `MonadicAssertionException.MonadicAssertionException`
+
+| Overload | Description |
+| --- | --- |
+| [`MonadicAssertionException(string message)`](#overload-monadicassertionexceptionstring-message-on-monadicassertionexception) | Exception thrown by framework-neutral MonadicTypes.NET test assertions. |
+
+##### Overload: `MonadicAssertionException(string message)` on `MonadicAssertionException`
+
+Exception thrown by framework-neutral MonadicTypes.NET test assertions.
+
+### Type: `MonadicAssertions`
+
+Provides framework-neutral assertions for tests of monadic values.
+
+| Member | Description |
+| --- | --- |
+| [`ErrorOrFail`](#member-monadicassertionserrororfail) | Returns the failure error or throws a test assertion exception. |
+| [`ShouldBeError`](#member-monadicassertionsshouldbeerror) | Asserts that a result is failed and returns it for further checks. |
+| [`ShouldBeNone`](#member-monadicassertionsshouldbenone) | Asserts that an option is empty and returns it for further checks. |
+| [`ShouldBeOk`](#member-monadicassertionsshouldbeok) | Asserts that a result is successful and returns it for further checks. |
+| [`ShouldBeSome`](#member-monadicassertionsshouldbesome) | Asserts that an option is present and returns it for further checks. |
+| [`ValueOrFail`](#member-monadicassertionsvalueorfail) | Returns the present value or throws a test assertion exception. |
+
+#### Member: `MonadicAssertions.ErrorOrFail`
+
+| Overload | Description |
+| --- | --- |
+| [`TError ErrorOrFail<T, TError>(Result<T, TError> result, string? message)`](#overload-terror-errororfailt-terrorresultt-terror-result-string-message-on-monadicassertions) | Returns the failure error or throws a test assertion exception. |
+
+##### Overload: `TError ErrorOrFail<T, TError>(Result<T, TError> result, string? message)` on `MonadicAssertions`
+
+Returns the failure error or throws a test assertion exception.
+
+**Type parameters**
+
+- `T`: Success value type.
+- `TError`: Error type.
+
+**Parameters**
+
+- `result`: Result to inspect.
+- `message`: Optional context included in the failure message.
+
+**Returns:** The failure error.
+
+#### Member: `MonadicAssertions.ShouldBeError`
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TError> ShouldBeError<T, TError>(Result<T, TError> result, string? message)`](#overload-resultt-terror-shouldbeerrort-terrorresultt-terror-result-string-message-on-monadicassertions) | Asserts that a result is failed and returns it for further checks. |
+
+##### Overload: `Result<T, TError> ShouldBeError<T, TError>(Result<T, TError> result, string? message)` on `MonadicAssertions`
+
+Asserts that a result is failed and returns it for further checks.
+
+**Type parameters**
+
+- `T`: Success value type.
+- `TError`: Error type.
+
+**Parameters**
+
+- `result`: Result to inspect.
+- `message`: Optional context included in the failure message.
+
+**Returns:** The unchanged result.
+
+#### Member: `MonadicAssertions.ShouldBeNone`
+
+| Overload | Description |
+| --- | --- |
+| [`Option<T> ShouldBeNone<T>(Option<T> option, string? message)`](#overload-optiont-shouldbenonetoptiont-option-string-message-on-monadicassertions) | Asserts that an option is empty and returns it for further checks. |
+
+##### Overload: `Option<T> ShouldBeNone<T>(Option<T> option, string? message)` on `MonadicAssertions`
+
+Asserts that an option is empty and returns it for further checks.
+
+**Type parameters**
+
+- `T`: Contained value type.
+
+**Parameters**
+
+- `option`: Option to inspect.
+- `message`: Optional context included in the failure message.
+
+**Returns:** The unchanged option.
+
+#### Member: `MonadicAssertions.ShouldBeOk`
+
+| Overload | Description |
+| --- | --- |
+| [`Result<T, TError> ShouldBeOk<T, TError>(Result<T, TError> result, string? message)`](#overload-resultt-terror-shouldbeokt-terrorresultt-terror-result-string-message-on-monadicassertions) | Asserts that a result is successful and returns it for further checks. |
+
+##### Overload: `Result<T, TError> ShouldBeOk<T, TError>(Result<T, TError> result, string? message)` on `MonadicAssertions`
+
+Asserts that a result is successful and returns it for further checks.
+
+**Type parameters**
+
+- `T`: Success value type.
+- `TError`: Error type.
+
+**Parameters**
+
+- `result`: Result to inspect.
+- `message`: Optional context included in the failure message.
+
+**Returns:** The unchanged result.
+
+#### Member: `MonadicAssertions.ShouldBeSome`
+
+| Overload | Description |
+| --- | --- |
+| [`Option<T> ShouldBeSome<T>(Option<T> option, string? message)`](#overload-optiont-shouldbesometoptiont-option-string-message-on-monadicassertions) | Asserts that an option is present and returns it for further checks. |
+
+##### Overload: `Option<T> ShouldBeSome<T>(Option<T> option, string? message)` on `MonadicAssertions`
+
+Asserts that an option is present and returns it for further checks.
+
+**Type parameters**
+
+- `T`: Contained value type.
+
+**Parameters**
+
+- `option`: Option to inspect.
+- `message`: Optional context included in the failure message.
+
+**Returns:** The unchanged option.
+
+#### Member: `MonadicAssertions.ValueOrFail`
+
+| Overload | Description |
+| --- | --- |
+| [`T ValueOrFail<T>(Option<T> option, string? message)`](#overload-t-valueorfailtoptiont-option-string-message-on-monadicassertions) | Returns the present value or throws a test assertion exception. |
+| [`T ValueOrFail<T, TError>(Result<T, TError> result, string? message)`](#overload-t-valueorfailt-terrorresultt-terror-result-string-message-on-monadicassertions) | Returns the successful value or throws a test assertion exception. |
+
+##### Overload: `T ValueOrFail<T>(Option<T> option, string? message)` on `MonadicAssertions`
+
+Returns the present value or throws a test assertion exception.
+
+**Type parameters**
+
+- `T`: Contained value type.
+
+**Parameters**
+
+- `option`: Option to inspect.
+- `message`: Optional context included in the failure message.
+
+**Returns:** The present value.
+
+##### Overload: `T ValueOrFail<T, TError>(Result<T, TError> result, string? message)` on `MonadicAssertions`
+
+Returns the successful value or throws a test assertion exception.
+
+**Type parameters**
+
+- `T`: Success value type.
+- `TError`: Error type.
+
+**Parameters**
+
+- `result`: Result to inspect.
+- `message`: Optional context included in the failure message.
+
+**Returns:** The successful value.

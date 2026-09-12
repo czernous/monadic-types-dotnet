@@ -16,6 +16,10 @@ Current development dependencies use licenses permitting commercial use:
 - Meziantou.Analyzer: MIT, private build-time analysis only.
 - Microsoft.CodeAnalysis.BannedApiAnalyzers: MIT, private build-time architecture
   enforcement for shipping source projects only.
+- `MonadicTypes.NET.Analyzers`: repository-owned opt-in build-time diagnostics;
+  packaged under the NuGet analyzer path with no runtime dependency.
+- `MonadicTypes.NET.Testing`: repository-owned framework-neutral test helpers;
+  references only `MonadicTypes.NET` and no test runner.
 
 The .NET SDK's built-in analyzers run at the pinned .NET 10 recommended level.
 Analyzer references use `PrivateAssets="all"` and do not flow into runtime or

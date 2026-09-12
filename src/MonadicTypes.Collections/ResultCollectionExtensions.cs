@@ -7,6 +7,17 @@ public static class ResultCollectionExtensions
 {
     extension<TSource>(IReadOnlyList<TSource> source)
     {
+        /// <summary>Traverses each item through a generated callable wrapper with inferred result types.</summary>
+        /// <example><code>var result = rows.TraverseToArray(Projections.Functions.ToDomain);</code></example>
+        /// <remarks>Preserves fail-fast order. Empty input reuses an empty array; non-empty input allocates one output array.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<TResult[], TError> TraverseToArray<TResult, TError, TFunction>(
+            ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)
+            where TError : notnull
+            where TFunction : struct, IValueFunction<TSource, Result<TResult, TError>> =>
+            ResultCollectionExtensions.TraverseToArray<TSource, TResult, TError,
+                ValueFunction<TSource, Result<TResult, TError>, TFunction>>(source, selector);
+
         /// <summary>Traverses each item once and returns a newly allocated array of successful values.</summary>
         /// <example><code>Result&lt;User[], LoadError&gt; users = ids.TraverseToArray(LoadUser);</code></example>
         /// <remarks>Empty input reuses <see cref="Array.Empty{T}"/>. Non-empty input allocates exactly one output array, including when a later item fails.</remarks>
@@ -99,6 +110,16 @@ public static class ResultCollectionExtensions
 
     extension<TSource>(ReadOnlySpan<TSource> source)
     {
+        /// <summary>Traverses each span item through a generated callable wrapper with inferred result types.</summary>
+        /// <remarks>Preserves fail-fast order. Empty input reuses an empty array; non-empty input allocates one output array.</remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<TResult[], TError> TraverseToArray<TResult, TError, TFunction>(
+            ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)
+            where TError : notnull
+            where TFunction : struct, IValueFunction<TSource, Result<TResult, TError>> =>
+            ResultCollectionExtensions.TraverseToArray<TSource, TResult, TError,
+                ValueFunction<TSource, Result<TResult, TError>, TFunction>>(source, selector);
+
         /// <summary>Traverses each span item once and returns a newly allocated array of successful values.</summary>
         /// <remarks>Empty input reuses <see cref="Array.Empty{T}"/>. Non-empty input allocates exactly one output array, including when a later item fails.</remarks>
         public Result<TResult[], TError> TraverseToArray<TResult, TError>(

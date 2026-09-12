@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/MonadicTypes.Consumer.Benchmarks/MonadicTypes.Consumer.Benchmarks.csproj" />
     <Project Path="benchmarks/MonadicTypes.AspNetCore.Benchmarks/MonadicTypes.AspNetCore.Benchmarks.csproj" />
     <Project Path="benchmarks/MonadicTypes.Composition.Benchmarks/MonadicTypes.Composition.Benchmarks.csproj" />
     <Project Path="benchmarks/MonadicTypes.Extensions.Benchmarks/MonadicTypes.Extensions.Benchmarks.csproj" />
@@ -16,6 +17,7 @@
     <Project Path="eng/MonadicTypes.VerifyLockfiles.Tool/MonadicTypes.VerifyLockfiles.Tool.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/MonadicTypes.Analyzers/MonadicTypes.Analyzers.csproj" />
     <Project Path="src/MonadicTypes.AspNetCore.OpenApi.Analyzers/MonadicTypes.AspNetCore.OpenApi.Analyzers.csproj" />
     <Project Path="src/MonadicTypes.AspNetCore.OpenApi/MonadicTypes.AspNetCore.OpenApi.csproj" />
     <Project Path="src/MonadicTypes.Async/MonadicTypes.Async.csproj" />
@@ -26,9 +28,12 @@
     <Project Path="src/MonadicTypes.Effects/MonadicTypes.Effects.csproj" />
     <Project Path="src/MonadicTypes.Generators/MonadicTypes.Generators.csproj" />
     <Project Path="src/MonadicTypes.Linq/MonadicTypes.Linq.csproj" />
+    <Project Path="src/MonadicTypes.Testing/MonadicTypes.Testing.csproj" />
     <Project Path="src/MonadicTypes/MonadicTypes.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/MonadicTypes.AspNetCore.ColdAotSmoke/MonadicTypes.AspNetCore.ColdAotSmoke.csproj" />
+    <Project Path="tests/MonadicTypes.Analyzers.Tests/MonadicTypes.Analyzers.Tests.csproj" />
     <Project Path="tests/MonadicTypes.AspNetCore.OpenApi.Analyzers.Tests/MonadicTypes.AspNetCore.OpenApi.Analyzers.Tests.csproj" />
     <Project Path="tests/MonadicTypes.AspNetCore.OpenApi.AotSmoke/MonadicTypes.AspNetCore.OpenApi.AotSmoke.csproj" />
     <Project Path="tests/MonadicTypes.Async.Tests/MonadicTypes.Async.Tests.csproj" />
@@ -43,6 +48,7 @@
     <Project Path="tests/MonadicTypes.Generators.Tests/MonadicTypes.Generators.Tests.csproj" />
     <Project Path="tests/MonadicTypes.Linq.Tests/MonadicTypes.Linq.Tests.csproj" />
     <Project Path="tests/MonadicTypes.Tooling.Tests/MonadicTypes.Tooling.Tests.csproj" />
+    <Project Path="tests/MonadicTypes.Testing.Tests/MonadicTypes.Testing.Tests.csproj" />
     <Project Path="tests/MonadicTypes.Tests/MonadicTypes.Tests.csproj" />
   </Folder>
 </Solution>

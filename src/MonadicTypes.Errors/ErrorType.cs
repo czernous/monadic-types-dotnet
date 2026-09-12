@@ -42,5 +42,29 @@ public enum ErrorType : byte
     Cancelled,
     /// <summary>A consumer-defined category identified by <see cref="Error.NumericType"/>.</summary>
     /// <example><code>ErrorType category = ErrorType.Custom;</code></example>
-    Custom
+    Custom = 12,
+    /// <summary>A payment or entitlement requirement prevented the operation.</summary>
+    PaymentRequired,
+    /// <summary>The requested representation is not acceptable.</summary>
+    NotAcceptable,
+    /// <summary>The client took too long to send the request.</summary>
+    RequestTimeout,
+    /// <summary>The requested resource was deliberately removed.</summary>
+    Gone,
+    /// <summary>A supplied request precondition was not met.</summary>
+    PreconditionFailed,
+    /// <summary>The request content exceeded the accepted limit.</summary>
+    ContentTooLarge,
+    /// <summary>The request media type is not supported.</summary>
+    UnsupportedMediaType,
+    /// <summary>The request was valid but could not be processed semantically.</summary>
+    UnprocessableContent,
+    /// <summary>The target resource is locked.</summary>
+    Locked,
+    /// <summary>The request requires a precondition.</summary>
+    PreconditionRequired,
+    /// <summary>An upstream gateway returned an unusable response.</summary>
+    BadGateway,
+    /// <summary>The requested operation is not implemented.</summary>
+    NotImplemented
 }

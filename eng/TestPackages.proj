@@ -14,12 +14,12 @@
   <ItemGroup>
     <PackageConfiguration Include="$(PackageSmokeProject)">
       <AdditionalProperties>
-        $(RuntimeProperty)PackageVersionToTest=$(PackageVersionToTest);RestoreAdditionalProjectSources=$(PackageSource);BaseIntermediateOutputPath=$(DefaultIntermediate);MSBuildProjectExtensionsPath=$(DefaultIntermediate);OutputPath=$(DefaultIntermediate)bin/;PackageSmokeTarget=Publish;PublishDir=$(DefaultOutput);SelfContained=true
+        $(RuntimeProperty)RuntimeFrameworkVersion=10.0.12;PackageVersionToTest=$(PackageVersionToTest);RestoreAdditionalProjectSources=$(PackageSource);BaseIntermediateOutputPath=$(DefaultIntermediate);MSBuildProjectExtensionsPath=$(DefaultIntermediate);OutputPath=$(DefaultIntermediate)bin/;PackageSmokeTarget=Publish;PublishDir=$(DefaultOutput);SelfContained=true
       </AdditionalProperties>
     </PackageConfiguration>
     <PackageConfiguration Include="$(PackageSmokeProject)">
       <AdditionalProperties>
-        $(RuntimeProperty)PackageVersionToTest=$(PackageVersionToTest);RestoreAdditionalProjectSources=$(PackageSource);BaseIntermediateOutputPath=$(OptInIntermediate);MSBuildProjectExtensionsPath=$(OptInIntermediate);PackageSmokeTarget=Build;OutputPath=$(OptInOutput);EnableMicrosoftOpenApiXmlComments=true;WarningsAsErrors=MTAPI001
+        $(RuntimeProperty)RuntimeFrameworkVersion=10.0.12;PackageVersionToTest=$(PackageVersionToTest);RestoreAdditionalProjectSources=$(PackageSource);BaseIntermediateOutputPath=$(OptInIntermediate);MSBuildProjectExtensionsPath=$(OptInIntermediate);PackageSmokeTarget=Build;OutputPath=$(OptInOutput);EnableMicrosoftOpenApiXmlComments=true;WarningsAsErrors=MTAPI001
       </AdditionalProperties>
     </PackageConfiguration>
   </ItemGroup>

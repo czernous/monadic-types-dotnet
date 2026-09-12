@@ -18,6 +18,44 @@ public static class ResultCompositionExtensions
 
     extension<T, TError>(in Result<Option<T>, TError> result) where TError : notnull
     {
+        /// <summary>Requires a successful option to contain a value using an eagerly supplied error.</summary>
+        /// <example><code>var required = result.RequireSome(LookupError.NotFound);</code></example>
+        /// <param name="whenNone">Failure used only for a successful absent option.</param>
+        /// <returns>The contained value, the original failure, or the supplied absence failure.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<T, TError> RequireSome(TError whenNone)
+        {
+            if (result.IsFailure)
+            {
+                return Result<T, TError>.Fail(result.Error);
+            }
+
+            Option<T> option = result.Value;
+            return option.HasValue
+                ? Result<T, TError>.Ok(option.Value)
+                : Result<T, TError>.Fail(whenNone);
+        }
+
+        /// <summary>Requires a successful option to contain a value using a caller-state error factory.</summary>
+        /// <example><code>var required = result.RequireSome(id, static key =&gt; LookupError.NotFound(key));</code></example>
+        /// <typeparam name="TState">Caller state type.</typeparam>
+        /// <param name="state">State passed unchanged to the error factory.</param>
+        /// <param name="whenNone">Factory invoked only for a successful absent option.</param>
+        /// <returns>The contained value, the original failure, or the generated absence failure.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<T, TError> RequireSome<TState>(TState state, Func<TState, TError> whenNone)
+        {
+            if (result.IsFailure)
+            {
+                return Result<T, TError>.Fail(result.Error);
+            }
+
+            Option<T> option = result.Value;
+            return option.HasValue
+                ? Result<T, TError>.Ok(option.Value)
+                : Result<T, TError>.Fail(whenNone(state));
+        }
+
         /// <summary>Exchanges the result and option layers without losing a failure.</summary>
         /// <example><code>Option&lt;Result&lt;User, LookupError&gt;&gt; transposed = result.Transpose();</code></example>
         /// <returns>
@@ -79,6 +117,21 @@ public static class ResultCompositionExtensions
 
     extension<TSource>(in Option<TSource> option)
     {
+        /// <summary>Traverses Some through a generated callable wrapper and preserves None.</summary>
+        /// <example><code>var result = option.Traverse(Projections.Functions.ToDomain);</code></example>
+        /// <typeparam name="TResult">Selected success type.</typeparam>
+        /// <typeparam name="TError">Failure type.</typeparam>
+        /// <typeparam name="TFunction">Wrapped value-function type.</typeparam>
+        /// <param name="selector">Selector invoked only for Some.</param>
+        /// <returns>A failed selector result, Some containing its success, or successful None.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Result<Option<TResult>, TError> Traverse<TResult, TError, TFunction>(
+            ValueFunction<TSource, Result<TResult, TError>, TFunction> selector)
+            where TError : notnull
+            where TFunction : struct, IValueFunction<TSource, Result<TResult, TError>> =>
+            ResultCompositionExtensions.Traverse<TSource, TResult, TError,
+                ValueFunction<TSource, Result<TResult, TError>, TFunction>>(option, selector);
+
         /// <summary>Traverses a present value through a fallible selector and preserves absence.</summary>
         /// <example><code>Result&lt;Option&lt;Address&gt;, LookupError&gt; address = option.Traverse(LoadAddress);</code></example>
         /// <typeparam name="TResult">Selected success type.</typeparam>

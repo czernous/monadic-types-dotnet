@@ -71,14 +71,16 @@ boundary; theoretical completeness alone is insufficient.
 | Opt-in LINQ | Medium-high | Additional names and generated code when consumed | Accepted in separate package; fluent form is recommended |
 | Positional pattern support | High | Two small deconstructors | Accepted; matchable case-wrapper hierarchy rejected as larger and less predictable |
 | OpenAPI error catalogs | High | Cold metadata ownership and optional Microsoft runtime dependencies | Accepted in separate package with reflection-free default |
+| Precise MonadicTypes usage analyzers | Medium | Build-time only; diagnostics are limited to deterministic library semantics | Accepted in separate opt-in package (`MT0001`, `MT0002`) |
 | XML-comment automation | Medium-high | Microsoft's complete behavior uses reflection during document generation | Compatibility only; direct third-party reference is explicit opt-in |
 | Logging projection and severity policy | Medium | Logging dependency and application-specific severity/disclosure policy | Rejected from runtime packages; document application-owned extensions |
-| General-purpose usage analyzer package | Medium | False positives, build cost, and policy-specific heuristics | Rejected; retain only precise diagnostics tied to package behavior |
-| Framework-agnostic testing helpers | Low-medium | Very small application helper but permanent public/package surface | Deferred until repeated use demonstrates stable assertion semantics |
+| Broad heuristic usage analyzer package | Medium | False positives, build cost, and policy-specific heuristics | Rejected; retain only precise diagnostics tied to package behavior |
+| Framework-neutral testing helpers | Low-medium | Small dependency-free package surface with explicit assertion semantics | Accepted in separate opt-in package with focused tests |
 | Cached or interned widened errors | Low-medium | Lifetime, retained cause, identity, and domain-policy hazards | Rejected as a library policy; widen once at the boundary and cache only domain-safe singleton cases locally |
 | More Task/ValueTask side-effect overloads | Medium | Large overload matrix and NativeAOT code-size cost | Deferred until profiling identifies a specific capture or composition gap |
 | Accumulating validation | Medium-high | New error-combination semantics and ownership allocations | Deferred until a concrete accumulating workflow defines the contract |
-| Option Tap/Zip and higher arities | Low | Convenience growth without a demonstrated missing workflow | Rejected for the initial completion boundary |
+| Option Tap/Zip | Low | Small, allocation-free observation and pairing operations with a recurring workflow | Accepted with direct semantics and NativeAOT evidence |
+| Composition above arity six | Low | Convenience growth without a demonstrated missing workflow | Rejected; no additional arity is shipped without a recurring use case |
 | Generated API and package README inventories | High | Build tooling and deterministic-output maintenance | Accepted as repository tooling; no runtime package dependency |
 
 Value is not sufficient by itself. An accepted API must also have stable

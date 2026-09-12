@@ -50,6 +50,8 @@ int length = name.Map(static value => value.Length).ValueOr(0);
 - `Result<Option<T>,E>` represents a fallible lookup where absence is expected.
 - `Combine`, `Zip`, and two-through-six-input `Map`/`Bind` compose independent
   results; caller-state forms avoid captured projection delegates.
+- `Recover`, `ValueOrElse`, and `RequireSome` accept caller state when a lazy
+  failure path needs local data without a captured delegate.
 - `Option.Traverse` exchanges optional input with a fallible stage.
 - Explicit nullable bridges and deconstruction support application boundaries and patterns.
 
@@ -83,6 +85,6 @@ Apache-2.0. Developed with AI assistance.
 
 [Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnet)
 
-Documented public members: 141
+Documented public members: 153
 
 <!-- END GENERATED API INDEX -->

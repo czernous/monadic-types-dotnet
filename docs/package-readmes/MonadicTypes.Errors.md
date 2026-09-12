@@ -37,10 +37,13 @@ ValidationErrors validation = new(
 ## Error Contract
 
 `Error` carries a bounded category, stable machine code, message, public-message
-policy, and optional exception cause. Built-in categories include validation,
-authentication, authorization, not-found, conflict, rate-limit, availability,
-timeout, cancellation, and unexpected failure. `Error.Custom` supports positive
-application-defined numeric categories.
+policy, and optional exception cause. Its focused built-in categories cover
+validation, authentication, authorization, resource state, request
+preconditions and content, rate limits, cancellation, upstream failures, and
+unexpected failures. Construct any built-in category with
+`new Error(type, code, message, ...)`; the named factories retain the common
+short forms. `Error.Custom` supports positive application-defined numeric
+categories without making the core type itself an HTTP-status catalog.
 
 `Error.IO` and `Error.System` provide standard-code convenience forms and
 custom-code overloads that can retain an exception and explicit disclosure
@@ -85,6 +88,6 @@ Apache-2.0. Developed with AI assistance.
 
 [Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesneterrors)
 
-Documented public members: 72
+Documented public members: 84
 
 <!-- END GENERATED API INDEX -->

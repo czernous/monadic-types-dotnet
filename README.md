@@ -41,6 +41,8 @@ dotnet add package MonadicTypes.NET --prerelease
 | `MonadicTypes.NET.Collections` | A count-known collection needs fail-fast traversal into one owned array. | `MonadicTypes.NET` | [Collections and LINQ](#collections-and-linq) |
 | `MonadicTypes.NET.Linq` | Result or Option pipelines should use opt-in LINQ method or query syntax. | `MonadicTypes.NET` | [Collections and LINQ](#collections-and-linq) |
 | `MonadicTypes.NET.Diagnostics` | Structured errors should be projected to optional `Activity` and `Meter` signals. | `MonadicTypes.NET.Errors`, then core | [Diagnostics](#diagnostics) |
+| `MonadicTypes.NET.Testing` | Tests need framework-neutral Result and Option assertions. | `MonadicTypes.NET` | [Testing helpers](#testing-helpers) |
+| `MonadicTypes.NET.Analyzers` | Build-time checks should catch precise Option and nested-railway mistakes. | None; analyzer only | [Analyzers](#analyzers) |
 | `MonadicTypes.NET.AspNetCore` | An ASP.NET Core API needs typed HTTP results, RFC problem responses, validation conversion, or endpoint metadata. | `MonadicTypes.NET.Errors`, then core | [ASP.NET Core](#aspnet-core) |
 | `MonadicTypes.NET.AspNetCore.OpenApi` | Explicit error catalogs should become status-scoped OpenAPI code enums and problem examples. | ASP.NET Core package, Microsoft OpenAPI runtime assemblies | [OpenAPI error catalogs](#openapi-error-catalogs) |
 | `MonadicTypes.NET.Generators` | Annotated methods need compile-time struct-callable adapters for measured hot paths. | None; analyzer only | [Generated callables](#generated-callables) |
@@ -179,7 +181,10 @@ has identical branch semantics.
 | [`Option<T>.TryGetValue`](docs/api-reference.md#member-optionttrygetvalue) | `out T` | Read presence at an imperative boundary. |
 | [`Option<T>.Deconstruct`](docs/api-reference.md#member-optiontdeconstruct) | `out bool`, `out T` | Expose presence to positional patterns. |
 | [`Option<T>.Map`](docs/api-reference.md#member-optiontmap) | delegate; caller-state; struct callable; generated token | Transform a present value. |
+| [`Option<T>.MapNullable`](docs/api-reference.md#member-optiontmapnullable) | nullable reference/value projection | Turn a null projection into `None` without changing `Map`'s null-rejection contract. |
 | [`Option<T>.Bind`](docs/api-reference.md#member-optiontbind) | delegate; caller-state; struct callable; generated token | Continue presence without nesting Options. |
+| [`Option<T>.Tap`](docs/api-reference.md#member-optionttap) | action; caller-state; struct action; generated action | Observe `Some` and return the original Option. |
+| [`Option<T>.Zip`](docs/api-reference.md#member-optiontzip) | another Option | Pair two present values or return `None`. |
 | [`Option<T>.Filter`](docs/api-reference.md#member-optiontfilter) | predicate; caller-state | Retain presence only when a predicate is true. |
 | [`Option<T>.Match`](docs/api-reference.md#member-optiontmatch) | delegates; caller-state; two struct callables | Exhaustively reduce presence and absence. |
 | [`Option<T>.Equals`](docs/api-reference.md#member-optiontequals) | another Option | Compare presence and only the active value. |
@@ -872,6 +877,29 @@ will consume.
 
 ### Option And Result
 
+Use `IsNone`, `IsSome`, or comparison with `Option<T>.None` to test absence.
+`option == null` is not a consistent absence test: null converts to `None` for
+reference-type payloads, but a value-type Option can instead participate in a
+lifted nullable comparison. `Assert.Null(option)` also tests a boxed struct,
+not its presence state.
+
+With nullable analysis enabled, the reference-type spelling produces CS8625;
+the value-type spelling produces CS8073 (always false). This repository treats
+both diagnostics as errors. Do not suppress them to perform an absence check.
+
+`Map` preserves the non-null `Some` contract and throws if a projection returns
+null, including an empty nullable value type. Use `MapNullable` for nullable
+reference projections and `MapNullableValue` for nullable value projections:
+
+```csharp
+Option<string> nickname = person.MapNullable(static value => value.Nickname);
+Option<Guid> userId = person.MapNullableValue(static value => value.UserId);
+```
+
+Both yield `None` for an absent source or null projection. `Bind` with
+`Option.FromNullable` remains the general composition form when the projection
+already returns an Option.
+
 Nested Result/Option shapes can be transposed without ad-hoc branching:
 
 ```csharp
@@ -894,6 +922,20 @@ Result<Customer, LookupError> required = lookup.RequireSome(
 Result. Its eager overload receives an existing error; its lazy overload calls
 the factory only for `None`.
 
+`RequireSome` also accepts an existing error or caller-owned factory state:
+
+```csharp
+Result<Option<Customer>, Error> customerLookup = FindCustomer(id);
+var required = customerLookup.RequireSome(Error.NotFound("MISSING", "Customer missing."));
+var requiredWithId = customerLookup.RequireSome(
+    id, static key => Error.NotFound("MISSING", $"Customer {key} missing."));
+```
+
+Use these forms with a `Result<Option<Customer>, Error>` lookup. The eager form
+evaluates its argument at the call site; the caller-state form constructs an
+error only for `Ok(None)` and avoids a captured delegate. Error construction or
+message formatting can still allocate. Both preserve an existing failure.
+
 Use explicit nullable bridges at framework, persistence, and serialization
 boundaries. Reference and value nullability remain distinct to avoid ambiguous
 overloads:
@@ -912,6 +954,13 @@ The selector runs only for Some; None becomes `Ok(None)` without invocation:
 ```csharp
 Result<Option<Customer>, LookupError> loaded = optionalId.Traverse(LoadCustomer);
 ```
+
+Generated wrappers also infer the success and error types in
+`optionalId.Traverse(Projections.Functions.LoadCustomer)` and
+`rows.TraverseToArray(Projections.Functions.ToDomain)`, including span receivers.
+For explicitly generic bare-callable calls, use a typed value such as
+`default(MyProjection)`; an untyped `default` can be ambiguous with the wrapper
+overload.
 
 Transpose changes nesting, not meaning:
 
@@ -1230,14 +1279,27 @@ categories.
 | --- | ---: | --- |
 | `Validation` | 400 | Invalid input or a client-correctable rule failure |
 | `Unauthorized` | 401 | Missing or invalid authentication |
+| `PaymentRequired` | 402 | Billing or entitlement requirement |
 | `Forbidden` | 403 | Authenticated caller lacks permission |
 | `NotFound` | 404 | Requested resource is absent |
+| `NotAcceptable` | 406 | Requested representation cannot be produced |
+| `RequestTimeout` | 408 | Caller did not send the request in time |
 | `Conflict` | 409 | State or concurrency conflict |
-| `Cancelled` | 499 | Request cancelled by the caller |
+| `Gone` | 410 | Resource was deliberately removed |
+| `PreconditionFailed` | 412 | Supplied request precondition was not met |
+| `ContentTooLarge` | 413 | Request content exceeds the accepted limit |
+| `UnsupportedMediaType` | 415 | Request media type is unsupported |
+| `UnprocessableContent` | 422 | Parsed content cannot be processed semantically |
+| `Locked` | 423 | Target resource is locked |
+| `PreconditionRequired` | 428 | A required request precondition is absent |
 | `RateLimited` | 429 | Quota or rate exceeded |
+| `Cancelled` | 499 | Request cancelled by the caller; non-IANA compatibility mapping |
+| `NotImplemented` | 501 | Declared operation is not implemented |
+| `BadGateway` | 502 | Upstream response was unusable |
 | `Unavailable` | 503 | Temporary dependency or service outage |
 | `Timeout` | 504 | Dependency exceeded its time budget |
-| `Failure`, `Unexpected`, `Custom` | 500 | Private failure unless a custom HTTP mapper overrides policy |
+| `Failure`, `Unexpected` | 500 | Private failure unless a custom HTTP mapper overrides policy |
+| `Custom` | 500 by default; 400–599 when supplied | Application-defined numeric category; the ASP.NET adapter honors valid custom HTTP statuses |
 
 | Construction API | Category |
 | --- | --- |
@@ -1247,7 +1309,7 @@ categories.
 | `Error.Failure`, `Unexpected` | General private failures; use `Unexpected` for unclassified faults |
 | `Error.Custom` | Positive application-defined numeric category |
 | `Error.IO`, `System` | Convenience codes for general I/O and system failures |
-| `new Error(type, code, message, ...)` | Full built-in-category control |
+| `new Error(type, code, message, ...)` | All focused built-in categories, including the twelve precise HTTP-oriented categories above |
 
 `Code` is stable machine-readable identity. `Message` is diagnostic text and is
 included in a problem response only when `IsMessagePublic` is true. `Cause` is
@@ -1388,20 +1450,37 @@ app.MapGet("/customers/{id:int}", GetCustomer)
     .ProducesErrors(ErrorType.NotFound, ErrorType.Unexpected);
 ```
 
-Use the two-callback overload when an application owns its ProblemDetails
-shape or needs a status outside the default category policy:
+Use an explicit HTTP status when the endpoint needs a response outside the
+default category policy. The existing failure callback composes with the adapter:
 
 ```csharp
 Results<Ok<Customer>, ProblemHttpResult> response = result.ToHttpResult(
     static customer => TypedResults.Ok(customer),
-    static error => TypedResults.Problem(
-        statusCode: StatusCodes.Status402PaymentRequired,
-        title: "Payment required",
-        extensions: new Dictionary<string, object?>
-        {
-            ["code"] = error.Code
-        }));
+    static error => ErrorProblemDetails.ToHttpResult(error, StatusCodes.Status402PaymentRequired));
 ```
+
+`Create`, `CreateExample`, and `ToHttpResult` accept an explicit status from 400
+through 599. This covers standard HTTP errors and deliberate application/proxy
+extensions; other ranges are rejected. Overrides use a status-specific title
+and `urn:problem-type:http-{status}` identity while preserving error codes,
+message visibility, and request tracing. Unknown reason phrases use `HTTP error`.
+`CreateExample` continues to omit ambient trace data.
+
+`ErrorType` remains a focused set of application categories. Core treats
+`Error.Custom` as an application-defined numeric category; at the ASP.NET Core
+boundary, a custom numeric value from 400 through 599 is also honored as its HTTP
+error status. Other custom numeric values retain the generic 500 mapping. Use an
+explicit override when transport policy differs from the stored category.
+`Cancelled` retains its existing nonstandard 499 default; choose 408 explicitly
+only when the request-timeout meaning is appropriate.
+
+Endpoints remain responsible for status-specific protocol behavior and headers,
+such as `Allow` for 405, authentication challenges for 401/407, and precondition
+evaluation for 412/428. Consult the
+[HTTP status registry](https://www.iana.org/assignments/http-status-codes/) and
+[HTTP semantics](https://www.rfc-editor.org/rfc/rfc9110.html) when choosing a status.
+Successful or conditional 2xx/3xx responses belong on the success channel.
+The two-callback overload also supports fully caller-owned `ProblemDetails`.
 
 For a measured hot boundary, implement `IHttpResultMapper<TError,TResult>` as a
 readonly struct and pass it to the mapper overload; success mappers can likewise
@@ -1508,7 +1587,7 @@ OpenAPI runtime dependency. Each `ErrorCatalogEntry` requires an initialized
 defined category, a non-empty machine code, and a non-empty public description.
 Minimal API registration copies the entries, rejects duplicate codes across the
 complete endpoint regardless of HTTP status, and adds one problem response per
-distinct category:
+distinct HTTP status:
 
 ```csharp
 app.MapGet("/customers/{id:int}", GetCustomer)
@@ -1524,6 +1603,24 @@ app.MapGet("/customers/{id:int}", GetCustomer)
 ```
 
 The input may be stack-backed through the `params ReadOnlySpan<T>` contract.
+
+Catalog entries and attributes accept the same explicit HTTP status policy:
+
+```csharp
+app.MapPut("/customers/{id:int}", UpdateCustomer)
+    .ProducesErrorCatalog(
+        new(ErrorType.Conflict, "STALE_VERSION", "Reload the resource.", 412),
+        new(ErrorType.Conflict, "PRECONDITION_REQUIRED", "Supply If-Match.", 428));
+
+// Controller equivalent:
+// [ProducesErrorCatalog(ErrorType.Validation, "INVALID_CONTENT", "Invalid content.", 422)]
+// [ProducesError(ErrorType.Validation, 422)]
+```
+
+Runtime mapping and declared metadata must use the same status. OpenAPI groups
+each code under that status and uses matching status-specific example titles
+and types. Metadata documents behavior; it does not change runtime responses.
+
 Registration performs one owned array copy so later caller mutation cannot
 change endpoint metadata. This is a cold startup cost; request execution does
 not construct, transform, or inspect catalogs. Controllers attach repeatable
@@ -1631,6 +1728,32 @@ Result<Receipt, Error> observed = result.TapError(new ObserveError(errorMetrics)
 `ErrorMetrics.Disabled` or omit the diagnostics package for the lowest-cost
 disabled path. Applications remain free to project public error values into
 Serilog, Application Insights, Elastic, or a custom stack.
+
+## Testing Helpers
+
+`MonadicTypes.NET.Testing` is an optional framework-neutral package for test
+projects that want typed extraction without taking a dependency on a specific
+test runner:
+
+```csharp
+using MonadicTypes.Testing;
+
+User user = LoadUser().ShouldBeOk("load user").ValueOrFail();
+Option<User> maybeUser = FindUser();
+maybeUser.ShouldBeSome().ValueOrFail();
+```
+
+The helpers return the unchanged Result or Option for composition and throw
+only the package-owned `MonadicAssertionException` when the expected case is
+absent. Production packages do not reference this package.
+
+## Analyzers
+
+`MonadicTypes.NET.Analyzers` is an explicit build-time package. `MT0001` flags
+`Option<T> == null`/`!= null`; `MT0002` flags a direct `Map` that creates a
+nested `Result` or `Option` where `Bind` is usually intended. Both diagnostics
+are suppressible for intentional boundary code, and the analyzer package adds
+no runtime dependency.
 
 ## Complete Application Flow
 
@@ -2006,6 +2129,6 @@ criteria, and published changes remain subject to human direction and review.
 
 [Complete API reference](docs/api-reference.md)
 
-349 documented public members
+393 documented public members
 
 <!-- END GENERATED API INDEX -->

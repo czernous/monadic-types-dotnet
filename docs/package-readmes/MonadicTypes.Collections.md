@@ -63,6 +63,6 @@ Apache-2.0. Developed with AI assistance.
 
 [Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetcollections)
 
-Documented public members: 8
+Documented public members: 10
 
 <!-- END GENERATED API INDEX -->
