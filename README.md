@@ -1729,6 +1729,11 @@ Result<Receipt, Error> observed = result.TapError(new ObserveError(errorMetrics)
 disabled path. Applications remain free to project public error values into
 Serilog, Application Insights, Elastic, or a custom stack.
 
+`ErrorTelemetry.Record` includes the diagnostic message in the `error.message`
+activity tag. `Error.IsMessagePublic` controls HTTP response disclosure only;
+it does not redact telemetry. Keep diagnostic messages safe for the configured
+telemetry backends, or project a redacted error at the application boundary.
+
 ## Testing Helpers
 
 `MonadicTypes.NET.Testing` is an optional framework-neutral package for test

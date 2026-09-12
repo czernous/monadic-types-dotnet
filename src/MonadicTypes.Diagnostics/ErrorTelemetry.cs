@@ -14,6 +14,12 @@ public static class ErrorTelemetry
     /// <param name="activity">The caller-owned activity, or null to perform no work.</param>
     /// <param name="error">The initialized error to record.</param>
     /// <param name="statusPolicy">The policy controlling activity status mutation.</param>
+    /// <remarks>
+    /// The diagnostic message is written to the <c>error.message</c> activity tag,
+    /// while <see cref="Error.IsMessagePublic"/> controls HTTP disclosure only.
+    /// Keep diagnostic messages safe for the telemetry backends used by the
+    /// application; project a redacted error yourself when that is not possible.
+    /// </remarks>
     /// <exception cref="ArgumentNullException">The activity is sampled and <paramref name="error"/> is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="statusPolicy"/> or the error category is invalid.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -46,6 +46,11 @@ default. Error-code tags are opt-in because they can increase cardinality.
 OpenTelemetry, Prometheus, Application Insights, and other BCL-compatible
 consumers can export these signals without package-specific adapters.
 
+`Record` also writes the diagnostic message to the `error.message` activity tag.
+`Error.IsMessagePublic` controls HTTP response disclosure; it does not redact
+telemetry. Keep diagnostic messages safe for the application's telemetry
+backends, or project a redacted error at the boundary when that is not possible.
+
 `ErrorMetrics.Disabled` and an absent or unsampled Activity provide low-cost
 disabled paths. For allocation-sensitive callbacks, use caller-state or an
 `IValueAction<Error>` struct rather than a capturing lambda.

@@ -4326,6 +4326,8 @@ ErrorTelemetry.Record(Activity.Current, error);
 
 Records an error on a sampled activity without creating an activity.
 
+The diagnostic message is written to the `error.message` activity tag, while `IsMessagePublic` controls HTTP disclosure only. Keep diagnostic messages safe for the telemetry backends used by the application; project a redacted error yourself when that is not possible.
+
 **Parameters**
 
 - `activity`: The caller-owned activity, or null to perform no work.
