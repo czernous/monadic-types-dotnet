@@ -4147,7 +4147,7 @@ Traverses each span item once using an allocation-free callable and returns a ne
 
 ## Package MonadicTypes.NET.Diagnostics
 
-**Types:** [`ErrorActivityStatusPolicy`](#type-erroractivitystatuspolicy) · [`ErrorMetrics`](#type-errormetrics) · [`ErrorTelemetry`](#type-errortelemetry)
+**Types:** [`ErrorActivityStatusPolicy`](#type-erroractivitystatuspolicy) · [`ErrorMetrics`](#type-errormetrics) · [`ErrorTelemetry`](#type-errortelemetry) · [`ErrorTelemetryMessagePolicy`](#type-errortelemetrymessagepolicy)
 
 ### Type: `ErrorActivityStatusPolicy`
 
@@ -4321,12 +4321,13 @@ ErrorTelemetry.Record(Activity.Current, error);
 | Overload | Description |
 | --- | --- |
 | [`void Record(Activity? activity, Error? error, ErrorActivityStatusPolicy statusPolicy)`](#overload-void-recordactivity-activity-error-error-erroractivitystatuspolicy-statuspolicy-on-errortelemetry) | Records an error on a sampled activity without creating an activity. |
+| [`void Record(Activity? activity, Error? error, ErrorActivityStatusPolicy statusPolicy, ErrorTelemetryMessagePolicy messagePolicy)`](#overload-void-recordactivity-activity-error-error-erroractivitystatuspolicy-statuspolicy-errortelemetrymessagepolicy-messagepolicy-on-errortelemetry) | Records an error with explicit activity status and message policies. |
 
 ##### Overload: `void Record(Activity? activity, Error? error, ErrorActivityStatusPolicy statusPolicy)` on `ErrorTelemetry`
 
 Records an error on a sampled activity without creating an activity.
 
-The diagnostic message is written to the `error.message` activity tag, while `IsMessagePublic` controls HTTP disclosure only. Keep diagnostic messages safe for the telemetry backends used by the application; project a redacted error yourself when that is not possible.
+The default `PublicOnly` policy writes only messages marked public to the `error.message` activity tag. `IsMessagePublic` controls HTTP disclosure only; use the overload with an explicit policy when telemetry has a different security boundary.
 
 **Parameters**
 
@@ -4338,6 +4339,80 @@ The diagnostic message is written to the `error.message` activity tag, while `Is
 
 - `ArgumentNullException`: The activity is sampled and `error` is null.
 - `ArgumentOutOfRangeException`: `statusPolicy` or the error category is invalid.
+
+##### Overload: `void Record(Activity? activity, Error? error, ErrorActivityStatusPolicy statusPolicy, ErrorTelemetryMessagePolicy messagePolicy)` on `ErrorTelemetry`
+
+Records an error with explicit activity status and message policies.
+
+**Parameters**
+
+- `activity`: The caller-owned activity, or null to perform no work.
+- `error`: The initialized error to record.
+- `statusPolicy`: The policy controlling activity status mutation.
+- `messagePolicy`: The policy controlling the diagnostic message tag.
+
+**Throws**
+
+- `ArgumentNullException`: The activity is sampled and `error` is null.
+- `ArgumentOutOfRangeException`: `statusPolicy`, `messagePolicy`, or the error category is invalid.
+
+### Type: `ErrorTelemetryMessagePolicy`
+
+Controls whether an error's diagnostic message is written to telemetry.
+
+| Member | Description |
+| --- | --- |
+| [`Include`](#member-errortelemetrymessagepolicyinclude) | Writes the diagnostic message regardless of its transport visibility. |
+| [`Omit`](#member-errortelemetrymessagepolicyomit) | Omits the diagnostic message from telemetry. |
+| [`PublicOnly`](#member-errortelemetrymessagepolicypubliconly) | Writes only messages marked public by the error. |
+
+#### Member: `ErrorTelemetryMessagePolicy.Include`
+
+**Example**
+
+```csharp
+ErrorTelemetryMessagePolicy policy = ErrorTelemetryMessagePolicy.Include;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorTelemetryMessagePolicy Include`](#overload-errortelemetrymessagepolicy-include-on-errortelemetrymessagepolicy) | Writes the diagnostic message regardless of its transport visibility. |
+
+##### Overload: `ErrorTelemetryMessagePolicy Include` on `ErrorTelemetryMessagePolicy`
+
+Writes the diagnostic message regardless of its transport visibility.
+
+#### Member: `ErrorTelemetryMessagePolicy.Omit`
+
+**Example**
+
+```csharp
+ErrorTelemetryMessagePolicy policy = ErrorTelemetryMessagePolicy.Omit;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorTelemetryMessagePolicy Omit`](#overload-errortelemetrymessagepolicy-omit-on-errortelemetrymessagepolicy) | Omits the diagnostic message from telemetry. |
+
+##### Overload: `ErrorTelemetryMessagePolicy Omit` on `ErrorTelemetryMessagePolicy`
+
+Omits the diagnostic message from telemetry.
+
+#### Member: `ErrorTelemetryMessagePolicy.PublicOnly`
+
+**Example**
+
+```csharp
+ErrorTelemetryMessagePolicy policy = ErrorTelemetryMessagePolicy.PublicOnly;
+```
+
+| Overload | Description |
+| --- | --- |
+| [`ErrorTelemetryMessagePolicy PublicOnly`](#overload-errortelemetrymessagepolicy-publiconly-on-errortelemetrymessagepolicy) | Writes only messages marked public by the error. |
+
+##### Overload: `ErrorTelemetryMessagePolicy PublicOnly` on `ErrorTelemetryMessagePolicy`
+
+Writes only messages marked public by the error.
 
 
 ## Package MonadicTypes.NET.Effects

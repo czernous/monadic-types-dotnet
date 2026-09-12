@@ -2684,7 +2684,7 @@
       "id": "MonadicTypes.NET.Diagnostics",
       "project": "MonadicTypes.Diagnostics",
       "reference": "api-reference.md#package-monadictypesnetdiagnostics",
-      "memberCount": 11,
+      "memberCount": 16,
       "members": [
         {
           "kind": "type",
@@ -2795,6 +2795,56 @@
           "summary": "Records an error on a sampled activity without creating an activity.",
           "familyReference": "api-reference.md#member-errortelemetryrecord",
           "reference": "api-reference.md#overload-void-recordactivity-activity-error-error-erroractivitystatuspolicy-statuspolicy-on-errortelemetry"
+        },
+        {
+          "kind": "member",
+          "id": "M:MonadicTypes.ErrorTelemetry.Record(System.Diagnostics.Activity,MonadicTypes.Error,MonadicTypes.ErrorActivityStatusPolicy,MonadicTypes.ErrorTelemetryMessagePolicy)",
+          "declaringType": "ErrorTelemetry",
+          "name": "Record",
+          "signature": "void Record(Activity? activity, Error? error, ErrorActivityStatusPolicy statusPolicy, ErrorTelemetryMessagePolicy messagePolicy)",
+          "summary": "Records an error with explicit activity status and message policies.",
+          "familyReference": "api-reference.md#member-errortelemetryrecord",
+          "reference": "api-reference.md#overload-void-recordactivity-activity-error-error-erroractivitystatuspolicy-statuspolicy-errortelemetrymessagepolicy-messagepolicy-on-errortelemetry"
+        },
+        {
+          "kind": "type",
+          "id": "T:MonadicTypes.ErrorTelemetryMessagePolicy",
+          "declaringType": "ErrorTelemetryMessagePolicy",
+          "name": "ErrorTelemetryMessagePolicy",
+          "signature": "ErrorTelemetryMessagePolicy",
+          "summary": "Controls whether an error's diagnostic message is written to telemetry.",
+          "familyReference": "api-reference.md#type-errortelemetrymessagepolicy",
+          "reference": "api-reference.md#type-errortelemetrymessagepolicy"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorTelemetryMessagePolicy.Include",
+          "declaringType": "ErrorTelemetryMessagePolicy",
+          "name": "Include",
+          "signature": "ErrorTelemetryMessagePolicy Include",
+          "summary": "Writes the diagnostic message regardless of its transport visibility.",
+          "familyReference": "api-reference.md#member-errortelemetrymessagepolicyinclude",
+          "reference": "api-reference.md#overload-errortelemetrymessagepolicy-include-on-errortelemetrymessagepolicy"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorTelemetryMessagePolicy.Omit",
+          "declaringType": "ErrorTelemetryMessagePolicy",
+          "name": "Omit",
+          "signature": "ErrorTelemetryMessagePolicy Omit",
+          "summary": "Omits the diagnostic message from telemetry.",
+          "familyReference": "api-reference.md#member-errortelemetrymessagepolicyomit",
+          "reference": "api-reference.md#overload-errortelemetrymessagepolicy-omit-on-errortelemetrymessagepolicy"
+        },
+        {
+          "kind": "member",
+          "id": "F:MonadicTypes.ErrorTelemetryMessagePolicy.PublicOnly",
+          "declaringType": "ErrorTelemetryMessagePolicy",
+          "name": "PublicOnly",
+          "signature": "ErrorTelemetryMessagePolicy PublicOnly",
+          "summary": "Writes only messages marked public by the error.",
+          "familyReference": "api-reference.md#member-errortelemetrymessagepolicypubliconly",
+          "reference": "api-reference.md#overload-errortelemetrymessagepolicy-publiconly-on-errortelemetrymessagepolicy"
         }
       ]
     },

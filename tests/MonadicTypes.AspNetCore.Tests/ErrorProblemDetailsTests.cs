@@ -234,6 +234,25 @@ public class ErrorProblemDetailsTests
         Assert.Equal(expected, ErrorProblemDetails.ToHttpResult(error).StatusCode);
     }
 
+    [Fact]
+    public void DefaultMapping_ProvidesHttpIdentityForEveryBuiltInCategory()
+    {
+        foreach (ErrorType type in Enum.GetValues<ErrorType>())
+        {
+            if (type is ErrorType.Uninitialized or ErrorType.Custom)
+            {
+                continue;
+            }
+
+            ProblemDetails details = ErrorProblemDetails.CreateExample(new Error(type, "TEST", "failure"));
+
+            Assert.NotNull(details.Status);
+            Assert.InRange(details.Status.Value, 400, 599);
+            Assert.False(string.IsNullOrWhiteSpace(details.Title));
+            Assert.False(string.IsNullOrWhiteSpace(details.Type));
+        }
+    }
+
     [Theory]
     [InlineData(ErrorType.PaymentRequired, 402, "payment-required")]
     [InlineData(ErrorType.NotAcceptable, 406, "not-acceptable")]

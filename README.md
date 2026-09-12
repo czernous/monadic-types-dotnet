@@ -304,7 +304,8 @@ has identical branch semantics.
 
 | Member | Overloads or value | Purpose |
 | --- | --- | --- |
-| [`ErrorTelemetry.Record`](docs/api-reference.md#member-errortelemetryrecord) | activity/error/policy | Project an error into an existing BCL Activity. |
+| [`ErrorTelemetry.Record`](docs/api-reference.md#member-errortelemetryrecord) | activity/error/policy | Project an error into an existing BCL Activity; the default records only public messages. |
+| [`ErrorTelemetryMessagePolicy`](docs/api-reference.md#type-errortelemetrymessagepolicy) | `PublicOnly` / `Include` / `Omit` | Control diagnostic-message disclosure in telemetry independently from HTTP visibility. |
 | [`ErrorActivityStatusPolicy.Automatic`](docs/api-reference.md#member-erroractivitystatuspolicyautomatic) | enum value | Mark only server-failure categories as activity errors. |
 | [`ErrorActivityStatusPolicy.Preserve`](docs/api-reference.md#member-erroractivitystatuspolicypreserve) | enum value | Preserve the caller's activity status. |
 | [`ErrorActivityStatusPolicy.MarkError`](docs/api-reference.md#member-erroractivitystatuspolicymarkerror) | enum value | Mark every recorded category as an activity error. |
@@ -1729,10 +1730,10 @@ Result<Receipt, Error> observed = result.TapError(new ObserveError(errorMetrics)
 disabled path. Applications remain free to project public error values into
 Serilog, Application Insights, Elastic, or a custom stack.
 
-`ErrorTelemetry.Record` includes the diagnostic message in the `error.message`
-activity tag. `Error.IsMessagePublic` controls HTTP response disclosure only;
-it does not redact telemetry. Keep diagnostic messages safe for the configured
-telemetry backends, or project a redacted error at the application boundary.
+`ErrorTelemetry.Record` uses `PublicOnly` by default: it includes the diagnostic
+message in the `error.message` activity tag only when `Error.IsMessagePublic` is
+true. Use `Include` or `Omit` when the telemetry boundary requires different
+disclosure; `Error.IsMessagePublic` continues to control HTTP responses only.
 
 ## Testing Helpers
 
@@ -2134,6 +2135,6 @@ criteria, and published changes remain subject to human direction and review.
 
 [Complete API reference](docs/api-reference.md)
 
-393 documented public members
+398 documented public members
 
 <!-- END GENERATED API INDEX -->

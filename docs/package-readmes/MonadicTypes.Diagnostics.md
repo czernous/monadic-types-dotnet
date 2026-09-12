@@ -46,10 +46,10 @@ default. Error-code tags are opt-in because they can increase cardinality.
 OpenTelemetry, Prometheus, Application Insights, and other BCL-compatible
 consumers can export these signals without package-specific adapters.
 
-`Record` also writes the diagnostic message to the `error.message` activity tag.
-`Error.IsMessagePublic` controls HTTP response disclosure; it does not redact
-telemetry. Keep diagnostic messages safe for the application's telemetry
-backends, or project a redacted error at the boundary when that is not possible.
+`Record` uses `PublicOnly` by default and writes the diagnostic message to the
+`error.message` activity tag only when `Error.IsMessagePublic` is true. Use
+`ErrorTelemetryMessagePolicy.Include` or `.Omit` for an explicit telemetry
+boundary policy; HTTP disclosure remains controlled by `IsMessagePublic`.
 
 `ErrorMetrics.Disabled` and an absent or unsampled Activity provide low-cost
 disabled paths. For allocation-sensitive callbacks, use caller-state or an
@@ -73,6 +73,6 @@ Apache-2.0. Developed with AI assistance.
 
 [Complete API reference](https://github.com/czernous/monadic-types-dotnet/blob/HEAD/docs/api-reference.md#package-monadictypesnetdiagnostics)
 
-Documented public members: 11
+Documented public members: 16
 
 <!-- END GENERATED API INDEX -->

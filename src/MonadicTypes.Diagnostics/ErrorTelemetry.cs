@@ -15,10 +15,11 @@ public static class ErrorTelemetry
     /// <param name="error">The initialized error to record.</param>
     /// <param name="statusPolicy">The policy controlling activity status mutation.</param>
     /// <remarks>
-    /// The diagnostic message is written to the <c>error.message</c> activity tag,
-    /// while <see cref="Error.IsMessagePublic"/> controls HTTP disclosure only.
-    /// Keep diagnostic messages safe for the telemetry backends used by the
-    /// application; project a redacted error yourself when that is not possible.
+    /// The default <see cref="ErrorTelemetryMessagePolicy.PublicOnly"/> policy
+    /// writes only messages marked public to the <c>error.message</c> activity
+    /// tag. <see cref="Error.IsMessagePublic"/> controls HTTP disclosure only;
+    /// use the overload with an explicit policy when telemetry has a different
+    /// security boundary.
     /// </remarks>
     /// <exception cref="ArgumentNullException">The activity is sampled and <paramref name="error"/> is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="statusPolicy"/> or the error category is invalid.</exception>
@@ -27,6 +28,21 @@ public static class ErrorTelemetry
         Activity? activity,
         Error? error,
         ErrorActivityStatusPolicy statusPolicy = ErrorActivityStatusPolicy.Automatic)
+        => Record(activity, error, statusPolicy, ErrorTelemetryMessagePolicy.PublicOnly);
+
+    /// <summary>Records an error with explicit activity status and message policies.</summary>
+    /// <param name="activity">The caller-owned activity, or null to perform no work.</param>
+    /// <param name="error">The initialized error to record.</param>
+    /// <param name="statusPolicy">The policy controlling activity status mutation.</param>
+    /// <param name="messagePolicy">The policy controlling the diagnostic message tag.</param>
+    /// <exception cref="ArgumentNullException">The activity is sampled and <paramref name="error"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="statusPolicy"/>, <paramref name="messagePolicy"/>, or the error category is invalid.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void Record(
+        Activity? activity,
+        Error? error,
+        ErrorActivityStatusPolicy statusPolicy,
+        ErrorTelemetryMessagePolicy messagePolicy)
     {
         if (activity is null || !activity.IsAllDataRequested)
         {
@@ -35,10 +51,22 @@ public static class ErrorTelemetry
 
         ArgumentNullException.ThrowIfNull(error);
 
+        if (messagePolicy is not (ErrorTelemetryMessagePolicy.PublicOnly
+            or ErrorTelemetryMessagePolicy.Include
+            or ErrorTelemetryMessagePolicy.Omit))
+        {
+            throw new ArgumentOutOfRangeException(nameof(messagePolicy), messagePolicy, null);
+        }
+
         string category = GetCategoryName(error.Type);
         activity.SetTag("error.type", error.Code);
         activity.SetTag("error.category", category);
-        activity.SetTag("error.message", error.Message);
+
+        if (messagePolicy is ErrorTelemetryMessagePolicy.Include
+            || messagePolicy is ErrorTelemetryMessagePolicy.PublicOnly && error.IsMessagePublic)
+        {
+            activity.SetTag("error.message", error.Message);
+        }
 
         if (error.Cause is { } cause)
         {

@@ -9,8 +9,6 @@ namespace MonadicTypes.AspNetCore;
 /// <summary>Converts structured errors to default RFC 9457 problem details.</summary>
 public static class ErrorProblemDetails
 {
-    private const string HttpTypePrefix = "urn:problem-type:http-";
-
     /// <summary>Creates problem details with an explicit HTTP error status and the existing visibility and trace policy.</summary>
     /// <example><code>ProblemDetails problem = ErrorProblemDetails.Create(error, 422, httpContext);</code></example>
     /// <param name="error">The initialized error to convert.</param>
@@ -86,7 +84,7 @@ public static class ErrorProblemDetails
         int effectiveStatus = statusCode ?? GetStatusCodeCore(error);
         bool useHttpIdentity = statusCode is not null || IsCustomHttpStatus(error);
         (string title, string type) = useHttpIdentity
-            ? (GetStatusTitle(effectiveStatus), HttpStatusTypeUris.Get(effectiveStatus))
+            ? (HttpStatusIdentity.GetTitle(effectiveStatus), HttpStatusIdentity.GetTypeUri(effectiveStatus))
             : (GetTitle(error.Type), GetTypeUri(error.Type));
         ProblemDetails details = new()
         {
@@ -156,84 +154,6 @@ public static class ErrorProblemDetails
 
     private static int GetStatusCodeCore(in Error error) =>
         IsCustomHttpStatus(error) ? error.NumericType : GetStatusCode(error.Type);
-
-    private static string GetStatusTitle(int statusCode) => statusCode switch
-    {
-        400 => "Bad Request",
-        401 => "Unauthorized",
-        402 => "Payment Required",
-        403 => "Forbidden",
-        404 => "Not Found",
-        405 => "Method Not Allowed",
-        406 => "Not Acceptable",
-        407 => "Proxy Authentication Required",
-        408 => "Request Timeout",
-        409 => "Conflict",
-        410 => "Gone",
-        411 => "Length Required",
-        412 => "Precondition Failed",
-        413 => "Content Too Large",
-        414 => "URI Too Long",
-        415 => "Unsupported Media Type",
-        416 => "Range Not Satisfiable",
-        417 => "Expectation Failed",
-        421 => "Misdirected Request",
-        422 => "Unprocessable Content",
-        423 => "Locked",
-        424 => "Failed Dependency",
-        425 => "Too Early",
-        426 => "Upgrade Required",
-        428 => "Precondition Required",
-        429 => "Too Many Requests",
-        431 => "Request Header Fields Too Large",
-        451 => "Unavailable For Legal Reasons",
-        499 => "Client Closed Request",
-        500 => "Internal Server Error",
-        501 => "Not Implemented",
-        502 => "Bad Gateway",
-        503 => "Service Unavailable",
-        504 => "Gateway Timeout",
-        505 => "HTTP Version Not Supported",
-        506 => "Variant Also Negotiates",
-        507 => "Insufficient Storage",
-        508 => "Loop Detected",
-        510 => "Not Extended",
-        511 => "Network Authentication Required",
-        _ => "HTTP error"
-    };
-
-    // The bounded array is initialized only when an HTTP identity is requested.
-    // Each URI is then created independently so an application pays only for
-    // statuses it actually emits.
-    private static class HttpStatusTypeUris
-    {
-        private static readonly string?[] Values = new string[200];
-
-        // Prevent beforefieldinit from moving cache initialization onto the
-        // category-only path. HTTP-specific responses own this cold cost.
-        static HttpStatusTypeUris()
-        {
-        }
-
-        internal static string Get(int statusCode)
-        {
-            ref string? location = ref Values[statusCode - 400];
-            string? existing = Volatile.Read(ref location);
-            if (existing is not null)
-            {
-                return existing;
-            }
-
-            string created = string.Create(HttpTypePrefix.Length + 3, statusCode, static (destination, value) =>
-            {
-                HttpTypePrefix.AsSpan().CopyTo(destination);
-                destination[^3] = (char)('0' + (value / 100));
-                destination[^2] = (char)('0' + ((value / 10) % 10));
-                destination[^1] = (char)('0' + (value % 10));
-            });
-            return Interlocked.CompareExchange(ref location, created, comparand: null) ?? created;
-        }
-    }
 
     private static string GetTitle(ErrorType type) => type switch
     {

@@ -57,4 +57,91 @@ public class ErrorTelemetryTests
 
         Assert.Equal(ActivityStatusCode.Unset, activity.Status);
     }
+
+    [Fact]
+    public void Record_DefaultPolicyOmitsPrivateMessage()
+    {
+        using Activity activity = new("request");
+        activity.Start();
+
+        ErrorTelemetry.Record(activity, Error.Failure("PRIVATE", "secret"));
+
+        Assert.DoesNotContain(activity.Tags, tag => string.Equals(tag.Key, "error.message", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Record_DefaultPolicyIncludesPublicMessage()
+    {
+        using Activity activity = new("request");
+        activity.Start();
+
+        ErrorTelemetry.Record(activity, Error.Validation("INVALID", "bad input"));
+
+        Assert.Contains(activity.Tags, tag =>
+            string.Equals(tag.Key, "error.message", StringComparison.Ordinal)
+            && string.Equals(tag.Value, "bad input", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Record_IncludePolicyIncludesPrivateMessage()
+    {
+        using Activity activity = new("request");
+        activity.Start();
+
+        ErrorTelemetry.Record(
+            activity,
+            Error.Failure("PRIVATE", "secret"),
+            ErrorActivityStatusPolicy.Automatic,
+            ErrorTelemetryMessagePolicy.Include);
+
+        Assert.Contains(activity.Tags, tag =>
+            string.Equals(tag.Key, "error.message", StringComparison.Ordinal)
+            && string.Equals(tag.Value, "secret", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Record_OmitPolicyOmitsPublicMessage()
+    {
+        using Activity activity = new("request");
+        activity.Start();
+
+        ErrorTelemetry.Record(
+            activity,
+            Error.Validation("INVALID", "bad input"),
+            ErrorActivityStatusPolicy.Automatic,
+            ErrorTelemetryMessagePolicy.Omit);
+
+        Assert.DoesNotContain(activity.Tags, tag => string.Equals(tag.Key, "error.message", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Record_MessagePolicyDoesNotSuppressRetainedException()
+    {
+        using Activity activity = new("request");
+        activity.Start();
+        InvalidOperationException cause = new("database unavailable");
+
+        ErrorTelemetry.Record(
+            activity,
+            Error.Unexpected(cause),
+            ErrorActivityStatusPolicy.Automatic,
+            ErrorTelemetryMessagePolicy.Omit);
+
+        ActivityEvent exceptionEvent = Assert.Single(activity.Events);
+        Assert.Equal("exception", exceptionEvent.Name);
+        Assert.Contains(exceptionEvent.Tags, tag => string.Equals(tag.Key, "exception.type", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Record_RejectsInvalidMessagePolicyOnSampledActivity()
+    {
+        using Activity activity = new("request");
+        activity.Start();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => ErrorTelemetry.Record(
+            activity,
+            Error.Failure("PRIVATE", "secret"),
+            ErrorActivityStatusPolicy.Automatic,
+            (ErrorTelemetryMessagePolicy)255));
+    }
 }
