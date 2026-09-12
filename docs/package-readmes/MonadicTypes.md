@@ -70,8 +70,11 @@ vectorized inner loops where a simpler branch or `Try*` contract is cheaper.
 | `MonadicTypes.NET.Collections` | Count-known fail-fast traversal into arrays |
 | `MonadicTypes.NET.Linq` | Opt-in fluent and query-expression operators |
 | `MonadicTypes.NET.AspNetCore` | Typed HTTP and problem results |
+| `MonadicTypes.NET.AspNetCore.OpenApi` | Error-catalog response metadata and examples in generated OpenAPI documents |
 | `MonadicTypes.NET.Diagnostics` | Optional Activity and Meter projection |
 | `MonadicTypes.NET.Generators` | Compile-time struct-callable adapters |
+| `MonadicTypes.NET.Testing` | Framework-neutral Result and Option test helpers |
+| `MonadicTypes.NET.Analyzers` | Opt-in diagnostics for nested railway types and common Option misuse |
 
 ## Documentation
 
