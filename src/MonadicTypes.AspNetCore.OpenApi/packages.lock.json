@@ -4,9 +4,9 @@
     "net10.0": {
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.125, )",
-        "resolved": "3.0.125",
-        "contentHash": "CexelZXr4mqLJGy9LGthGnAKUkz/Uh5U4Brh0FnbO+VAI7/TUoPoHKXA+8LLJ8kId7DagSWeuAP3KvCiTvPhgQ=="
+        "requested": "[3.0.257, )",
+        "resolved": "3.0.257",
+        "contentHash": "165MJVOaCy46Jevdc4/1ni3OeJgtp+3WS0FKvH/0KD7Dth0hK9Yf7yWKoWg/lKGfhvVoQYypeQkZTuGFcXrqVg=="
       },
       "Microsoft.AspNetCore.OpenApi": {
         "type": "Direct",
